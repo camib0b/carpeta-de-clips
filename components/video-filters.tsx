@@ -48,6 +48,22 @@ export function VideoFilters({
     return GAME_CONCEPTS.filter((concept) => conceptsForRival.has(concept))
   }, [videos, selectedRival])
 
+  // Compute available rivals based on selected concept
+  const availableRivals = useMemo(() => {
+    if (selectedConcept === 'Todos los Conceptos') {
+      // No concept filter - show all rivals that have at least one video
+      return rivals
+    }
+    
+    // Filter to rivals that have videos for the selected concept
+    const rivalsForConcept = new Set(
+      videos
+        .filter((v) => v.gameConcept === selectedConcept)
+        .map((v) => v.rivalTeam)
+    )
+    return rivals.filter((rival) => rival === 'Todos los Rivales' || rivalsForConcept.has(rival))
+  }, [videos, selectedConcept, rivals])
+
   // Reset concept filter if current selection is no longer available
   const effectiveConcept = useMemo(() => {
     if (selectedConcept === 'Todos los Conceptos') return selectedConcept
@@ -58,9 +74,24 @@ export function VideoFilters({
     return 'Todos los Conceptos'
   }, [selectedConcept, availableConcepts])
 
+  // Reset rival filter if current selection is no longer available
+  const effectiveRival = useMemo(() => {
+    if (selectedRival === 'Todos los Rivales') return selectedRival
+    if (availableRivals.includes(selectedRival)) {
+      return selectedRival
+    }
+    // Current rival not available - reset to all
+    return 'Todos los Rivales'
+  }, [selectedRival, availableRivals])
+
   // Notify parent if concept was reset
   if (effectiveConcept !== selectedConcept) {
     onConceptChange(effectiveConcept)
+  }
+
+  // Notify parent if rival was reset
+  if (effectiveRival !== selectedRival) {
+    onRivalChange(effectiveRival)
   }
 
   return (
@@ -96,12 +127,12 @@ export function VideoFilters({
         >
           Rival
         </label>
-        <Select value={selectedRival} onValueChange={onRivalChange}>
+        <Select value={effectiveRival} onValueChange={onRivalChange}>
           <SelectTrigger id="rival-filter" className="w-[180px] border-border">
             <SelectValue placeholder="Todos los Rivales" />
           </SelectTrigger>
           <SelectContent>
-            {rivals.map((rival) => (
+            {availableRivals.map((rival) => (
               <SelectItem key={rival} value={rival}>
                 {rival}
               </SelectItem>
