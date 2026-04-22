@@ -8,14 +8,14 @@ export interface VideoClip {
   gameConcept: string
   rivalTeam: string
   date: string // ISO string
-  time: string
-  place: string
+  time?: string
+  place?: string
   homeTeam: string
   awayTeam: string
-  homeGoals: number
-  awayGoals: number
+  homeGoals?: number
+  awayGoals?: number
   shootoutWinner?: string
-  playerRoster: string[]
+  playerRoster?: string[]
   uploadedAt: string // ISO string for sorting by upload date
 }
 
@@ -46,16 +46,21 @@ export interface Team {
 
 /**
  * Available game concepts for filtering (Spanish)
+ * Based on real video categories from UC hockey playlists
  */
 export const GAME_CONCEPTS = [
   'Todos los Conceptos',
-  'Tiros al Arco',
+  'Salidas',
+  'Goles',
   'Corners Cortos',
-  'Juego de Construccion',
-  'Estructura Defensiva',
-  'Contraataque',
-  'Jugadas de Balon Parado',
-  'Atajadas del Arquero',
+  'Shoot Outs',
+  'Perdidas',
+  'Ingresos al Area',
+  'Defensa del Area',
+  'Presion',
+  'Flicks',
+  'Juego Abierto',
+  'Partido Completo',
 ] as const
 
 export type GameConcept = (typeof GAME_CONCEPTS)[number]

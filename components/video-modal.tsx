@@ -29,8 +29,9 @@ export function VideoModal({ video, notes, open, onOpenChange, onAddNote }: Vide
   if (!video) return null
 
   const formattedDate = format(new Date(video.date), "d 'de' MMMM, yyyy", { locale: es })
-  const score = `${video.homeGoals}–${video.awayGoals}`
-  const scoreDisplay = video.shootoutWinner
+  const hasScore = video.homeGoals !== undefined && video.awayGoals !== undefined
+  const score = hasScore ? `${video.homeGoals}–${video.awayGoals}` : null
+  const scoreDisplay = score && video.shootoutWinner
     ? `${score} (${video.shootoutWinner} gana en penales)`
     : score
 
@@ -89,20 +90,22 @@ export function VideoModal({ video, notes, open, onOpenChange, onAddNote }: Vide
                 </div>
               </div>
               <div className="space-y-3">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                    Resultado
-                  </p>
-                  <p className="text-foreground font-medium">
-                    {video.rivalTeam === 'Entrenamiento' ? '—' : scoreDisplay}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                    Lugar
-                  </p>
-                  <p className="text-foreground">{video.place}</p>
-                </div>
+                {scoreDisplay && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                      Resultado
+                    </p>
+                    <p className="text-foreground font-medium">{scoreDisplay}</p>
+                  </div>
+                )}
+                {video.place && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                      Lugar
+                    </p>
+                    <p className="text-foreground">{video.place}</p>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -15,8 +15,9 @@ interface VideoCardProps {
  */
 export function VideoCard({ video, onClick }: VideoCardProps) {
   const formattedDate = format(new Date(video.date), "d 'de' MMM, yyyy", { locale: es })
-  const score = `${video.homeGoals}–${video.awayGoals}`
-  const scoreDisplay = video.shootoutWinner
+  const hasScore = video.homeGoals !== undefined && video.awayGoals !== undefined
+  const score = hasScore ? `${video.homeGoals}–${video.awayGoals}` : null
+  const scoreDisplay = score && video.shootoutWinner
     ? `${score} (${video.shootoutWinner === video.homeTeam ? 'L' : 'V'} SP)`
     : score
 
@@ -58,7 +59,7 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>vs {video.rivalTeam}</span>
-          {video.rivalTeam !== 'Entrenamiento' && (
+          {scoreDisplay && (
             <>
               <span className="text-muted-foreground/50">·</span>
               <span className="font-medium text-foreground">{scoreDisplay}</span>
