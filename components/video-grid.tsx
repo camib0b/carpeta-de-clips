@@ -77,6 +77,7 @@ export function VideoGrid({ videos, rivals }: VideoGridProps) {
         onConceptChange={setSelectedConcept}
         onRivalChange={setSelectedRival}
         rivals={rivals}
+        videos={videos}
       />
 
       {/* Results count */}
