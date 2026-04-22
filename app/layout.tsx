@@ -7,8 +7,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Carpeta de Clips — Hockey Cesped',
-  description: 'Analisis de partidos y clips de entrenamiento para equipos de hockey cesped',
+  title: 'Carpeta de Clips — Camila Escudero',
+  description: 'Tu carpeta de clips de partidos para trabajar con el equipo.',
   generator: 'v0.app',
   metadataBase: new URL('https://carpeta.cl'),
   icons: {

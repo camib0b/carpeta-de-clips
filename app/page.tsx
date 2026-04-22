@@ -32,7 +32,7 @@ export default function HomePage() {
             Carpeta de Clips
           </h1>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-            Analisis de partidos y clips de entrenamiento de hockey cesped.
+            Tu carpeta de clips de partidos para trabajar con el equipo.
             <br />
             Selecciona un equipo para ver su coleccion de videos.
           </p>
@@ -90,7 +90,10 @@ export default function HomePage() {
       <footer className="border-t border-border mt-auto">
         <div className="mx-auto max-w-2xl px-6 py-8">
           <p className="text-xs text-muted-foreground">
-            carpeta.cl — Biblioteca de videos para equipos de hockey cesped.
+            carpeta.cl — Biblioteca de videos para el video análisis de hockey césped.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            by Camila Escudero
           </p>
         </div>
       </footer>
