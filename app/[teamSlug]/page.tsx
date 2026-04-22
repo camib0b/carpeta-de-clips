@@ -28,13 +28,13 @@ export async function generateMetadata({
 
   if (!team) {
     return {
-      title: 'Team Not Found',
+      title: 'Equipo No Encontrado',
     }
   }
 
   return {
-    title: `${team.name} Video Library`,
-    description: `Field hockey video analysis library for ${team.name}`,
+    title: `${team.name} — Carpeta de Clips`,
+    description: `Biblioteca de videos de hockey cesped para ${team.name}`,
   }
 }
 

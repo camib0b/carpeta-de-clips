@@ -36,11 +36,11 @@ export function VideoFilters({
           htmlFor="concept-filter"
           className="text-xs uppercase tracking-wide text-muted-foreground whitespace-nowrap"
         >
-          Concept
+          Concepto
         </label>
         <Select value={selectedConcept} onValueChange={onConceptChange}>
-          <SelectTrigger id="concept-filter" className="w-[180px] border-border">
-            <SelectValue placeholder="All Concepts" />
+          <SelectTrigger id="concept-filter" className="w-[200px] border-border">
+            <SelectValue placeholder="Todos los Conceptos" />
           </SelectTrigger>
           <SelectContent>
             {GAME_CONCEPTS.map((concept) => (
@@ -58,11 +58,11 @@ export function VideoFilters({
           htmlFor="rival-filter"
           className="text-xs uppercase tracking-wide text-muted-foreground whitespace-nowrap"
         >
-          Opponent
+          Rival
         </label>
         <Select value={selectedRival} onValueChange={onRivalChange}>
           <SelectTrigger id="rival-filter" className="w-[180px] border-border">
-            <SelectValue placeholder="All Opponents" />
+            <SelectValue placeholder="Todos los Rivales" />
           </SelectTrigger>
           <SelectContent>
             {rivals.map((rival) => (

@@ -7,9 +7,10 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Video Library — Field Hockey',
-  description: 'Match analysis and training clips for field hockey teams',
+  title: 'Carpeta de Clips — Hockey Cesped',
+  description: 'Analisis de partidos y clips de entrenamiento para equipos de hockey cesped',
   generator: 'v0.app',
+  metadataBase: new URL('https://carpeta.cl'),
   icons: {
     icon: [
       {
@@ -35,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
+    <html lang="es" className="bg-background">
       <body className="font-sans antialiased min-h-screen">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

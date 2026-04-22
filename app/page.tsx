@@ -29,12 +29,12 @@ export default function HomePage() {
       <header className="border-b border-border">
         <div className="mx-auto max-w-2xl px-6 py-16 md:py-24">
           <h1 className="text-2xl font-medium tracking-tight text-foreground md:text-3xl">
-            Video Library
+            Carpeta de Clips
           </h1>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-            Field hockey match analysis and training clips.
+            Analisis de partidos y clips de entrenamiento de hockey cesped.
             <br />
-            Select a team to view their video collection.
+            Selecciona un equipo para ver su coleccion de videos.
           </p>
         </div>
       </header>
@@ -53,7 +53,7 @@ export default function HomePage() {
                     <span
                       className="text-2xl"
                       role="img"
-                      aria-label={`${team.country} flag`}
+                      aria-label={`bandera de ${team.country}`}
                     >
                       {getCountryFlag(team.country)}
                     </span>
@@ -90,7 +90,7 @@ export default function HomePage() {
       <footer className="border-t border-border mt-auto">
         <div className="mx-auto max-w-2xl px-6 py-8">
           <p className="text-xs text-muted-foreground">
-            A minimalist video library for field hockey teams.
+            carpeta.cl — Biblioteca de videos para equipos de hockey cesped.
           </p>
         </div>
       </footer>

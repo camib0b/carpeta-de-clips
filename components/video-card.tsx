@@ -2,6 +2,7 @@
 
 import { VideoClip } from '@/lib/types'
 import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 
 interface VideoCardProps {
   video: VideoClip
@@ -13,10 +14,10 @@ interface VideoCardProps {
  * Shows thumbnail, title, and key metadata
  */
 export function VideoCard({ video, onClick }: VideoCardProps) {
-  const formattedDate = format(new Date(video.date), 'MMM d, yyyy')
+  const formattedDate = format(new Date(video.date), "d 'de' MMM, yyyy", { locale: es })
   const score = `${video.homeGoals}–${video.awayGoals}`
   const scoreDisplay = video.shootoutWinner
-    ? `${score} (${video.shootoutWinner === video.homeTeam ? 'H' : 'A'} SO)`
+    ? `${score} (${video.shootoutWinner === video.homeTeam ? 'L' : 'V'} SP)`
     : score
 
   return (
@@ -57,7 +58,7 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>vs {video.rivalTeam}</span>
-          {video.rivalTeam !== 'Training Session' && (
+          {video.rivalTeam !== 'Entrenamiento' && (
             <>
               <span className="text-muted-foreground/50">·</span>
               <span className="font-medium text-foreground">{scoreDisplay}</span>

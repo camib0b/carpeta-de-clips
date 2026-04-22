@@ -20,6 +20,20 @@ export interface VideoClip {
 }
 
 /**
+ * Note/comment attached to a video clip
+ * Anonymous by default, optional author name
+ * Future: will be associated with authenticated user
+ */
+export interface VideoNote {
+  id: string
+  videoId: string
+  content: string
+  authorName?: string // Optional - anonymous if not provided
+  // Future: userId?: string // Will be added when auth is enabled
+  createdAt: string // ISO string
+}
+
+/**
  * Team data structure
  */
 export interface Team {
@@ -31,17 +45,17 @@ export interface Team {
 }
 
 /**
- * Available game concepts for filtering
+ * Available game concepts for filtering (Spanish)
  */
 export const GAME_CONCEPTS = [
-  'All Concepts',
-  'Shots on Target',
-  'Penalty Corners',
-  'Build-up Play',
-  'Defensive Structure',
-  'Counter Attack',
-  'Set Pieces',
-  'Goalkeeper Saves',
+  'Todos los Conceptos',
+  'Tiros al Arco',
+  'Corners Cortos',
+  'Juego de Construccion',
+  'Estructura Defensiva',
+  'Contraataque',
+  'Jugadas de Balon Parado',
+  'Atajadas del Arquero',
 ] as const
 
 export type GameConcept = (typeof GAME_CONCEPTS)[number]
