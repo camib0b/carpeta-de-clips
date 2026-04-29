@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { VideoClip, VideoNote } from '@/lib/types'
 import { getVideoNotes } from '@/lib/data'
 import { VideoCard } from './video-card'
@@ -68,6 +68,44 @@ export function VideoGrid({ videos, rivals }: VideoGridProps) {
   // Get notes for selected video
   const selectedVideoNotes = selectedVideo ? (notesMap[selectedVideo.id] || []) : []
 
+  const selectedIndex =
+    selectedVideo && modalOpen
+      ? filteredVideos.findIndex((videoItem) => videoItem.id === selectedVideo.id)
+      : -1
+
+  const canNavigatePrevious = selectedIndex > 0
+  const canNavigateNext =
+    selectedIndex >= 0 && selectedIndex < filteredVideos.length - 1
+
+  const handleNavigatePrevious = useCallback(() => {
+    setSelectedVideo((current) => {
+      if (!current) return current
+      const index = filteredVideos.findIndex((videoItem) => videoItem.id === current.id)
+      if (index <= 0) return current
+      return filteredVideos[index - 1]
+    })
+  }, [filteredVideos])
+
+  const handleNavigateNext = useCallback(() => {
+    setSelectedVideo((current) => {
+      if (!current) return current
+      const index = filteredVideos.findIndex((videoItem) => videoItem.id === current.id)
+      if (index < 0 || index >= filteredVideos.length - 1) return current
+      return filteredVideos[index + 1]
+    })
+  }, [filteredVideos])
+
+  useEffect(() => {
+    if (!modalOpen || !selectedVideo) return
+    const stillInFilteredList = filteredVideos.some(
+      (videoItem) => videoItem.id === selectedVideo.id,
+    )
+    if (!stillInFilteredList) {
+      setModalOpen(false)
+      setSelectedVideo(null)
+    }
+  }, [filteredVideos, modalOpen, selectedVideo])
+
   return (
     <div className="space-y-10">
       {/* Filters */}
@@ -120,6 +158,10 @@ export function VideoGrid({ videos, rivals }: VideoGridProps) {
         open={modalOpen}
         onOpenChange={setModalOpen}
         onAddNote={handleAddNote}
+        canNavigatePrevious={canNavigatePrevious}
+        canNavigateNext={canNavigateNext}
+        onNavigatePrevious={handleNavigatePrevious}
+        onNavigateNext={handleNavigateNext}
       />
     </div>
   )

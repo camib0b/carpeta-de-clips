@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { VideoClip, VideoNote } from '@/lib/types'
 import {
   Dialog,
@@ -8,6 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { VideoNotes } from './video-notes'
 import YouTube from 'react-youtube'
 import { format } from 'date-fns'
@@ -19,13 +22,46 @@ interface VideoModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAddNote: (videoId: string, note: { content: string; authorName?: string }) => void
+  canNavigatePrevious?: boolean
+  canNavigateNext?: boolean
+  onNavigatePrevious?: () => void
+  onNavigateNext?: () => void
 }
 
 /**
  * Modal component for playing YouTube videos
  * Clean, minimal design with video player, metadata, and notes
  */
-export function VideoModal({ video, notes, open, onOpenChange, onAddNote }: VideoModalProps) {
+export function VideoModal({
+  video,
+  notes,
+  open,
+  onOpenChange,
+  onAddNote,
+  canNavigatePrevious = false,
+  canNavigateNext = false,
+  onNavigatePrevious,
+  onNavigateNext,
+}: VideoModalProps) {
+  const showClipNavigation = open && (canNavigatePrevious || canNavigateNext)
+
+  useEffect(() => {
+    if (!open || (!canNavigatePrevious && !canNavigateNext)) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft' && canNavigatePrevious && onNavigatePrevious) {
+        event.preventDefault()
+        onNavigatePrevious()
+      } else if (event.key === 'ArrowRight' && canNavigateNext && onNavigateNext) {
+        event.preventDefault()
+        onNavigateNext()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [open, canNavigatePrevious, canNavigateNext, onNavigatePrevious, onNavigateNext])
+
   if (!video) return null
 
   const formattedDate = format(new Date(video.date), "d 'de' MMMM, yyyy", { locale: es })
@@ -45,6 +81,34 @@ export function VideoModal({ video, notes, open, onOpenChange, onAddNote }: Vide
         <div className="overflow-y-auto max-h-[90vh]">
           {/* Video Player */}
           <div className="relative aspect-video w-full bg-black">
+            {showClipNavigation && (
+              <>
+                {canNavigatePrevious && onNavigatePrevious && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    onClick={onNavigatePrevious}
+                    className="absolute left-2 top-1/2 z-10 size-10 -translate-y-1/2 rounded-full border-0 bg-black/55 text-white shadow-md hover:bg-black/75"
+                    aria-label="Clip anterior"
+                  >
+                    <ChevronLeft className="size-6" aria-hidden />
+                  </Button>
+                )}
+                {canNavigateNext && onNavigateNext && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    onClick={onNavigateNext}
+                    className="absolute right-2 top-1/2 z-10 size-10 -translate-y-1/2 rounded-full border-0 bg-black/55 text-white shadow-md hover:bg-black/75"
+                    aria-label="Clip siguiente"
+                  >
+                    <ChevronRight className="size-6" aria-hidden />
+                  </Button>
+                )}
+              </>
+            )}
             <YouTube
               videoId={video.youtubeId}
               className="absolute inset-0"
