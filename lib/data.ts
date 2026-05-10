@@ -462,7 +462,7 @@ export const videoClips: VideoClip[] = [
   },
   {
     id: '44',
-    youtubeId: 'iCcjVzOgNk8',
+    youtubeId: 'ETPOMoqp61k',
     title: 'Cortos ofensivos',
     gameConcept: 'Corner Cortos',
     rivalTeam: 'Old Gabs',
