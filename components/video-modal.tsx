@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogPortal,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { VideoNotes } from './video-notes'
@@ -77,38 +78,18 @@ export function VideoModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] gap-0 p-0 overflow-hidden">
+      <DialogContent
+        className="max-w-4xl max-h-[90vh] gap-0 p-0 overflow-hidden"
+        onPointerDownOutside={(event) => {
+          const target = event.target as HTMLElement | null
+          if (target?.closest('[data-clip-nav]')) {
+            event.preventDefault()
+          }
+        }}
+      >
         <div className="overflow-y-auto max-h-[90vh]">
           {/* Video Player */}
           <div className="relative aspect-video w-full bg-black">
-            {showClipNavigation && (
-              <>
-                {canNavigatePrevious && onNavigatePrevious && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    onClick={onNavigatePrevious}
-                    className="absolute left-2 top-1/2 z-10 size-10 -translate-y-1/2 rounded-full border-0 bg-black/55 text-white shadow-md hover:bg-black/75"
-                    aria-label="Clip anterior"
-                  >
-                    <ChevronLeft className="size-6" aria-hidden />
-                  </Button>
-                )}
-                {canNavigateNext && onNavigateNext && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    onClick={onNavigateNext}
-                    className="absolute right-2 top-1/2 z-10 size-10 -translate-y-1/2 rounded-full border-0 bg-black/55 text-white shadow-md hover:bg-black/75"
-                    aria-label="Clip siguiente"
-                  >
-                    <ChevronRight className="size-6" aria-hidden />
-                  </Button>
-                )}
-              </>
-            )}
             <YouTube
               videoId={video.youtubeId}
               className="absolute inset-0"
@@ -185,6 +166,36 @@ export function VideoModal({
           </div>
         </div>
       </DialogContent>
+      {showClipNavigation && (
+        <DialogPortal>
+          {canNavigatePrevious && onNavigatePrevious && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              data-clip-nav="previous"
+              onClick={onNavigatePrevious}
+              className="fixed left-4 top-1/2 z-50 size-11 -translate-y-1/2 rounded-full border-0 bg-background/90 text-foreground shadow-lg backdrop-blur hover:bg-background sm:left-6"
+              aria-label="Clip anterior"
+            >
+              <ChevronLeft className="size-6" aria-hidden />
+            </Button>
+          )}
+          {canNavigateNext && onNavigateNext && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              data-clip-nav="next"
+              onClick={onNavigateNext}
+              className="fixed right-4 top-1/2 z-50 size-11 -translate-y-1/2 rounded-full border-0 bg-background/90 text-foreground shadow-lg backdrop-blur hover:bg-background sm:right-6"
+              aria-label="Clip siguiente"
+            >
+              <ChevronRight className="size-6" aria-hidden />
+            </Button>
+          )}
+        </DialogPortal>
+      )}
     </Dialog>
   )
 }
