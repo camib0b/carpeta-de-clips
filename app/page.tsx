@@ -29,10 +29,14 @@ export default function HomePage() {
       <header className="border-b border-border">
         <div className="mx-auto max-w-2xl px-6 py-16 md:py-24">
           <h1 className="text-2xl font-medium tracking-tight text-foreground md:text-3xl">
-            Carpeta de Clips
+            CC
           </h1>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-            Tu carpeta de clips para trabajar con el equipo.
+            Tu{' '}
+            <strong className="font-semibold text-foreground">
+              Carpeta de Clips
+            </strong>{' '}
+            para trabajar con el equipo.
           </p>
         </div>
       </header>
@@ -91,7 +95,7 @@ export default function HomePage() {
             carpeta.cl — Biblioteca de clips para analizar el juego.
           </p>
           <p className="text-xs text-muted-foreground">
-            by Camila Escudero
+            by Camilu
           </p>
         </div>
       </footer>
