@@ -135,6 +135,14 @@ export function VideoModal({
                 </div>
               </div>
               <div className="space-y-3">
+                {video.category && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                      Categoría
+                    </p>
+                    <p className="text-foreground">{video.category}</p>
+                  </div>
+                )}
                 {scoreDisplay && (
                   <div>
                     <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">

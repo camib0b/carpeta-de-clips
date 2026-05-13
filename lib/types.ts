@@ -6,6 +6,8 @@ export interface VideoClip {
   youtubeId: string
   title: string
   gameConcept: string
+  collection?: string
+  category?: string
   rivalTeam: string
   date: string // ISO string
   time?: string

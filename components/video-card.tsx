@@ -20,6 +20,9 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
   const scoreDisplay = score && video.shootoutWinner
     ? `${score} (${video.shootoutWinner === video.homeTeam ? 'L' : 'V'} SP)`
     : score
+  const matchupDisplay = video.collection
+    ? `${video.homeTeam} vs ${video.awayTeam}`
+    : `vs ${video.rivalTeam}`
 
   return (
     <button
@@ -56,9 +59,15 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
           <span>{formattedDate}</span>
           <span className="text-muted-foreground/50">·</span>
           <span>{video.gameConcept}</span>
+          {video.category && (
+            <>
+              <span className="text-muted-foreground/50">·</span>
+              <span>{video.category}</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>vs {video.rivalTeam}</span>
+          <span>{matchupDisplay}</span>
           {scoreDisplay && (
             <>
               <span className="text-muted-foreground/50">·</span>

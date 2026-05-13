@@ -22,6 +22,12 @@ export const teams: Team[] = [
     slug: 'uc-primera-b',
     country: 'CL',
   },
+  {
+    id: '4',
+    name: 'Others',
+    slug: 'others',
+    country: 'CL',
+  },
 ]
 
 /**
@@ -634,6 +640,122 @@ export const videoClips: VideoClip[] = [
     awayTeam: 'UC Primera A',
     uploadedAt: '2024-03-20T05:00:00Z',
   },
+
+  // =====================
+  // Others - Primera A - COGS vs PWCC (Playlist: PLIeIXM8a6FD67yZz5sREljuIvBAFjR8tE)
+  // =====================
+  {
+    id: '52',
+    youtubeId: 'fJhrZsPSpo8',
+    title: 'Salidas COGS (Presión PWCC)',
+    gameConcept: 'Salidas',
+    collection: 'Others',
+    category: 'Primera A',
+    rivalTeam: 'COGS vs PWCC',
+    date: '2026-04-25',
+    place: 'COGS',
+    homeTeam: 'COGS',
+    awayTeam: 'PWCC',
+    homeGoals: 2,
+    awayGoals: 3,
+    uploadedAt: '2026-04-25T10:00:00Z',
+  },
+  {
+    id: '53',
+    youtubeId: 'AcDdN--vd5w',
+    title: 'Presión COGS (Salidas PWCC)',
+    gameConcept: 'Presiones',
+    collection: 'Others',
+    category: 'Primera A',
+    rivalTeam: 'COGS vs PWCC',
+    date: '2026-04-25',
+    place: 'COGS',
+    homeTeam: 'COGS',
+    awayTeam: 'PWCC',
+    homeGoals: 2,
+    awayGoals: 3,
+    uploadedAt: '2026-04-25T09:00:00Z',
+  },
+  {
+    id: '54',
+    youtubeId: 'yOfvZft6Fvk',
+    title: 'Cortos ofensivos PWCC',
+    gameConcept: 'Corner Cortos',
+    collection: 'Others',
+    category: 'Primera A',
+    rivalTeam: 'COGS vs PWCC',
+    date: '2026-04-25',
+    place: 'COGS',
+    homeTeam: 'COGS',
+    awayTeam: 'PWCC',
+    homeGoals: 2,
+    awayGoals: 3,
+    uploadedAt: '2026-04-25T08:00:00Z',
+  },
+  {
+    id: '55',
+    youtubeId: 'LuZ6VrPpMu4',
+    title: 'Goles COGS',
+    gameConcept: 'Goles',
+    collection: 'Others',
+    category: 'Primera A',
+    rivalTeam: 'COGS vs PWCC',
+    date: '2026-04-25',
+    place: 'COGS',
+    homeTeam: 'COGS',
+    awayTeam: 'PWCC',
+    homeGoals: 2,
+    awayGoals: 3,
+    uploadedAt: '2026-04-25T07:00:00Z',
+  },
+  {
+    id: '56',
+    youtubeId: 'hYuEjRMF3JE',
+    title: 'Goles PWCC',
+    gameConcept: 'Goles',
+    collection: 'Others',
+    category: 'Primera A',
+    rivalTeam: 'COGS vs PWCC',
+    date: '2026-04-25',
+    place: 'COGS',
+    homeTeam: 'COGS',
+    awayTeam: 'PWCC',
+    homeGoals: 2,
+    awayGoals: 3,
+    uploadedAt: '2026-04-25T06:00:00Z',
+  },
+  {
+    id: '57',
+    youtubeId: 'jSSxKuiAoTc',
+    title: 'COGS Ingresos al área',
+    gameConcept: 'Ingresos al área',
+    collection: 'Others',
+    category: 'Primera A',
+    rivalTeam: 'COGS vs PWCC',
+    date: '2026-04-25',
+    place: 'COGS',
+    homeTeam: 'COGS',
+    awayTeam: 'PWCC',
+    homeGoals: 2,
+    awayGoals: 3,
+    uploadedAt: '2026-04-25T05:00:00Z',
+  },
+  {
+    id: '58',
+    youtubeId: 'dSguB0ls4Dc',
+    title: 'PWCC Ingresos al área',
+    gameConcept: 'Ingresos al área',
+    collection: 'Others',
+    category: 'Primera A',
+    rivalTeam: 'COGS vs PWCC',
+    date: '2026-04-25',
+    place: 'COGS',
+    homeTeam: 'COGS',
+    awayTeam: 'PWCC',
+    homeGoals: 2,
+    awayGoals: 3,
+    uploadedAt: '2026-04-25T04:00:00Z',
+  },
 ]
 
 /**
@@ -652,7 +774,9 @@ export function getTeamVideos(teamSlug: string): VideoClip[] {
   return videoClips
     .filter(
       (clip) =>
-        clip.homeTeam === team.name || clip.awayTeam === team.name
+        clip.collection === team.name ||
+        clip.homeTeam === team.name ||
+        clip.awayTeam === team.name
     )
     .sort(
       (a, b) =>
