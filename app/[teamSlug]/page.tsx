@@ -32,9 +32,20 @@ export async function generateMetadata({
     }
   }
 
+  const pageTitle = `${team.name} — Carpeta de Clips`
+  const pageDescription = `Clips ${team.name}`
+
   return {
-    title: `${team.name} — Carpeta de Clips`,
-    description: `Biblioteca de videos de hockey cesped para ${team.name}`,
+    title: pageTitle,
+    description: pageDescription,
+    openGraph: {
+      title: pageTitle,
+      description: pageDescription,
+      url: `/${team.slug}`,
+      siteName: 'Carpeta de Clips',
+      locale: 'es_CL',
+      type: 'website',
+    },
   }
 }
 

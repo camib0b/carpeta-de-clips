@@ -5,12 +5,22 @@ import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const siteTitle = 'Carpeta de Clips — Camila Escudero'
+const siteDescription = 'Carpeta de Clips'
 
 export const metadata: Metadata = {
-  title: 'Carpeta de Clips — Camila Escudero',
-  description: 'Tu carpeta de clips de partidos para trabajar con el equipo.',
+  title: siteTitle,
+  description: siteDescription,
   generator: 'v0.app',
   metadataBase: new URL('https://carpeta.cl'),
+  openGraph: {
+    title: siteTitle,
+    description: siteDescription,
+    siteName: 'Carpeta de Clips',
+    url: '/',
+    locale: 'es_CL',
+    type: 'website',
+  },
   icons: {
     icon: [
       {
