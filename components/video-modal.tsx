@@ -79,7 +79,7 @@ export function VideoModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-4xl max-h-[90vh] gap-0 p-0 overflow-hidden"
+        className="w-[min(94vw,72rem)] max-w-none max-h-[94vh] gap-0 p-0 overflow-hidden"
         onPointerDownOutside={(event) => {
           const target = event.target as HTMLElement | null
           if (target?.closest('[data-clip-nav]')) {
@@ -87,7 +87,7 @@ export function VideoModal({
           }
         }}
       >
-        <div className="overflow-y-auto max-h-[90vh]">
+        <div className="overflow-y-auto max-h-[94vh]">
           {/* Video Player */}
           <div className="relative aspect-video w-full bg-black">
             <YouTube
@@ -107,9 +107,9 @@ export function VideoModal({
           </div>
 
           {/* Video Info */}
-          <div className="p-6 space-y-6">
-            <DialogHeader className="text-left space-y-2">
-              <DialogTitle className="text-lg font-medium leading-snug tracking-tight">
+          <div className="space-y-4 p-4 sm:p-5">
+            <DialogHeader className="text-left space-y-1.5">
+              <DialogTitle className="text-base font-medium leading-snug tracking-tight sm:text-lg">
                 {video.title}
               </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground">
@@ -117,10 +117,10 @@ export function VideoModal({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div className="space-y-2.5">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                  <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">
                     Partido
                   </p>
                   <p className="text-foreground">
@@ -128,16 +128,16 @@ export function VideoModal({
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                  <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">
                     Fecha
                   </p>
                   <p className="text-foreground">{formattedDate}</p>
                 </div>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {video.category && (
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                    <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">
                       Categoría
                     </p>
                     <p className="text-foreground">{video.category}</p>
@@ -145,7 +145,7 @@ export function VideoModal({
                 )}
                 {scoreDisplay && (
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                    <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">
                       Resultado
                     </p>
                     <p className="text-foreground font-medium">{scoreDisplay}</p>
@@ -153,7 +153,7 @@ export function VideoModal({
                 )}
                 {video.place && (
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                    <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">
                       Lugar
                     </p>
                     <p className="text-foreground">{video.place}</p>

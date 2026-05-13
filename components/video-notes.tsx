@@ -56,7 +56,7 @@ export function VideoNotes({ videoId, initialNotes, onAddNote }: VideoNotesProps
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
         <MessageSquare className="h-4 w-4 text-muted-foreground" />
@@ -66,17 +66,17 @@ export function VideoNotes({ videoId, initialNotes, onAddNote }: VideoNotesProps
       </div>
 
       {/* Add Note Form */}
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-2.5">
         <Textarea
           value={newNote}
           onChange={(e) => setNewNote(e.target.value)}
           placeholder="Escribe una nota sobre este video..."
-          className="min-h-[80px] resize-none border-border bg-background text-sm"
+          className="min-h-[64px] resize-none border-border bg-background text-sm"
           aria-label="Nueva nota"
         />
         
         {/* Optional name field */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             {showNameField ? (
               <Input
@@ -112,10 +112,10 @@ export function VideoNotes({ videoId, initialNotes, onAddNote }: VideoNotesProps
 
       {/* Notes List */}
       {notes.length > 0 ? (
-        <ul className="space-y-4 divide-y divide-border">
+        <ul className="space-y-3 divide-y divide-border">
           {notes.map((note) => (
-            <li key={note.id} className="pt-4 first:pt-0">
-              <div className="space-y-2">
+            <li key={note.id} className="pt-3 first:pt-0">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-xs font-medium text-foreground">
                     {note.authorName || 'Anonimo'}
@@ -124,7 +124,7 @@ export function VideoNotes({ videoId, initialNotes, onAddNote }: VideoNotesProps
                     {format(new Date(note.createdAt), "d MMM yyyy, HH:mm", { locale: es })}
                   </time>
                 </div>
-                <p className="text-sm leading-relaxed text-muted-foreground">
+                <p className="text-sm leading-normal text-muted-foreground">
                   {note.content}
                 </p>
               </div>
@@ -132,7 +132,7 @@ export function VideoNotes({ videoId, initialNotes, onAddNote }: VideoNotesProps
           ))}
         </ul>
       ) : (
-        <p className="py-6 text-center text-sm text-muted-foreground">
+        <p className="py-4 text-center text-sm text-muted-foreground">
           No hay notas todavia. Se el primero en agregar una.
         </p>
       )}
