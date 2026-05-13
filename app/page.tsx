@@ -32,7 +32,6 @@ export default function HomePage() {
             CC
           </h1>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-            Tu{' '}
             <strong className="font-semibold text-foreground">
               Carpeta de Clips
             </strong>{' '}
@@ -92,7 +91,7 @@ export default function HomePage() {
       <footer className="border-t border-border mt-auto">
         <div className="mx-auto max-w-2xl px-6 py-8">
           <p className="text-xs text-muted-foreground">
-            carpeta.cl — Biblioteca de clips para analizar el juego.
+            carpeta.cl — Biblioteca de partidos.
           </p>
           <p className="text-xs text-muted-foreground">
             by Camilu
