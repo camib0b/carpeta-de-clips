@@ -645,6 +645,22 @@ export const videoClips: VideoClip[] = [
   // Others - Primera A - COGS vs PWCC (Playlist: PLIeIXM8a6FD67yZz5sREljuIvBAFjR8tE)
   // =====================
   {
+    id: '59',
+    youtubeId: '0-CC3uSKRfY',
+    title: 'PWCC Juego 50-yd',
+    gameConcept: 'Juego 50-yds',
+    collection: 'Others',
+    category: 'Primera A',
+    rivalTeam: 'COGS vs PWCC',
+    date: '2026-04-25',
+    place: 'COGS',
+    homeTeam: 'COGS',
+    awayTeam: 'PWCC',
+    homeGoals: 2,
+    awayGoals: 3,
+    uploadedAt: '2026-04-25T11:00:00Z',
+  },
+  {
     id: '52',
     youtubeId: 'fJhrZsPSpo8',
     title: 'Salidas COGS (Presión PWCC)',
@@ -755,6 +771,22 @@ export const videoClips: VideoClip[] = [
     homeGoals: 2,
     awayGoals: 3,
     uploadedAt: '2026-04-25T04:00:00Z',
+  },
+  {
+    id: '60',
+    youtubeId: '8Lou8wPiWEE',
+    title: 'COGS Juego 50-yd',
+    gameConcept: 'Juego 50-yds',
+    collection: 'Others',
+    category: 'Primera A',
+    rivalTeam: 'COGS vs PWCC',
+    date: '2026-04-25',
+    place: 'COGS',
+    homeTeam: 'COGS',
+    awayTeam: 'PWCC',
+    homeGoals: 2,
+    awayGoals: 3,
+    uploadedAt: '2026-04-25T03:00:00Z',
   },
 ]
 
