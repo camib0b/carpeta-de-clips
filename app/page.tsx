@@ -94,7 +94,7 @@ export default function HomePage() {
             carpeta.cl — Biblioteca de partidos.
           </p>
           <p className="text-xs text-muted-foreground">
-            by Camilu
+            camilaescudero@uc.cl
           </p>
         </div>
       </footer>
