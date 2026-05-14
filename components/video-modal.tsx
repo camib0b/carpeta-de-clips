@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { VideoClip, VideoNote } from '@/lib/types'
 import {
@@ -16,6 +16,11 @@ import { VideoNotes } from './video-notes'
 import YouTube from 'react-youtube'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+
+const MINIMUM_SWIPE_DISTANCE = 60
+const MINIMUM_HORIZONTAL_TO_VERTICAL_RATIO = 1.25
+const INTERACTIVE_TOUCH_TARGET_SELECTOR =
+  'button, a, input, textarea, select, [contenteditable="true"], [role="button"]'
 
 interface VideoModalProps {
   video: VideoClip | null
@@ -45,6 +50,54 @@ export function VideoModal({
   onNavigateNext,
 }: VideoModalProps) {
   const showClipNavigation = open && (canNavigatePrevious || canNavigateNext)
+  const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
+
+  const handleTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null
+
+    if (target?.closest(INTERACTIVE_TOUCH_TARGET_SELECTOR)) {
+      touchStartPoint.current = null
+      return
+    }
+
+    const touch = event.touches[0]
+    if (!touch) return
+
+    touchStartPoint.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+    }
+  }, [])
+
+  const handleTouchEnd = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    if (!open || !touchStartPoint.current) return
+
+    const touch = event.changedTouches[0]
+    if (!touch) {
+      touchStartPoint.current = null
+      return
+    }
+
+    const deltaX = touch.clientX - touchStartPoint.current.x
+    const deltaY = touch.clientY - touchStartPoint.current.y
+    const horizontalDistance = Math.abs(deltaX)
+    const verticalDistance = Math.abs(deltaY)
+
+    touchStartPoint.current = null
+
+    if (
+      horizontalDistance < MINIMUM_SWIPE_DISTANCE ||
+      horizontalDistance < verticalDistance * MINIMUM_HORIZONTAL_TO_VERTICAL_RATIO
+    ) {
+      return
+    }
+
+    if (deltaX < 0 && canNavigateNext && onNavigateNext) {
+      onNavigateNext()
+    } else if (deltaX > 0 && canNavigatePrevious && onNavigatePrevious) {
+      onNavigatePrevious()
+    }
+  }, [open, canNavigateNext, canNavigatePrevious, onNavigateNext, onNavigatePrevious])
 
   useEffect(() => {
     if (!open || (!canNavigatePrevious && !canNavigateNext)) return
@@ -87,7 +140,14 @@ export function VideoModal({
           }
         }}
       >
-        <div className="overflow-y-auto max-h-[94vh]">
+        <div
+          className="overflow-y-auto max-h-[94vh]"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={() => {
+            touchStartPoint.current = null
+          }}
+        >
           {/* Video Player */}
           <div className="relative aspect-video w-full bg-black">
             <YouTube
