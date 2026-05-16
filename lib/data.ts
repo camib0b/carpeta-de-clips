@@ -449,6 +449,28 @@ export const videoClips: VideoClip[] = [
     awayTeam: 'Old Girls',
     uploadedAt: '2024-03-14T09:00:00Z',
   },
+  {
+    id: '61',
+    youtubeId: 'GxEs1X3fDhg',
+    title: 'Old Girls Cortos ofensivos',
+    gameConcept: 'Corner Cortos',
+    rivalTeam: 'Old Girls',
+    date: '2024-03-08',
+    homeTeam: 'UC Primera B',
+    awayTeam: 'Old Girls',
+    uploadedAt: '2024-03-14T08:00:00Z',
+  },
+  {
+    id: '62',
+    youtubeId: 'VXxuLArSPrc',
+    title: 'UC B Cortos ofensivos',
+    gameConcept: 'Corner Cortos',
+    rivalTeam: 'Old Girls',
+    date: '2024-03-08',
+    homeTeam: 'UC Primera B',
+    awayTeam: 'Old Girls',
+    uploadedAt: '2024-03-14T07:00:00Z',
+  },
 
   // =====================
   // UC Primera B - UC B vs Old Gabs (Playlist: PLIeIXM8a6FD7nq_02FemxJmaNBo9XyuFE)
