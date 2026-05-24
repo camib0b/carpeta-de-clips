@@ -1,3 +1,4 @@
+import { TeamIcon } from '@/components/team-icon'
 import { Team } from '@/lib/types'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -7,19 +8,7 @@ interface TeamHeaderProps {
 }
 
 /**
- * Country flag emoji helper
- * Converts ISO country code to flag emoji
- */
-function getCountryFlag(countryCode: string): string {
-  const codePoints = countryCode
-    .toUpperCase()
-    .split('')
-    .map((char) => 127397 + char.charCodeAt(0))
-  return String.fromCodePoint(...codePoints)
-}
-
-/**
- * Team header component with name, country flag, and back navigation
+ * Team header component with name, team icon, and back navigation
  * Minimalist design with generous spacing
  */
 export function TeamHeader({ team }: TeamHeaderProps) {
@@ -35,11 +24,9 @@ export function TeamHeader({ team }: TeamHeaderProps) {
           <span>Todos los Equipos</span>
         </Link>
 
-        {/* Team name and flag */}
+        {/* Team name and icon */}
         <div className="flex items-center gap-4">
-          <span className="text-4xl" role="img" aria-label={`bandera de ${team.country}`}>
-            {getCountryFlag(team.country)}
-          </span>
+          <TeamIcon slug={team.slug} name={team.name} size="lg" />
           <h1 className="text-2xl font-medium tracking-tight text-foreground">
             {team.name}
           </h1>

@@ -1,16 +1,6 @@
 import Link from 'next/link'
+import { TeamIcon } from '@/components/team-icon'
 import { teams, getTeamVideos } from '@/lib/data'
-
-/**
- * Country flag emoji helper
- */
-function getCountryFlag(countryCode: string): string {
-  const codePoints = countryCode
-    .toUpperCase()
-    .split('')
-    .map((char) => 127397 + char.charCodeAt(0))
-  return String.fromCodePoint(...codePoints)
-}
 
 /**
  * Home page - Team selection
@@ -51,13 +41,7 @@ export default function HomePage() {
                   className="group flex items-center justify-between py-6 transition-colors hover:bg-muted/30"
                 >
                   <div className="flex items-center gap-4">
-                    <span
-                      className="text-2xl"
-                      role="img"
-                      aria-label={`bandera de ${team.country}`}
-                    >
-                      {getCountryFlag(team.country)}
-                    </span>
+                    <TeamIcon slug={team.slug} name={team.name} size="sm" />
                     <span className="text-base font-medium text-foreground">
                       {team.name}
                     </span>
