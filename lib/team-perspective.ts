@@ -5,6 +5,7 @@ const UC_PRIMERA_B = 'UC Primera B'
 const RIVAL_SUBJECT_CONCEPT_MAP: Record<string, string> = {
   'Ingresos al área': 'Defensa de área',
   Salidas: 'Presiones',
+  'Juego 50-yds': 'Presiones',
 }
 
 const UC_SUBJECT_TITLE_PATTERNS = [
