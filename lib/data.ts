@@ -1,4 +1,5 @@
 import { Team, VideoClip, VideoNote } from './types'
+import { applyTeamPerspectiveConcept } from './team-perspective'
 
 /**
  * Teams data - UC Hockey teams
@@ -594,6 +595,108 @@ export const videoClips: VideoClip[] = [
   },
 
   // =====================
+  // UC Primera B - COGS vs UC B (Playlist: PLIeIXM8a6FD5e8cplaRsW42tSVXCLX2o3)
+  // =====================
+  {
+    id: '69',
+    youtubeId: 'h-VxqvuJPSs',
+    title: 'Shoot outs COGS vs UC B',
+    gameConcept: 'Shoot Outs',
+    category: 'Primera A',
+    rivalTeam: 'COGS',
+    date: '2026-05-16',
+    homeTeam: 'COGS',
+    awayTeam: 'UC Primera B',
+    homeGoals: 2,
+    awayGoals: 2,
+    uploadedAt: '2026-05-16T10:00:00Z',
+  },
+  {
+    id: '70',
+    youtubeId: 'VmcXYqBM4WQ',
+    title: 'COGS Goles',
+    gameConcept: 'Goles',
+    category: 'Primera A',
+    rivalTeam: 'COGS',
+    date: '2026-05-16',
+    homeTeam: 'COGS',
+    awayTeam: 'UC Primera B',
+    homeGoals: 2,
+    awayGoals: 2,
+    uploadedAt: '2026-05-16T09:00:00Z',
+  },
+  {
+    id: '71',
+    youtubeId: 'xAtzeBSGP08',
+    title: 'UC B Goles',
+    gameConcept: 'Goles',
+    category: 'Primera A',
+    rivalTeam: 'COGS',
+    date: '2026-05-16',
+    homeTeam: 'COGS',
+    awayTeam: 'UC Primera B',
+    homeGoals: 2,
+    awayGoals: 2,
+    uploadedAt: '2026-05-16T08:00:00Z',
+  },
+  {
+    id: '72',
+    youtubeId: 'roxHXSh-olQ',
+    title: 'UCB Cortos Ofensivos',
+    gameConcept: 'Corner Cortos',
+    category: 'Primera A',
+    rivalTeam: 'COGS',
+    date: '2026-05-16',
+    homeTeam: 'COGS',
+    awayTeam: 'UC Primera B',
+    homeGoals: 2,
+    awayGoals: 2,
+    uploadedAt: '2026-05-16T07:00:00Z',
+  },
+  {
+    id: '73',
+    youtubeId: 'nhj6BYSTjn4',
+    title: 'COGS Cortos ofensivos',
+    gameConcept: 'Corner Cortos',
+    category: 'Primera A',
+    rivalTeam: 'COGS',
+    date: '2026-05-16',
+    homeTeam: 'COGS',
+    awayTeam: 'UC Primera B',
+    homeGoals: 2,
+    awayGoals: 2,
+    uploadedAt: '2026-05-16T06:00:00Z',
+  },
+  {
+    id: '74',
+    youtubeId: '0mWdKtgjPkA',
+    title: 'UC B Ingresos al área',
+    gameConcept: 'Ingresos al área',
+    category: 'Primera A',
+    rivalTeam: 'COGS',
+    date: '2026-05-16',
+    homeTeam: 'COGS',
+    awayTeam: 'UC Primera B',
+    homeGoals: 2,
+    awayGoals: 2,
+    uploadedAt: '2026-05-16T05:00:00Z',
+  },
+  {
+    id: '75',
+    youtubeId: 'XrrXrI8CHGI',
+    title: 'COGS Ingresos al área',
+    gameConcept: 'Ingresos al área',
+    category: 'Primera A',
+    rivalTeam: 'COGS',
+    date: '2026-05-16',
+    homeTeam: 'COGS',
+    awayTeam: 'UC Primera B',
+    homeGoals: 2,
+    awayGoals: 2,
+    uploadedAt: '2026-05-16T04:00:00Z',
+  },
+
+  // =====================
   // UC Primera A - Old Girls vs UC A (Playlist: PLIeIXM8a6FD5elCVusR223GdoDsoO2_Hw)
   // =====================
   {
@@ -956,6 +1059,7 @@ export function getTeamVideos(teamSlug: string): VideoClip[] {
         clip.homeTeam === team.name ||
         clip.awayTeam === team.name
     )
+    .map((clip) => applyTeamPerspectiveConcept(clip, team.name))
     .sort(
       (a, b) =>
         new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
