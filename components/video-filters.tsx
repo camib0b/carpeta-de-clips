@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ShareFiltersButton } from '@/components/share-filters-button'
 
 interface VideoFiltersProps {
   selectedConcept: string
@@ -17,6 +18,7 @@ interface VideoFiltersProps {
   onRivalChange: (rival: string) => void
   rivals: string[]
   videos: VideoClip[]
+  hasActiveFilters: boolean
 }
 
 /**
@@ -30,6 +32,7 @@ export function VideoFilters({
   onRivalChange,
   rivals,
   videos,
+  hasActiveFilters,
 }: VideoFiltersProps) {
   // Compute available concepts based on selected rival
   const availableConcepts = useMemo(() => {
@@ -95,7 +98,7 @@ export function VideoFilters({
   }
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
       {/* Game Concept Filter */}
       <div className="flex items-center gap-3">
         <label
@@ -140,6 +143,8 @@ export function VideoFilters({
           </SelectContent>
         </Select>
       </div>
+
+      <ShareFiltersButton visible={hasActiveFilters} />
     </div>
   )
 }

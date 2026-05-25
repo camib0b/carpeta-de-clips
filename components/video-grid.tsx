@@ -5,6 +5,7 @@ import { VideoClip, VideoNote } from '@/lib/types'
 import { getVideoNotes } from '@/lib/data'
 import { VideoCard } from './video-card'
 import { VideoModal } from './video-modal'
+import { useLibraryFilters } from '@/hooks/use-library-filters'
 import { VideoFilters } from './video-filters'
 
 interface VideoGridProps {
@@ -20,8 +21,14 @@ interface VideoGridProps {
 export function VideoGrid({ videos, rivals }: VideoGridProps) {
   const [selectedVideo, setSelectedVideo] = useState<VideoClip | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [selectedConcept, setSelectedConcept] = useState('Todos los Conceptos')
-  const [selectedRival, setSelectedRival] = useState('Todos los Rivales')
+  const {
+    concept: selectedConcept,
+    rival: selectedRival,
+    setConcept: setSelectedConcept,
+    setRival: setSelectedRival,
+    clearFilters,
+    hasActiveFilters,
+  } = useLibraryFilters(rivals)
   
   // Notes state - in production this would be fetched from/persisted to database
   const [notesMap, setNotesMap] = useState<Record<string, VideoNote[]>>(() => {
@@ -116,6 +123,7 @@ export function VideoGrid({ videos, rivals }: VideoGridProps) {
         onRivalChange={setSelectedRival}
         rivals={rivals}
         videos={videos}
+        hasActiveFilters={hasActiveFilters}
       />
 
       {/* Results count */}
@@ -140,10 +148,7 @@ export function VideoGrid({ videos, rivals }: VideoGridProps) {
             No hay clips que coincidan con tus filtros.
           </p>
           <button
-            onClick={() => {
-              setSelectedConcept('Todos los Conceptos')
-              setSelectedRival('Todos los Rivales')
-            }}
+            onClick={clearFilters}
             className="mt-4 text-sm text-foreground underline underline-offset-4 hover:no-underline"
           >
             Limpiar filtros

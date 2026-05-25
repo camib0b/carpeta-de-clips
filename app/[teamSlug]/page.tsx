@@ -1,7 +1,9 @@
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { teams, getTeamVideos, getTeamRivals, getTeamBySlug } from '@/lib/data'
 import { TeamHeader } from '@/components/team-header'
 import { VideoGrid } from '@/components/video-grid'
+import { VideoGridSkeleton } from '@/components/video-grid-skeleton'
 import { Metadata } from 'next'
 
 interface TeamPageProps {
@@ -69,7 +71,9 @@ export default async function TeamPage({ params }: TeamPageProps) {
       <TeamHeader team={team} />
 
       <main className="mx-auto max-w-6xl px-6 py-12">
-        <VideoGrid videos={videos} rivals={rivals} />
+        <Suspense fallback={<VideoGridSkeleton />}>
+          <VideoGrid videos={videos} rivals={rivals} />
+        </Suspense>
       </main>
     </div>
   )
