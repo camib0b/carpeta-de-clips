@@ -1,6 +1,6 @@
 'use client'
 
-import { Link2 } from 'lucide-react'
+import { Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 
@@ -24,12 +24,13 @@ export function ShareFiltersButton({ visible }: ShareFiltersButtonProps) {
     <Button
       type="button"
       variant="outline"
-      size="sm"
+      size="icon-sm"
       onClick={handleCopyLink}
       className="shrink-0"
+      aria-label="Copiar enlace con filtros"
+      title="Copiar enlace"
     >
-      <Link2 className="h-4 w-4" />
-      Compartir filtros
+      <Share2 className="h-3.5 w-3.5" />
     </Button>
   )
 }
