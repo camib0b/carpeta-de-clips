@@ -168,9 +168,11 @@ export function VideoModal({
       <DialogContent
         className={cn(
           'gap-0 overflow-hidden p-0',
-          'w-[min(100vw-0.5rem,36rem)] max-w-none',
+          // Override dialog defaults (sm:max-w-lg caps at 512px and breaks the wide layout)
+          'max-w-none sm:max-w-none',
+          'w-[min(calc(100vw-1rem),100%)]',
           'max-h-[100dvh] sm:max-h-[94vh]',
-          'lg:w-[min(96vw,90rem)] lg:max-h-[92vh]',
+          'md:w-[min(94vw,80rem)] md:max-h-[92vh]',
         )}
         onPointerDownOutside={(event) => {
           const target = event.target as HTMLElement | null
@@ -181,8 +183,8 @@ export function VideoModal({
       >
         <div
           className={cn(
-            'flex max-h-[100dvh] flex-col overflow-hidden sm:max-h-[94vh] lg:max-h-[92vh]',
-            'lg:h-[min(88vh,52rem)] lg:flex-row',
+            'flex max-h-[100dvh] flex-col overflow-hidden sm:max-h-[94vh] md:max-h-[92vh]',
+            'md:flex-row md:items-start',
           )}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -190,9 +192,9 @@ export function VideoModal({
             touchStartPoint.current = null
           }}
         >
-          {/* Video Player — primary focus, ~75%+ of modal on desktop */}
-          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-black lg:basis-[76%]">
-            <div className="relative aspect-video w-full lg:aspect-auto lg:h-full lg:min-h-0">
+          {/* Video Player — primary focus; 16:9 aspect drives modal height on desktop */}
+          <div className="relative min-w-0 shrink-0 bg-black md:flex-1">
+            <div className="relative aspect-video w-full">
               <YouTube
                 videoId={video.youtubeId}
                 className="absolute inset-0"
@@ -211,7 +213,7 @@ export function VideoModal({
               {/* Mobile navigation — overlaid on video for visibility and touch access */}
               {showClipNavigation && (
                 <div
-                  className="pointer-events-none absolute inset-0 z-10 flex items-center justify-between px-2 sm:px-3 lg:hidden"
+                  className="pointer-events-none absolute inset-0 z-10 flex items-center justify-between px-2 sm:px-3 md:hidden"
                   aria-hidden={false}
                 >
                   <div className="pointer-events-auto">
@@ -240,37 +242,37 @@ export function VideoModal({
             className={cn(
               'overflow-y-auto border-border',
               'max-h-[42vh] border-t p-4 sm:p-5',
-              'lg:max-h-none lg:w-[min(100%,22rem)] lg:shrink-0 lg:basis-[24%] lg:border-t-0 lg:border-l lg:p-4',
+              'md:max-h-[92vh] md:w-72 md:shrink-0 md:border-t-0 md:border-l md:p-4',
             )}
           >
             <DialogHeader className="space-y-1 text-left">
-              <DialogTitle className="text-sm font-medium leading-snug tracking-tight sm:text-base lg:text-[0.9375rem]">
+              <DialogTitle className="text-sm font-medium leading-snug tracking-tight sm:text-base md:text-[0.9375rem]">
                 {video.title}
               </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground sm:text-sm lg:text-xs">
+              <DialogDescription className="text-xs text-muted-foreground sm:text-sm md:text-xs">
                 {video.gameConcept}
               </DialogDescription>
             </DialogHeader>
 
-            <dl className="mt-3 space-y-2 text-xs sm:text-sm lg:text-xs">
+            <dl className="mt-3 space-y-2 text-xs sm:text-sm md:text-xs">
               <div>
-                <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs lg:text-[0.625rem]">
+                <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs md:text-[0.625rem]">
                   Partido
                 </dt>
                 <dd className="text-foreground">
                   {video.homeTeam} vs {video.awayTeam}
                 </dd>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-1">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 md:grid-cols-1">
                 <div>
-                  <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs lg:text-[0.625rem]">
+                  <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs md:text-[0.625rem]">
                     Fecha
                   </dt>
                   <dd className="text-foreground">{formattedDate}</dd>
                 </div>
                 {video.category && (
                   <div>
-                    <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs lg:text-[0.625rem]">
+                    <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs md:text-[0.625rem]">
                       Categoría
                     </dt>
                     <dd className="text-foreground">{video.category}</dd>
@@ -278,7 +280,7 @@ export function VideoModal({
                 )}
                 {scoreDisplay && (
                   <div>
-                    <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs lg:text-[0.625rem]">
+                    <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs md:text-[0.625rem]">
                       Resultado
                     </dt>
                     <dd className="font-medium text-foreground">{scoreDisplay}</dd>
@@ -286,7 +288,7 @@ export function VideoModal({
                 )}
                 {video.place && (
                   <div>
-                    <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs lg:text-[0.625rem]">
+                    <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs md:text-[0.625rem]">
                       Lugar
                     </dt>
                     <dd className="text-foreground">{video.place}</dd>
@@ -295,7 +297,7 @@ export function VideoModal({
               </div>
             </dl>
 
-            <div className="my-3 border-t border-border lg:my-4" />
+            <div className="my-3 border-t border-border md:my-4" />
 
             <VideoNotes
               videoId={video.id}
@@ -314,9 +316,9 @@ export function VideoModal({
               direction="previous"
               onClick={onNavigatePrevious}
               className={cn(
-                'fixed top-1/2 z-50 hidden -translate-y-1/2 lg:flex',
+                'fixed top-1/2 z-50 hidden -translate-y-1/2 md:flex',
                 'size-12 border-border bg-background/95 text-foreground hover:bg-background',
-                'left-[max(0.75rem,calc((100vw-min(96vw,90rem))/2-3.5rem))]',
+                'left-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3.5rem))]',
               )}
             />
           )}
@@ -325,9 +327,9 @@ export function VideoModal({
               direction="next"
               onClick={onNavigateNext}
               className={cn(
-                'fixed top-1/2 z-50 hidden -translate-y-1/2 lg:flex',
+                'fixed top-1/2 z-50 hidden -translate-y-1/2 md:flex',
                 'size-12 border-border bg-background/95 text-foreground hover:bg-background',
-                'right-[max(0.75rem,calc((100vw-min(96vw,90rem))/2-3.5rem))]',
+                'right-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3.5rem))]',
               )}
             />
           )}
