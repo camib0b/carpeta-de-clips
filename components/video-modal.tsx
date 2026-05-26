@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react'
 import { VideoClip, VideoNote } from '@/lib/types'
 import {
   Dialog,
@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogPortal,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { VideoNotes } from './video-notes'
@@ -17,8 +16,10 @@ import YouTube from 'react-youtube'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 const MINIMUM_SWIPE_DISTANCE = 60
+const SWIPE_HINT_STORAGE_KEY = 'carpeta-de-clips-modal-swipe-hint-seen'
 const MINIMUM_HORIZONTAL_TO_VERTICAL_RATIO = 1.25
 const INTERACTIVE_TOUCH_TARGET_SELECTOR =
   'button, a, input, textarea, select, [contenteditable="true"], [role="button"]'
@@ -41,10 +42,20 @@ interface ClipNavButtonProps {
   className?: string
 }
 
+function isClipNavTarget(target: EventTarget | null) {
+  return target instanceof Element && Boolean(target.closest('[data-clip-nav]'))
+}
+
 function ClipNavButton({ direction, onClick, className }: ClipNavButtonProps) {
   const isPrevious = direction === 'previous'
   const Icon = isPrevious ? ChevronLeft : ChevronRight
   const label = isPrevious ? 'Clip anterior' : 'Clip siguiente'
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    onClick()
+  }
 
   return (
     <Button
@@ -52,7 +63,8 @@ function ClipNavButton({ direction, onClick, className }: ClipNavButtonProps) {
       variant="secondary"
       size="icon"
       data-clip-nav={direction}
-      onClick={onClick}
+      onClick={handleClick}
+      onPointerDown={(event) => event.stopPropagation()}
       aria-label={label}
       className={cn(
         'rounded-full border border-white/25 bg-black/75 text-white shadow-lg backdrop-blur-sm',
@@ -64,6 +76,21 @@ function ClipNavButton({ direction, onClick, className }: ClipNavButtonProps) {
     >
       <Icon className="size-7 sm:size-8" aria-hidden />
     </Button>
+  )
+}
+
+function SwipeNavigationHint() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center bg-gradient-to-t from-black/80 via-black/50 to-transparent px-4 pb-4 pt-10 md:hidden"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-xs font-medium text-white/95 backdrop-blur-sm">
+        <MoveHorizontal className="size-4 shrink-0 animate-pulse" aria-hidden />
+        <span>Desliza para cambiar de clip</span>
+      </div>
+    </div>
   )
 }
 
@@ -83,8 +110,36 @@ export function VideoModal({
   onNavigatePrevious,
   onNavigateNext,
 }: VideoModalProps) {
+  const isMobile = useIsMobile()
   const showClipNavigation = open && (canNavigatePrevious || canNavigateNext)
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
+  const [swipeHintDismissed, setSwipeHintDismissed] = useState(true)
+
+  useEffect(() => {
+    try {
+      setSwipeHintDismissed(localStorage.getItem(SWIPE_HINT_STORAGE_KEY) === '1')
+    } catch {
+      setSwipeHintDismissed(false)
+    }
+  }, [])
+
+  const dismissSwipeHint = useCallback(() => {
+    setSwipeHintDismissed(true)
+    try {
+      localStorage.setItem(SWIPE_HINT_STORAGE_KEY, '1')
+    } catch {
+      // ignore private browsing / storage errors
+    }
+  }, [])
+
+  const showSwipeHint =
+    isMobile && open && showClipNavigation && !swipeHintDismissed
+
+  const preventCloseOnClipNav = useCallback((event: Event) => {
+    if (isClipNavTarget(event.target)) {
+      event.preventDefault()
+    }
+  }, [])
 
   const handleTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement | null
@@ -127,11 +182,20 @@ export function VideoModal({
     }
 
     if (deltaX < 0 && canNavigateNext && onNavigateNext) {
+      dismissSwipeHint()
       onNavigateNext()
     } else if (deltaX > 0 && canNavigatePrevious && onNavigatePrevious) {
+      dismissSwipeHint()
       onNavigatePrevious()
     }
-  }, [open, canNavigateNext, canNavigatePrevious, onNavigateNext, onNavigatePrevious])
+  }, [
+    open,
+    canNavigateNext,
+    canNavigatePrevious,
+    onNavigateNext,
+    onNavigatePrevious,
+    dismissSwipeHint,
+  ])
 
   useEffect(() => {
     if (!open || (!canNavigatePrevious && !canNavigateNext)) return
@@ -174,13 +238,37 @@ export function VideoModal({
           'max-h-[100dvh] sm:max-h-[94vh]',
           'md:w-[min(94vw,80rem)] md:max-h-[92vh]',
         )}
-        onPointerDownOutside={(event) => {
-          const target = event.target as HTMLElement | null
-          if (target?.closest('[data-clip-nav]')) {
-            event.preventDefault()
-          }
-        }}
+        onPointerDownOutside={preventCloseOnClipNav}
+        onInteractOutside={preventCloseOnClipNav}
       >
+        {/* Desktop clip navigation — must live inside DialogContent so clicks are not treated as outside dismiss */}
+        {showClipNavigation && !isMobile && (
+          <>
+            {canNavigatePrevious && onNavigatePrevious && (
+              <ClipNavButton
+                direction="previous"
+                onClick={onNavigatePrevious}
+                className={cn(
+                  'fixed top-1/2 z-[60] hidden -translate-y-1/2 md:flex',
+                  'size-12 border-border bg-background/95 text-foreground hover:bg-background',
+                  'left-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3.5rem))]',
+                )}
+              />
+            )}
+            {canNavigateNext && onNavigateNext && (
+              <ClipNavButton
+                direction="next"
+                onClick={onNavigateNext}
+                className={cn(
+                  'fixed top-1/2 z-[60] hidden -translate-y-1/2 md:flex',
+                  'size-12 border-border bg-background/95 text-foreground hover:bg-background',
+                  'right-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3.5rem))]',
+                )}
+              />
+            )}
+          </>
+        )}
+
         <div
           className={cn(
             'flex max-h-[100dvh] flex-col overflow-hidden sm:max-h-[94vh] md:max-h-[92vh]',
@@ -210,30 +298,7 @@ export function VideoModal({
                 }}
               />
 
-              {/* Mobile navigation — overlaid on video for visibility and touch access */}
-              {showClipNavigation && (
-                <div
-                  className="pointer-events-none absolute inset-0 z-10 flex items-center justify-between px-2 sm:px-3 md:hidden"
-                  aria-hidden={false}
-                >
-                  <div className="pointer-events-auto">
-                    {canNavigatePrevious && onNavigatePrevious && (
-                      <ClipNavButton
-                        direction="previous"
-                        onClick={onNavigatePrevious}
-                      />
-                    )}
-                  </div>
-                  <div className="pointer-events-auto">
-                    {canNavigateNext && onNavigateNext && (
-                      <ClipNavButton
-                        direction="next"
-                        onClick={onNavigateNext}
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
+              {showSwipeHint && <SwipeNavigationHint />}
             </div>
           </div>
 
@@ -307,34 +372,6 @@ export function VideoModal({
           </div>
         </div>
       </DialogContent>
-
-      {/* Desktop navigation — flanking the wide modal */}
-      {showClipNavigation && (
-        <DialogPortal>
-          {canNavigatePrevious && onNavigatePrevious && (
-            <ClipNavButton
-              direction="previous"
-              onClick={onNavigatePrevious}
-              className={cn(
-                'fixed top-1/2 z-50 hidden -translate-y-1/2 md:flex',
-                'size-12 border-border bg-background/95 text-foreground hover:bg-background',
-                'left-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3.5rem))]',
-              )}
-            />
-          )}
-          {canNavigateNext && onNavigateNext && (
-            <ClipNavButton
-              direction="next"
-              onClick={onNavigateNext}
-              className={cn(
-                'fixed top-1/2 z-50 hidden -translate-y-1/2 md:flex',
-                'size-12 border-border bg-background/95 text-foreground hover:bg-background',
-                'right-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3.5rem))]',
-              )}
-            />
-          )}
-        </DialogPortal>
-      )}
     </Dialog>
   )
 }
