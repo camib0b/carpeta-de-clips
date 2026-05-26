@@ -6,7 +6,9 @@ import { getVideoNotes } from '@/lib/data'
 import { VideoCard } from './video-card'
 import { VideoModal } from './video-modal'
 import { useLibraryFilters } from '@/hooks/use-library-filters'
+import { MatchContextBanner } from './match-context-banner'
 import { VideoFilters } from './video-filters'
+import { getUniqueMatchesFromVideos } from '@/lib/match-display'
 
 interface VideoGridProps {
   videos: VideoClip[]
@@ -50,6 +52,13 @@ export function VideoGrid({ videos, rivals }: VideoGridProps) {
       return matchesConcept && matchesRival
     })
   }, [videos, selectedConcept, selectedRival])
+
+  const showMatchContext = selectedRival !== 'Todos los Rivales'
+
+  const matchContext = useMemo(() => {
+    if (!showMatchContext) return []
+    return getUniqueMatchesFromVideos(filteredVideos)
+  }, [filteredVideos, showMatchContext])
 
   const handleVideoClick = (video: VideoClip) => {
     setSelectedVideo(video)
@@ -125,6 +134,8 @@ export function VideoGrid({ videos, rivals }: VideoGridProps) {
         videos={videos}
         hasActiveFilters={hasActiveFilters}
       />
+
+      {showMatchContext && <MatchContextBanner matches={matchContext} />}
 
       {/* Results count */}
       <p className="text-sm text-muted-foreground">
