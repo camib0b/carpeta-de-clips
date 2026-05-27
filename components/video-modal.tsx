@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MoveHorizontal, Pause, Play } from 'lucide-react'
 import { VideoClip, VideoNote } from '@/lib/types'
 import {
   Dialog,
@@ -24,6 +24,8 @@ const MINIMUM_HORIZONTAL_TO_VERTICAL_RATIO = 1.25
 const INTERACTIVE_TOUCH_TARGET_SELECTOR =
   'button, a, input, textarea, select, [contenteditable="true"], [role="button"]'
 const YOUTUBE_PLAYER_STATE_PLAYING = 1
+const PLAYBACK_FEEDBACK_VISIBLE_MS = 350
+const PLAYBACK_FEEDBACK_FADE_MS = 180
 
 interface VideoModalProps {
   video: VideoClip | null
@@ -68,14 +70,14 @@ function ClipNavButton({ direction, onClick, className }: ClipNavButtonProps) {
       onPointerDown={(event) => event.stopPropagation()}
       aria-label={label}
       className={cn(
-        'rounded-full border border-white/25 bg-black/75 text-white shadow-lg backdrop-blur-sm',
-        'hover:bg-black/90 hover:text-white',
-        'focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/50',
-        'size-12 sm:size-14',
+        'rounded-full border border-white/15 bg-black/40 text-white/80 shadow-md backdrop-blur-sm',
+        'hover:bg-black/55 hover:text-white',
+        'focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black/50',
+        'size-10 sm:size-11',
         className,
       )}
     >
-      <Icon className="size-7 sm:size-8" aria-hidden />
+      <Icon className="size-5 sm:size-6" aria-hidden />
     </Button>
   )
 }
@@ -115,7 +117,13 @@ export function VideoModal({
   const showClipNavigation = open && (canNavigatePrevious || canNavigateNext)
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
   const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
+  const playbackFeedbackHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const playbackFeedbackRemoveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [swipeHintDismissed, setSwipeHintDismissed] = useState(true)
+  const [playbackFeedback, setPlaybackFeedback] = useState<{
+    icon: 'play' | 'pause'
+    fading: boolean
+  } | null>(null)
 
   useEffect(() => {
     try {
@@ -126,8 +134,45 @@ export function VideoModal({
   }, [])
 
   useEffect(() => {
+    return () => {
+      if (playbackFeedbackHideTimeoutRef.current) {
+        clearTimeout(playbackFeedbackHideTimeoutRef.current)
+      }
+      if (playbackFeedbackRemoveTimeoutRef.current) {
+        clearTimeout(playbackFeedbackRemoveTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     youtubePlayerRef.current = null
+    setPlaybackFeedback(null)
+    if (playbackFeedbackHideTimeoutRef.current) {
+      clearTimeout(playbackFeedbackHideTimeoutRef.current)
+    }
+    if (playbackFeedbackRemoveTimeoutRef.current) {
+      clearTimeout(playbackFeedbackRemoveTimeoutRef.current)
+    }
   }, [video?.id])
+
+  const showPlaybackFeedback = useCallback((icon: 'play' | 'pause') => {
+    if (playbackFeedbackHideTimeoutRef.current) {
+      clearTimeout(playbackFeedbackHideTimeoutRef.current)
+    }
+    if (playbackFeedbackRemoveTimeoutRef.current) {
+      clearTimeout(playbackFeedbackRemoveTimeoutRef.current)
+    }
+
+    setPlaybackFeedback({ icon, fading: false })
+
+    playbackFeedbackHideTimeoutRef.current = setTimeout(() => {
+      setPlaybackFeedback((current) => (current ? { ...current, fading: true } : null))
+    }, PLAYBACK_FEEDBACK_VISIBLE_MS)
+
+    playbackFeedbackRemoveTimeoutRef.current = setTimeout(() => {
+      setPlaybackFeedback(null)
+    }, PLAYBACK_FEEDBACK_VISIBLE_MS + PLAYBACK_FEEDBACK_FADE_MS)
+  }, [])
 
   const handleYoutubeReady = useCallback((event: YouTubeEvent) => {
     youtubePlayerRef.current = event.target
@@ -139,10 +184,12 @@ export function VideoModal({
 
     if (player.getPlayerState() === YOUTUBE_PLAYER_STATE_PLAYING) {
       player.pauseVideo()
+      showPlaybackFeedback('pause')
     } else {
       player.playVideo()
+      showPlaybackFeedback('play')
     }
-  }, [])
+  }, [showPlaybackFeedback])
 
   const dismissSwipeHint = useCallback(() => {
     setSwipeHintDismissed(true)
@@ -271,8 +318,8 @@ export function VideoModal({
                 onClick={onNavigatePrevious}
                 className={cn(
                   'fixed top-1/2 z-[60] hidden -translate-y-1/2 md:flex',
-                  'size-12 border-border bg-background/95 text-foreground hover:bg-background',
-                  'left-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3.5rem))]',
+                  'size-10 border-border/60 bg-background/55 text-foreground/90 hover:bg-background/75',
+                  'left-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3rem))]',
                 )}
               />
             )}
@@ -282,8 +329,8 @@ export function VideoModal({
                 onClick={onNavigateNext}
                 className={cn(
                   'fixed top-1/2 z-[60] hidden -translate-y-1/2 md:flex',
-                  'size-12 border-border bg-background/95 text-foreground hover:bg-background',
-                  'right-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3.5rem))]',
+                  'size-10 border-border/60 bg-background/55 text-foreground/90 hover:bg-background/75',
+                  'right-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3rem))]',
                 )}
               />
             )}
@@ -323,10 +370,31 @@ export function VideoModal({
 
               <button
                 type="button"
-                className="absolute inset-0 z-10 cursor-pointer"
+                className="absolute inset-0 z-10 cursor-pointer border-0 bg-transparent"
                 aria-label="Reproducir o pausar video"
                 onClick={handleVideoSurfaceClick}
               />
+
+              {playbackFeedback && (
+                <div
+                  className="pointer-events-none absolute inset-0 z-[11] flex items-center justify-center"
+                  aria-hidden
+                >
+                  <div
+                    className={cn(
+                      'flex size-9 items-center justify-center rounded-full bg-black/15 text-white/50 shadow-none transition-opacity',
+                      playbackFeedback.fading ? 'opacity-0' : 'opacity-100',
+                    )}
+                    style={{ transitionDuration: `${PLAYBACK_FEEDBACK_FADE_MS}ms` }}
+                  >
+                    {playbackFeedback.icon === 'play' ? (
+                      <Play className="ml-px size-4 fill-current" aria-hidden />
+                    ) : (
+                      <Pause className="size-4 fill-current" aria-hidden />
+                    )}
+                  </div>
+                </div>
+              )}
 
               {showSwipeHint && <SwipeNavigationHint />}
             </div>
