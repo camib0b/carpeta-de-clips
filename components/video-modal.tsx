@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { VideoNotes } from './video-notes'
-import YouTube from 'react-youtube'
+import YouTube, { type YouTubeEvent, type YouTubePlayer } from 'react-youtube'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -23,6 +23,7 @@ const SWIPE_HINT_STORAGE_KEY = 'carpeta-de-clips-modal-swipe-hint-seen'
 const MINIMUM_HORIZONTAL_TO_VERTICAL_RATIO = 1.25
 const INTERACTIVE_TOUCH_TARGET_SELECTOR =
   'button, a, input, textarea, select, [contenteditable="true"], [role="button"]'
+const YOUTUBE_PLAYER_STATE_PLAYING = 1
 
 interface VideoModalProps {
   video: VideoClip | null
@@ -113,6 +114,7 @@ export function VideoModal({
   const isMobile = useIsMobile()
   const showClipNavigation = open && (canNavigatePrevious || canNavigateNext)
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
+  const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
   const [swipeHintDismissed, setSwipeHintDismissed] = useState(true)
 
   useEffect(() => {
@@ -120,6 +122,25 @@ export function VideoModal({
       setSwipeHintDismissed(localStorage.getItem(SWIPE_HINT_STORAGE_KEY) === '1')
     } catch {
       setSwipeHintDismissed(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    youtubePlayerRef.current = null
+  }, [video?.id])
+
+  const handleYoutubeReady = useCallback((event: YouTubeEvent) => {
+    youtubePlayerRef.current = event.target
+  }, [])
+
+  const handleVideoSurfaceClick = useCallback(() => {
+    const player = youtubePlayerRef.current
+    if (!player) return
+
+    if (player.getPlayerState() === YOUTUBE_PLAYER_STATE_PLAYING) {
+      player.pauseVideo()
+    } else {
+      player.playVideo()
     }
   }, [])
 
@@ -287,6 +308,7 @@ export function VideoModal({
                 videoId={video.youtubeId}
                 className="absolute inset-0"
                 iframeClassName="h-full w-full"
+                onReady={handleYoutubeReady}
                 opts={{
                   width: '100%',
                   height: '100%',
@@ -294,8 +316,16 @@ export function VideoModal({
                     autoplay: 1,
                     modestbranding: 1,
                     rel: 0,
+                    controls: 0,
                   },
                 }}
+              />
+
+              <button
+                type="button"
+                className="absolute inset-0 z-10 cursor-pointer"
+                aria-label="Reproducir o pausar video"
+                onClick={handleVideoSurfaceClick}
               />
 
               {showSwipeHint && <SwipeNavigationHint />}
