@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, MoveHorizontal, Pause, Play } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react'
 import { VideoClip, VideoNote } from '@/lib/types'
 import {
   Dialog,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { VideoNotes } from './video-notes'
-import YouTube, { type YouTubeEvent, type YouTubePlayer } from 'react-youtube'
+import YouTube from 'react-youtube'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -23,9 +23,6 @@ const SWIPE_HINT_STORAGE_KEY = 'carpeta-de-clips-modal-swipe-hint-seen'
 const MINIMUM_HORIZONTAL_TO_VERTICAL_RATIO = 1.25
 const INTERACTIVE_TOUCH_TARGET_SELECTOR =
   'button, a, input, textarea, select, [contenteditable="true"], [role="button"]'
-const YOUTUBE_PLAYER_STATE_PLAYING = 1
-const PLAYBACK_FEEDBACK_VISIBLE_MS = 350
-const PLAYBACK_FEEDBACK_FADE_MS = 180
 
 interface VideoModalProps {
   video: VideoClip | null
@@ -116,14 +113,7 @@ export function VideoModal({
   const isMobile = useIsMobile()
   const showClipNavigation = open && (canNavigatePrevious || canNavigateNext)
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
-  const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
-  const playbackFeedbackHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const playbackFeedbackRemoveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [swipeHintDismissed, setSwipeHintDismissed] = useState(true)
-  const [playbackFeedback, setPlaybackFeedback] = useState<{
-    icon: 'play' | 'pause'
-    fading: boolean
-  } | null>(null)
 
   useEffect(() => {
     try {
@@ -132,64 +122,6 @@ export function VideoModal({
       setSwipeHintDismissed(false)
     }
   }, [])
-
-  useEffect(() => {
-    return () => {
-      if (playbackFeedbackHideTimeoutRef.current) {
-        clearTimeout(playbackFeedbackHideTimeoutRef.current)
-      }
-      if (playbackFeedbackRemoveTimeoutRef.current) {
-        clearTimeout(playbackFeedbackRemoveTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    youtubePlayerRef.current = null
-    setPlaybackFeedback(null)
-    if (playbackFeedbackHideTimeoutRef.current) {
-      clearTimeout(playbackFeedbackHideTimeoutRef.current)
-    }
-    if (playbackFeedbackRemoveTimeoutRef.current) {
-      clearTimeout(playbackFeedbackRemoveTimeoutRef.current)
-    }
-  }, [video?.id])
-
-  const showPlaybackFeedback = useCallback((icon: 'play' | 'pause') => {
-    if (playbackFeedbackHideTimeoutRef.current) {
-      clearTimeout(playbackFeedbackHideTimeoutRef.current)
-    }
-    if (playbackFeedbackRemoveTimeoutRef.current) {
-      clearTimeout(playbackFeedbackRemoveTimeoutRef.current)
-    }
-
-    setPlaybackFeedback({ icon, fading: false })
-
-    playbackFeedbackHideTimeoutRef.current = setTimeout(() => {
-      setPlaybackFeedback((current) => (current ? { ...current, fading: true } : null))
-    }, PLAYBACK_FEEDBACK_VISIBLE_MS)
-
-    playbackFeedbackRemoveTimeoutRef.current = setTimeout(() => {
-      setPlaybackFeedback(null)
-    }, PLAYBACK_FEEDBACK_VISIBLE_MS + PLAYBACK_FEEDBACK_FADE_MS)
-  }, [])
-
-  const handleYoutubeReady = useCallback((event: YouTubeEvent) => {
-    youtubePlayerRef.current = event.target
-  }, [])
-
-  const handleVideoSurfaceClick = useCallback(() => {
-    const player = youtubePlayerRef.current
-    if (!player) return
-
-    if (player.getPlayerState() === YOUTUBE_PLAYER_STATE_PLAYING) {
-      player.pauseVideo()
-      showPlaybackFeedback('pause')
-    } else {
-      player.playVideo()
-      showPlaybackFeedback('play')
-    }
-  }, [showPlaybackFeedback])
 
   const dismissSwipeHint = useCallback(() => {
     setSwipeHintDismissed(true)
@@ -355,7 +287,6 @@ export function VideoModal({
                 videoId={video.youtubeId}
                 className="absolute inset-0"
                 iframeClassName="h-full w-full"
-                onReady={handleYoutubeReady}
                 opts={{
                   width: '100%',
                   height: '100%',
@@ -363,38 +294,9 @@ export function VideoModal({
                     autoplay: 1,
                     modestbranding: 1,
                     rel: 0,
-                    controls: 0,
                   },
                 }}
               />
-
-              <button
-                type="button"
-                className="absolute inset-0 z-10 cursor-pointer border-0 bg-transparent"
-                aria-label="Reproducir o pausar video"
-                onClick={handleVideoSurfaceClick}
-              />
-
-              {playbackFeedback && (
-                <div
-                  className="pointer-events-none absolute inset-0 z-[11] flex items-center justify-center"
-                  aria-hidden
-                >
-                  <div
-                    className={cn(
-                      'flex size-9 items-center justify-center rounded-full bg-black/15 text-white/50 shadow-none transition-opacity',
-                      playbackFeedback.fading ? 'opacity-0' : 'opacity-100',
-                    )}
-                    style={{ transitionDuration: `${PLAYBACK_FEEDBACK_FADE_MS}ms` }}
-                  >
-                    {playbackFeedback.icon === 'play' ? (
-                      <Play className="ml-px size-4 fill-current" aria-hidden />
-                    ) : (
-                      <Pause className="size-4 fill-current" aria-hidden />
-                    )}
-                  </div>
-                </div>
-              )}
 
               {showSwipeHint && <SwipeNavigationHint />}
             </div>
