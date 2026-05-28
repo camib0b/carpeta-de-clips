@@ -8,9 +8,21 @@ __v0_jsx-dev-runtime.ts
 next.user-config.*
 
 # Environment variables
+.env
 .env*.local
 
 # Common ignores
 node_modules
 .next/
 .DS_Store
+tsconfig.tsbuildinfo
+
+# OpenNext
+.open-next
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+
+!.env.example
