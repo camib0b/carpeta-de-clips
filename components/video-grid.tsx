@@ -13,6 +13,7 @@ import { getUniqueMatchesFromVideos } from '@/lib/match-display'
 interface VideoGridProps {
   videos: VideoClip[]
   rivals: string[]
+  matchXmlAvailability: Record<string, boolean>
 }
 
 /**
@@ -20,7 +21,7 @@ interface VideoGridProps {
  * Displays videos in a responsive grid with client-side filtering
  * Manages notes state for all videos
  */
-export function VideoGrid({ videos, rivals }: VideoGridProps) {
+export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridProps) {
   const [selectedVideo, setSelectedVideo] = useState<VideoClip | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const {
@@ -135,7 +136,12 @@ export function VideoGrid({ videos, rivals }: VideoGridProps) {
         hasActiveFilters={hasActiveFilters}
       />
 
-      {showMatchContext && <MatchContextBanner matches={matchContext} />}
+      {showMatchContext && (
+        <MatchContextBanner
+          matches={matchContext}
+          matchXmlAvailability={matchXmlAvailability}
+        />
+      )}
 
       {/* Results count */}
       <p className="text-sm text-muted-foreground">

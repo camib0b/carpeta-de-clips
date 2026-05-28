@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
+import { buildMatchKeyFromClip, matchKeyToStorageSlug } from '@/lib/match-keys'
 import type { VideoClip } from '@/lib/types'
 
 export interface MatchMetadata {
@@ -11,13 +12,17 @@ export interface MatchMetadata {
   homeGoals?: number
   awayGoals?: number
   shootoutWinner?: string
+  /** Slug for public/match-xml/{storageSlug}.xml and /api/match-xml/[slug] */
+  storageSlug: string
 }
 
 function matchKey(video: VideoClip): string {
-  return `${video.date}|${video.homeTeam}|${video.awayTeam}`
+  return buildMatchKeyFromClip(video)
 }
 
 function videoToMatchMetadata(video: VideoClip): MatchMetadata {
+  const storageSlug = matchKeyToStorageSlug(buildMatchKeyFromClip(video))
+
   return {
     date: video.date,
     tournament: video.category ?? video.collection,
@@ -26,6 +31,7 @@ function videoToMatchMetadata(video: VideoClip): MatchMetadata {
     homeGoals: video.homeGoals,
     awayGoals: video.awayGoals,
     shootoutWinner: video.shootoutWinner,
+    storageSlug,
   }
 }
 
@@ -46,6 +52,24 @@ export function getUniqueMatchesFromVideos(videos: VideoClip[]): MatchMetadata[]
 
 export function formatMatchDate(date: string): string {
   return format(new Date(date), "d 'de' MMM, yyyy", { locale: es })
+}
+
+export function buildMatchXmlDownloadFilename(match: MatchMetadata): string {
+  const datePart = match.date
+  const teamsPart = `${match.homeTeam} vs ${match.awayTeam}`
+    .replace(/[/\\?%*:|"<>]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return `${teamsPart} ${datePart}.xml`
+}
+
+export function getMatchXmlDownloadHref(
+  storageSlug: string,
+  downloadFilename: string,
+): string {
+  const params = new URLSearchParams({ filename: downloadFilename })
+  return `/api/match-xml/${storageSlug}?${params.toString()}`
 }
 
 export function formatMatchScore(match: MatchMetadata): string | null {
