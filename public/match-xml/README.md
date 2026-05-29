@@ -3,6 +3,10 @@
 Each file holds the full LongoMatch-style event encoding for one match (~200 KB).
 Clip playlists on YouTube were built from these exports.
 
+Production XML is served from the Cloudflare R2 bucket **clipped-xml** (see
+`lib/match-xml-catalog.ts` when the object name differs from `{storageSlug}.xml`).
+Local copies in this folder are optional fallbacks for development.
+
 ## File naming
 
 Name each file `{storageSlug}.xml` where `storageSlug` is derived from the match:

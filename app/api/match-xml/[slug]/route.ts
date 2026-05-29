@@ -26,7 +26,7 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Invalid match identifier' }, { status: 400 })
   }
 
-  const xmlBytes = readMatchXmlBytes(slug)
+  const xmlBytes = await readMatchXmlBytes(slug)
   if (!xmlBytes) {
     return NextResponse.json({ error: 'Match XML not found' }, { status: 404 })
   }

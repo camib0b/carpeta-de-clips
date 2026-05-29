@@ -4,10 +4,10 @@ import { Download } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
-  buildMatchXmlDownloadFilename,
   getMatchXmlDownloadHref,
   type MatchMetadata,
 } from '@/lib/match-display'
+import { resolveMatchXmlDownloadFilename } from '@/lib/match-xml-catalog'
 
 interface MatchXmlDownloadButtonProps {
   match: MatchMetadata
@@ -25,7 +25,7 @@ export function MatchXmlDownloadButton({
     return null
   }
 
-  const downloadFilename = buildMatchXmlDownloadFilename(match)
+  const downloadFilename = resolveMatchXmlDownloadFilename(match)
   const href = getMatchXmlDownloadHref(match.storageSlug, downloadFilename)
 
   return (

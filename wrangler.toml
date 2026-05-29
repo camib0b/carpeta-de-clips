@@ -1,0 +1,20 @@
+name = "carpeta-de-clips"
+compatibility_date = "2025-05-24"
+
+# Create Hyperdrive in the Cloudflare dashboard:
+# Workers & Pages → Hyperdrive → Create → paste your Postgres URL (Neon recommended)
+#
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "<your-hyperdrive-config-id>"
+
+# LongoMatch event XML exports (e.g. COGS vs UCB.xml)
+[[r2_buckets]]
+binding = "CLIPPED_XML"
+bucket_name = "clipped-xml"
+remote = true
+
+# Future: R2 bucket for self-hosted video files (metadata stays in Postgres)
+# [[r2_buckets]]
+# binding = "VIDEO_STORAGE"
+# bucket_name = "carpeta-clips"

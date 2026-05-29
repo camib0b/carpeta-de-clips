@@ -17,6 +17,13 @@
   "images": {
     "binding": "IMAGES"
   },
+  "r2_buckets": [
+    {
+      "binding": "CLIPPED_XML",
+      "bucket_name": "clipped-xml",
+      "remote": true
+    }
+  ],
   "observability": {
     "enabled": true
   }
