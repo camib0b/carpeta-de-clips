@@ -13,6 +13,10 @@ export const MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG: Record<
     objectKey: 'COGS vs UCB.xml',
     downloadFilename: 'COGS vs UCB.xml',
   },
+  '2026-05-28--Manquehue--UC_Primera_B--Manquehue': {
+    objectKey: 'MQA vs UCB.xml',
+    downloadFilename: 'MQA vs UCB.xml',
+  },
   // Others — Primera A cross-club matches (R2 clipped-xml)
   '2026-03-21--Manquehue--Old_Reds--Manquehue_vs_Old_Reds--Others': {
     objectKey: 'MA vs Old reds.xml',
