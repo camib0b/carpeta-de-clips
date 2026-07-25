@@ -6,6 +6,12 @@ const RIVAL_SUBJECT_CONCEPT_MAP: Record<string, string> = {
   'Ingresos al área': 'Defensa de área',
   Salidas: 'Presiones',
   'Juego 50-yds': 'Presiones',
+  'Juego 75-yds': 'Presiones',
+}
+
+/** Title prefixes that identify the same opponent as `homeTeam`/`awayTeam`. */
+const OPPONENT_TITLE_ALIASES: Record<string, string[]> = {
+  Manquehue: ['Manquehue', 'MQA'],
 }
 
 const UC_SUBJECT_TITLE_PATTERNS = [
@@ -36,6 +42,15 @@ function getOpponentTeamName(
   return null
 }
 
+function titleStartsWithOpponent(title: string, opponent: string): boolean {
+  const aliases = OPPONENT_TITLE_ALIASES[opponent] ?? [opponent]
+  const normalizedTitle = title.toLowerCase()
+
+  return aliases.some((alias) =>
+    normalizedTitle.startsWith(alias.toLowerCase())
+  )
+}
+
 function isRivalSubjectClip(clip: VideoClip, teamName: string): boolean {
   const opponent = getOpponentTeamName(clip, teamName)
 
@@ -49,7 +64,7 @@ function isRivalSubjectClip(clip: VideoClip, teamName: string): boolean {
     return false
   }
 
-  return title.toLowerCase().startsWith(opponent.toLowerCase())
+  return titleStartsWithOpponent(title, opponent)
 }
 
 export function applyTeamPerspectiveConcept(
