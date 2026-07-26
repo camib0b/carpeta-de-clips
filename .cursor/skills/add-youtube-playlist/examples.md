@@ -102,12 +102,35 @@ Added in sync:
 | `Shoot outs COGS vs UC B` | `Shoot Outs` | neutral dual-team title |
 | `[Video borrado]` | — | skip; do not import |
 
+## R2 XML → Descargar XML button
+
+When the user names an object in bucket `clipped-xml`, catalog it so the match banner shows **Descargar XML**.
+
+| Match | `storageSlug` | R2 `objectKey` |
+|-------|---------------|----------------|
+| COGS vs UC B | `2026-05-16--COGS--UC_Primera_B--COGS` | `COGS vs UCB.xml` |
+| Manquehue vs UC B | `2026-05-28--Manquehue--UC_Primera_B--Manquehue` | `MQA vs UCB.xml` |
+| Old Reds vs UC B | `2026-05-30--Old_Reds--UC_Primera_B--Old_Reds` | `OR vs UCB.xml` |
+| Manquehue vs Old Girls (Others) | `2026-05-16--Manquehue--Old_Girls--Manquehue_vs_Old_Girls--Others` | `MQA vs OGI.xml` |
+
+**Catalog template** (`lib/match-xml-catalog.ts`):
+
+```ts
+'2026-05-30--Old_Reds--UC_Primera_B--Old_Reds': {
+  objectKey: 'OR vs UCB.xml',
+  downloadFilename: 'OR vs UCB.xml',
+},
+```
+
+After cataloging, `isMatchXmlAvailable(storageSlug)` is `true` → `MatchXmlDownloadButton` renders on the team page match banner. No new component work.
+
 ## Commit scope (typical)
 
-Playlist-only work that shipped:
+Playlist + XML work that shipped:
 
 ```
 lib/data.ts                          # always
+lib/match-xml-catalog.ts             # when wiring / enabling Descargar XML
 lib/team-perspective.ts              # only when POV rules / aliases change
 ```
 

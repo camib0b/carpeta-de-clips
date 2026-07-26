@@ -1,12 +1,13 @@
 ---
 name: add-youtube-playlist
 description: >-
-  Import YouTube playlist videos into carpeta-de-clips team library pages.
-  Maps each video title to a gameConcept filter from the analyzing team's
-  point of view (rival salidas / 50-yd / 75-yd → Presiones for UC Primera B).
-  Use when the user provides a YouTube playlist link plus a team, asks to add
-  missing playlist clips, sync new videos to an existing playlist, or wire
-  match XML downloads from R2 clipped-xml.
+  Import YouTube playlist videos into carpeta-de-clips team library pages,
+  including wiring the match XML from R2 clipped-xml so the Descargar XML
+  button appears on the match banner. Maps each video title to a gameConcept
+  filter from the analyzing team's point of view (rival salidas / 50-yd /
+  75-yd → Presiones for UC Primera B). Use when the user provides a YouTube
+  playlist link plus a team, asks to add missing playlist clips, sync new
+  videos to an existing playlist, or wire match XML downloads from R2.
 ---
 
 # Add YouTube Playlist Clips
@@ -17,9 +18,10 @@ Import a YouTube playlist into the correct team section of this app so filters w
 
 - YouTube playlist URL (`list=PL…`)
 - **Target library**: UC team page (e.g. UC Primera B → `uc-primera-b`) **or** Others (`others`)
-- Match metadata when adding a **new** match: date, home/away, score, optional shootout winner, optional `place`, optional R2 XML filename
+- Match metadata when adding a **new** match: date, home/away, score, optional shootout winner, optional `place`
+- **R2 XML object name** in bucket `clipped-xml` (e.g. `OR vs UCB.xml`) — required for new matches so the download button can be enabled
 
-If metadata is missing for a new match, ask before inventing scores or dates.
+If metadata or the XML filename is missing for a new match, ask before inventing scores, dates, or object keys.
 
 ## Choose the library target
 
@@ -65,9 +67,9 @@ Playlist import:
 - [ ] 2. Diff against existing youtubeIds for that match/team
 - [ ] 3. Map each title → gameConcept (+ team aliases if needed)
 - [ ] 4. Append VideoClip entries in lib/data.ts
-- [ ] 5. Optional: R2 XML in lib/match-xml-catalog.ts
+- [ ] 5. Wire R2 XML in lib/match-xml-catalog.ts (enables Descargar XML)
 - [ ] 6. Optional: playlist id in db/seed.ts (if touching seed)
-- [ ] 7. Verify POV remapping with a quick script
+- [ ] 7. Verify clips + XML availability (download button will show)
 - [ ] 8. Commit / push / deploy only if the user asks
 ```
 
@@ -141,9 +143,22 @@ Match key / storage slug (for XML / optional seed):
 - Key: `date|homeTeam|awayTeam|rivalTeam` (+ `|Others` when `collection: 'Others'`)
 - Slug: spaces → `_`, joined with `--` via `matchKeyToStorageSlug`
 
-### 5. Optional match XML (R2)
+### 5. Wire match XML from R2 (required for new matches)
 
-If the user provides an R2 object name in bucket `clipped-xml`, add to `MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG` in `lib/match-xml-catalog.ts`:
+Match event XMLs live in the Cloudflare R2 bucket **`clipped-xml`** (binding `CLIPPED_XML`). Hooking the file up is what turns on the **Descargar XML** button in the match context banner — no separate UI change is needed.
+
+**How the button appears**
+
+1. `lib/match-xml-catalog.ts` catalogs the match `storageSlug` → R2 `objectKey`.
+2. `isMatchXmlAvailable(slug)` returns `true` when the slug is cataloged (`isMatchXmlCataloged`).
+3. Team pages pass `matchXmlAvailability` into `MatchContextBanner`.
+4. `MatchXmlDownloadButton` renders **only when** `available === true` (label: “Descargar XML”). It links to `/api/match-xml/{storageSlug}?filename=…`, which reads bytes from R2 via `env.CLIPPED_XML`.
+
+**Do this every time you add a new match** (or when the user names an XML for an existing match):
+
+1. Compute `storageSlug` from the clips (`storageSlugFromClip` / `matchKeyToStorageSlug`) — must match `homeTeam` / `awayTeam` / `rivalTeam` / `collection` exactly.
+2. Ask for the exact R2 object name if the user did not provide it (do not guess filenames).
+3. Add an entry to `MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG` in `lib/match-xml-catalog.ts`:
 
 ```ts
 'YYYY-MM-DD--Home--Away--Rival': {
@@ -152,20 +167,32 @@ If the user provides an R2 object name in bucket `clipped-xml`, add to `MATCH_XM
 },
 ```
 
-Cataloged slugs are treated as downloadable without a local `public/match-xml/` file.
+For Others matches the slug includes `--Others` (because `collection: 'Others'` is part of the match key).
+
+**Sync-only imports** (new videos on an already-cataloged match): skip this step unless XML was never wired.
+
+Do **not** upload XML from the agent unless asked — the file must already exist in R2. Cataloging alone enables the download button.
 
 ### 6. Optional `db/seed.ts`
 
-Add playlist id to `PLAYLIST_BY_MATCH_KEY` using the match key above. The whole `db/` tree is often **untracked local WIP** — updating seed is fine, but playlist commits that shipped historically included **`lib/data.ts` only** (app reads static data unless `USE_DATABASE=true`).
+Add playlist id to `PLAYLIST_BY_MATCH_KEY` using the match key above. The whole `db/` tree is often **untracked local WIP** — updating seed is fine, but playlist commits that shipped historically included **`lib/data.ts`** (+ `lib/match-xml-catalog.ts` when XML was wired). App reads static data unless `USE_DATABASE=true`.
 
 ### 7. Verify
 
 ```bash
 npx tsx -e "
 import { getTeamVideos } from './lib/data'
+import { storageSlugFromClip } from './lib/match-keys'
+import { isMatchXmlAvailable } from './lib/match-xml.server'
+import { getMatchXmlR2ObjectKey } from './lib/match-xml-catalog'
+
 const clips = getTeamVideos('TEAM-SLUG').filter(c => c.date === 'YYYY-MM-DD')
 for (const c of clips) console.log(c.title, '->', c.gameConcept)
+const slug = storageSlugFromClip(clips[0])
 console.log('count:', clips.length)
+console.log('slug:', slug)
+console.log('r2:', getMatchXmlR2ObjectKey(slug))
+console.log('xmlAvailable (→ Descargar XML button):', isMatchXmlAvailable(slug))
 "
 ```
 
@@ -173,9 +200,11 @@ For **UC Primera B**: confirm rival salidas / 50 / 75 → `Presiones` and rival 
 
 For **Others**: confirm clip count matches playlist (minus deleted videos).
 
+For **XML**: `xmlAvailable` must be `true` after cataloging. That is enough for the banner download button on the team page (filter by rival/date to see the match row).
+
 ### 8. Ship
 
-Only when asked: commit **only** the files you changed for this import (`lib/data.ts`, and if touched `lib/team-perspective.ts`, `lib/match-xml-catalog.ts`). Then `git push` and `pnpm run deploy`. Do not include unrelated WIP (`db/`, work-window, lockfile, `.gitignore`, etc.).
+Only when asked: commit **only** the files you changed for this import (`lib/data.ts`, `lib/match-xml-catalog.ts` when XML was wired, and `lib/team-perspective.ts` if aliases were added). Then `git push` and `pnpm run deploy`. Do not include unrelated WIP (`db/`, work-window, lockfile, `.gitignore`, etc.).
 
 ## Key files
 
@@ -184,7 +213,10 @@ Only when asked: commit **only** the files you changed for this import (`lib/dat
 | `lib/data.ts` | Clip catalog + team sections (**primary ship target**) |
 | `lib/types.ts` | `GAME_CONCEPTS`, `VideoClip` |
 | `lib/team-perspective.ts` | UC Primera B POV remaps + title aliases |
-| `lib/match-xml-catalog.ts` | R2 XML object keys |
+| `lib/match-xml-catalog.ts` | R2 XML object keys (**enables Descargar XML**) |
+| `lib/match-xml.server.ts` | Availability + R2/local read |
+| `components/match-xml-download-button.tsx` | Banner download UI (auto via `available`) |
+| `components/match-context-banner.tsx` | Passes `xmlAvailable` into the button |
 | `lib/match-keys.ts` | Match key / storage slug |
 | `db/seed.ts` | Optional playlist id map (whole `db/` may be untracked WIP) |
 
