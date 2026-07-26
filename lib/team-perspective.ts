@@ -12,6 +12,7 @@ const RIVAL_SUBJECT_CONCEPT_MAP: Record<string, string> = {
 /** Title prefixes that identify the same opponent as `homeTeam`/`awayTeam`. */
 const OPPONENT_TITLE_ALIASES: Record<string, string[]> = {
   Manquehue: ['Manquehue', 'MQA'],
+  'Old Reds': ['Old Reds', 'OR'],
 }
 
 const UC_SUBJECT_TITLE_PATTERNS = [
