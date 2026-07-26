@@ -36,6 +36,14 @@ Titles usually prefix the subject team:
 
 Configure AKA → full name aliases in `lib/team-perspective.ts` `OPPONENT_TITLE_ALIASES` so rival-prefixed titles remap correctly.
 
+**Others library** clips are not remapped — both clubs' actions keep the literal `gameConcept` from the title.
+
+## Playlist hygiene
+
+- Skip YouTube titles `[Video borrado]` (deleted source).
+- When syncing an existing playlist, diff by `youtubeId` and append only new entries.
+- A video can reappear after deletion (e.g. `UC B Salidas` was once deleted, later re-added).
+
 ## Score / shootout metadata (not concepts)
 
 - Regulation score → `homeGoals` / `awayGoals`
