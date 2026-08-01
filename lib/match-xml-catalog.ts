@@ -38,6 +38,10 @@ export const MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG: Record<
     objectKey: 'Old Girls vs Old Reds.xml',
     downloadFilename: 'Old Girls vs Old Reds.xml',
   },
+  '2026-06-13--PWCC--Old_Girls--PWCC_vs_Old_Girls--Others': {
+    objectKey: 'PWCC vs OGI.xml',
+    downloadFilename: 'PWCC vs OGI.xml',
+  },
 }
 
 export function getMatchXmlR2ObjectKey(storageSlug: string): string {
