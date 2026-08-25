@@ -1,6 +1,5 @@
 const TEAM_ICON_PATHS: Record<string, string> = {
   'uc-sub-16-a': '/teams/uc-sub-16-a.png',
-  'uc-primera-a': '/teams/uc-primera-a.png',
   'uc-primera-b': '/teams/uc-primera-b.png',
 }
 

@@ -12,12 +12,6 @@ export const teams: Team[] = [
     country: 'CL',
   },
   {
-    id: '2',
-    name: 'UC Primera A',
-    slug: 'uc-primera-a',
-    country: 'CL',
-  },
-  {
     id: '3',
     name: 'UC Primera B',
     slug: 'uc-primera-b',
@@ -994,13 +988,15 @@ export const videoClips: VideoClip[] = [
   },
 
   // =====================
-  // UC Primera A - Old Girls vs UC A (Playlist: PLIeIXM8a6FD5elCVusR223GdoDsoO2_Hw)
+  // Others - Primera A - Old Girls vs UC A (Playlist: PLIeIXM8a6FD5elCVusR223GdoDsoO2_Hw)
   // =====================
   {
     id: '37',
     youtubeId: 'HrZjhXYQPK0',
     title: 'UC A cortos',
     gameConcept: 'Corner Cortos',
+    collection: 'Others',
+    category: 'Primera A',
     rivalTeam: 'Old Girls',
     date: '2024-03-14',
     homeTeam: 'Old Girls',
@@ -1012,6 +1008,8 @@ export const videoClips: VideoClip[] = [
     youtubeId: 'jG9M_H8SyTk',
     title: 'Old Girls cortos',
     gameConcept: 'Corner Cortos',
+    collection: 'Others',
+    category: 'Primera A',
     rivalTeam: 'Old Girls',
     date: '2024-03-14',
     homeTeam: 'Old Girls',
@@ -1023,6 +1021,8 @@ export const videoClips: VideoClip[] = [
     youtubeId: 'CIw2wL3MWyU',
     title: 'Old Girls ingresos al area',
     gameConcept: 'Defensa de área',
+    collection: 'Others',
+    category: 'Primera A',
     rivalTeam: 'Old Girls',
     date: '2024-03-14',
     homeTeam: 'Old Girls',
@@ -1034,6 +1034,8 @@ export const videoClips: VideoClip[] = [
     youtubeId: '2Coc0vG3lLQ',
     title: 'UC A ingresos al area',
     gameConcept: 'Ingresos al área',
+    collection: 'Others',
+    category: 'Primera A',
     rivalTeam: 'Old Girls',
     date: '2024-03-14',
     homeTeam: 'Old Girls',
@@ -1045,6 +1047,8 @@ export const videoClips: VideoClip[] = [
     youtubeId: '4FkS628SYho',
     title: 'Old Girls salidas',
     gameConcept: 'Presiones',
+    collection: 'Others',
+    category: 'Primera A',
     rivalTeam: 'Old Girls',
     date: '2024-03-14',
     homeTeam: 'Old Girls',
@@ -1056,6 +1060,8 @@ export const videoClips: VideoClip[] = [
     youtubeId: 'ZzjQyEENnmA',
     title: 'UC A salidas',
     gameConcept: 'Salidas',
+    collection: 'Others',
+    category: 'Primera A',
     rivalTeam: 'Old Girls',
     date: '2024-03-14',
     homeTeam: 'Old Girls',

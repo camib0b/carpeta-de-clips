@@ -27,7 +27,7 @@ If metadata or the XML filename is missing for a new match, ask before inventing
 
 | User says | Where clips live | Key fields |
 |-----------|------------------|------------|
-| UC Primera B / UC Sub-16 A / UC Primera A | That team's section in `lib/data.ts` | `homeTeam` / `awayTeam` includes UC; `rivalTeam` = **opponent only** (e.g. `COGS`) |
+| UC Primera B / UC Sub-16 A | That team's section in `lib/data.ts` | `homeTeam` / `awayTeam` includes UC; `rivalTeam` = **opponent only** (e.g. `COGS`) |
 | Others library / Category Others | `// Others - Primera A - …` section | `collection: 'Others'`, `category: 'Primera A'`, `rivalTeam: 'Club A vs Club B'` |
 
 **Home team** = first club named in the matchup (e.g. “Manquehue vs Old Girls” → Manquehue home).
