@@ -1,148 +1,251 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
+import { CheckIcon, ChevronDownIcon } from 'lucide-react'
 import { GAME_CONCEPTS, VideoClip } from '@/lib/types'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  DEFAULT_CONCEPT,
+  DEFAULT_RIVAL,
+} from '@/lib/library-filters/params'
+import { Button } from '@/components/ui/button'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { ShareFiltersButton } from '@/components/share-filters-button'
+import { cn } from '@/lib/utils'
 
 interface VideoFiltersProps {
-  selectedConcept: string
-  selectedRival: string
-  onConceptChange: (concept: string) => void
-  onRivalChange: (rival: string) => void
+  selectedConcepts: string[]
+  selectedRivals: string[]
+  onConceptsChange: (concepts: string[]) => void
+  onRivalsChange: (rivals: string[]) => void
   rivals: string[]
   videos: VideoClip[]
   hasActiveFilters: boolean
 }
 
+interface MultiSelectFilterProps {
+  id: string
+  label: string
+  allLabel: string
+  options: string[]
+  selected: string[]
+  onChange: (next: string[]) => void
+  triggerClassName: string
+  multipleCountLabel: (count: number) => string
+}
+
+function getTriggerLabel(
+  selected: string[],
+  allLabel: string,
+  multipleCountLabel: (count: number) => string,
+): string {
+  if (selected.length === 0) return allLabel
+  if (selected.length === 1) return selected[0]
+  return multipleCountLabel(selected.length)
+}
+
+function toggleSelectedValue(selected: string[], option: string): string[] {
+  if (selected.includes(option)) {
+    return selected.filter((item) => item !== option)
+  }
+  return [...selected, option]
+}
+
+function OptionCheck({ checked }: { checked: boolean }) {
+  return (
+    <span
+      className={cn(
+        'flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input shadow-xs',
+        checked && 'border-primary bg-primary text-primary-foreground',
+      )}
+      aria-hidden
+    >
+      {checked ? <CheckIcon className="size-3.5" /> : null}
+    </span>
+  )
+}
+
+function MultiSelectFilter({
+  id,
+  label,
+  allLabel,
+  options,
+  selected,
+  onChange,
+  triggerClassName,
+  multipleCountLabel,
+}: MultiSelectFilterProps) {
+  const isAllSelected = selected.length === 0
+  const triggerLabel = getTriggerLabel(selected, allLabel, multipleCountLabel)
+  const labelId = `${id}-label`
+
+  return (
+    <div className="flex items-center gap-3">
+      <span
+        id={labelId}
+        className="text-xs uppercase tracking-wide text-muted-foreground whitespace-nowrap"
+      >
+        {label}
+      </span>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            id={id}
+            variant="outline"
+            aria-labelledby={`${labelId} ${id}-value`}
+            className={cn(
+              'h-9 justify-between border-border font-normal',
+              triggerClassName,
+            )}
+          >
+            <span id={`${id}-value`} className="truncate">
+              {triggerLabel}
+            </span>
+            <ChevronDownIcon className="size-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="w-[var(--radix-popover-trigger-width)] p-1"
+        >
+          <div role="menu" aria-labelledby={labelId} className="flex flex-col">
+            <div
+              role="menuitemcheckbox"
+              aria-label={allLabel}
+              aria-checked={isAllSelected}
+              tabIndex={0}
+              className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              onClick={() => onChange([])}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  onChange([])
+                }
+              }}
+            >
+              <OptionCheck checked={isAllSelected} />
+              <span>{allLabel}</span>
+            </div>
+            {options.map((option) => {
+              const isSelected = selected.includes(option)
+              return (
+                <div
+                  key={option}
+                  role="menuitemcheckbox"
+                  aria-label={option}
+                  aria-checked={isSelected}
+                  tabIndex={0}
+                  className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                  onClick={() => onChange(toggleSelectedValue(selected, option))}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onChange(toggleSelectedValue(selected, option))
+                    }
+                  }}
+                >
+                  <OptionCheck checked={isSelected} />
+                  <span>{option}</span>
+                </div>
+              )
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
 /**
  * Filter controls for the video library
- * Clean, minimal dropdowns for concept and rival selection
+ * Checkbox dropdowns for multi-select concept and rival filtering
  */
 export function VideoFilters({
-  selectedConcept,
-  selectedRival,
-  onConceptChange,
-  onRivalChange,
+  selectedConcepts,
+  selectedRivals,
+  onConceptsChange,
+  onRivalsChange,
   rivals,
   videos,
   hasActiveFilters,
 }: VideoFiltersProps) {
-  // Compute available concepts based on selected rival
   const availableConcepts = useMemo(() => {
-    if (selectedRival === 'Todos los Rivales') {
-      // No rival filter - show all concepts that have at least one video
-      const conceptsWithVideos = new Set(videos.map((v) => v.gameConcept))
-      return GAME_CONCEPTS.filter((concept) => conceptsWithVideos.has(concept))
+    const conceptHasVideos = (concept: (typeof GAME_CONCEPTS)[number]) => {
+      if (concept === DEFAULT_CONCEPT) return false
+      if (selectedRivals.length === 0) {
+        return videos.some((video) => video.gameConcept === concept)
+      }
+      return videos.some(
+        (video) =>
+          video.gameConcept === concept &&
+          selectedRivals.includes(video.rivalTeam),
+      )
     }
-    
-    // Filter to concepts that have videos for the selected rival
-    const conceptsForRival = new Set(
-      videos
-        .filter((v) => v.rivalTeam === selectedRival)
-        .map((v) => v.gameConcept)
-    )
-    return GAME_CONCEPTS.filter((concept) => conceptsForRival.has(concept))
-  }, [videos, selectedRival])
 
-  // Compute available rivals based on selected concept
+    return GAME_CONCEPTS.filter(conceptHasVideos)
+  }, [videos, selectedRivals])
+
   const availableRivals = useMemo(() => {
-    if (selectedConcept === 'Todos los Conceptos') {
-      // No concept filter - show all rivals that have at least one video
-      return rivals
+    const rivalOptions = rivals.filter((rival) => rival !== DEFAULT_RIVAL)
+
+    if (selectedConcepts.length === 0) {
+      return rivalOptions
     }
-    
-    // Filter to rivals that have videos for the selected concept
-    const rivalsForConcept = new Set(
-      videos
-        .filter((v) => v.gameConcept === selectedConcept)
-        .map((v) => v.rivalTeam)
+
+    return rivalOptions.filter((rival) =>
+      videos.some(
+        (video) =>
+          video.rivalTeam === rival &&
+          selectedConcepts.includes(video.gameConcept),
+      ),
     )
-    return rivals.filter((rival) => rival === 'Todos los Rivales' || rivalsForConcept.has(rival))
-  }, [videos, selectedConcept, rivals])
+  }, [videos, selectedConcepts, rivals])
 
-  // Reset concept filter if current selection is no longer available
-  const effectiveConcept = useMemo(() => {
-    if (selectedConcept === 'Todos los Conceptos') return selectedConcept
-    if (availableConcepts.includes(selectedConcept as typeof GAME_CONCEPTS[number])) {
-      return selectedConcept
+  useEffect(() => {
+    const nextConcepts = selectedConcepts.filter((concept) =>
+      availableConcepts.includes(concept as (typeof GAME_CONCEPTS)[number]),
+    )
+    if (nextConcepts.length !== selectedConcepts.length) {
+      onConceptsChange(nextConcepts)
     }
-    // Current concept not available - reset to all
-    return 'Todos los Conceptos'
-  }, [selectedConcept, availableConcepts])
+  }, [selectedConcepts, availableConcepts, onConceptsChange])
 
-  // Reset rival filter if current selection is no longer available
-  const effectiveRival = useMemo(() => {
-    if (selectedRival === 'Todos los Rivales') return selectedRival
-    if (availableRivals.includes(selectedRival)) {
-      return selectedRival
+  useEffect(() => {
+    const nextRivals = selectedRivals.filter((rival) =>
+      availableRivals.includes(rival),
+    )
+    if (nextRivals.length !== selectedRivals.length) {
+      onRivalsChange(nextRivals)
     }
-    // Current rival not available - reset to all
-    return 'Todos los Rivales'
-  }, [selectedRival, availableRivals])
-
-  // Notify parent if concept was reset
-  if (effectiveConcept !== selectedConcept) {
-    onConceptChange(effectiveConcept)
-  }
-
-  // Notify parent if rival was reset
-  if (effectiveRival !== selectedRival) {
-    onRivalChange(effectiveRival)
-  }
+  }, [selectedRivals, availableRivals, onRivalsChange])
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
-      {/* Game Concept Filter */}
-      <div className="flex items-center gap-3">
-        <label
-          htmlFor="concept-filter"
-          className="text-xs uppercase tracking-wide text-muted-foreground whitespace-nowrap"
-        >
-          Concepto
-        </label>
-        <Select value={effectiveConcept} onValueChange={onConceptChange}>
-          <SelectTrigger id="concept-filter" className="w-[200px] border-border">
-            <SelectValue placeholder="Todos los Conceptos" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Todos los Conceptos">Todos los Conceptos</SelectItem>
-            {availableConcepts.map((concept) => (
-              <SelectItem key={concept} value={concept}>
-                {concept}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <MultiSelectFilter
+        id="concept-filter"
+        label="Concepto"
+        allLabel={DEFAULT_CONCEPT}
+        options={availableConcepts}
+        selected={selectedConcepts}
+        onChange={onConceptsChange}
+        triggerClassName="w-[200px]"
+        multipleCountLabel={(count) => `${count} conceptos`}
+      />
 
-      {/* Rival/Opponent Filter */}
-      <div className="flex items-center gap-3">
-        <label
-          htmlFor="rival-filter"
-          className="text-xs uppercase tracking-wide text-muted-foreground whitespace-nowrap"
-        >
-          Rival
-        </label>
-        <Select value={effectiveRival} onValueChange={onRivalChange}>
-          <SelectTrigger id="rival-filter" className="w-[180px] border-border">
-            <SelectValue placeholder="Todos los Rivales" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableRivals.map((rival) => (
-              <SelectItem key={rival} value={rival}>
-                {rival}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <MultiSelectFilter
+        id="rival-filter"
+        label="Rival"
+        allLabel={DEFAULT_RIVAL}
+        options={availableRivals}
+        selected={selectedRivals}
+        onChange={onRivalsChange}
+        triggerClassName="w-[180px]"
+        multipleCountLabel={(count) => `${count} rivales`}
+      />
 
       <ShareFiltersButton visible={hasActiveFilters} />
     </div>

@@ -31,13 +31,13 @@ export function useLibraryFilters(rivals: string[]) {
     [filters, pathname, router],
   )
 
-  const setConcept = useCallback(
-    (concept: string) => updateFilters({ concept }),
+  const setConcepts = useCallback(
+    (concepts: string[]) => updateFilters({ concepts }),
     [updateFilters],
   )
 
-  const setRival = useCallback(
-    (rival: string) => updateFilters({ rival }),
+  const setRivals = useCallback(
+    (nextRivals: string[]) => updateFilters({ rivals: nextRivals }),
     [updateFilters],
   )
 
@@ -46,10 +46,10 @@ export function useLibraryFilters(rivals: string[]) {
   }, [pathname, router])
 
   return {
-    concept: filters.concept,
-    rival: filters.rival,
-    setConcept,
-    setRival,
+    concepts: filters.concepts,
+    rivals: filters.rivals,
+    setConcepts,
+    setRivals,
     clearFilters,
     hasActiveFilters: hasActiveFilters(filters),
     defaultFilters: getDefaultLibraryFilters(),

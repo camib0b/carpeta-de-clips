@@ -4,20 +4,18 @@ export const DEFAULT_CONCEPT = 'Todos los Conceptos'
 export const DEFAULT_RIVAL = 'Todos los Rivales'
 
 export interface LibraryFilterState {
-  concept: string
-  rival: string
+  concepts: string[]
+  rivals: string[]
 }
 
 const FILTER_DEFS = {
-  concept: {
+  concepts: {
     param: 'concept',
-    defaultValue: DEFAULT_CONCEPT,
     toSlug: conceptToSlug,
     fromSlug: (slug: string, _rivals: string[]) => slugToConcept(slug),
   },
-  rival: {
+  rivals: {
     param: 'rival',
-    defaultValue: DEFAULT_RIVAL,
     toSlug: (rival: string) => rivalToSlug(rival),
     fromSlug: (slug: string, rivals: string[]) => slugToRival(slug, rivals),
   },
@@ -25,9 +23,50 @@ const FILTER_DEFS = {
 
 export function getDefaultLibraryFilters(): LibraryFilterState {
   return {
-    concept: DEFAULT_CONCEPT,
-    rival: DEFAULT_RIVAL,
+    concepts: [],
+    rivals: [],
   }
+}
+
+function parseSlugList(
+  raw: string | null,
+  fromSlug: (slug: string, rivals: string[]) => string | null,
+  rivals: string[],
+): string[] {
+  if (!raw) return []
+
+  const seen = new Set<string>()
+  const values: string[] = []
+
+  for (const part of raw.split(',')) {
+    const slug = part.trim()
+    if (!slug) continue
+
+    const value = fromSlug(slug, rivals)
+    if (!value || seen.has(value)) continue
+
+    seen.add(value)
+    values.push(value)
+  }
+
+  return values
+}
+
+function serializeSlugList(
+  values: string[],
+  toSlug: (value: string) => string | null,
+): string | null {
+  const slugs: string[] = []
+
+  for (const value of values) {
+    const slug = toSlug(value)
+    if (slug) {
+      slugs.push(slug)
+    }
+  }
+
+  if (slugs.length === 0) return null
+  return slugs.join(',')
 }
 
 export function parseLibraryFilters(
@@ -38,13 +77,7 @@ export function parseLibraryFilters(
 
   for (const key of Object.keys(FILTER_DEFS) as Array<keyof typeof FILTER_DEFS>) {
     const def = FILTER_DEFS[key]
-    const slug = searchParams.get(def.param)
-    if (!slug) continue
-
-    const value = def.fromSlug(slug, rivals)
-    if (value) {
-      state[key] = value
-    }
+    state[key] = parseSlugList(searchParams.get(def.param), def.fromSlug, rivals)
   }
 
   return state
@@ -55,13 +88,9 @@ export function serializeLibraryFilters(state: LibraryFilterState): URLSearchPar
 
   for (const key of Object.keys(FILTER_DEFS) as Array<keyof typeof FILTER_DEFS>) {
     const def = FILTER_DEFS[key]
-    const value = state[key]
-
-    if (value === def.defaultValue) continue
-
-    const slug = def.toSlug(value)
-    if (slug) {
-      params.set(def.param, slug)
+    const serialized = serializeSlugList(state[key], def.toSlug)
+    if (serialized) {
+      params.set(def.param, serialized)
     }
   }
 
@@ -69,7 +98,7 @@ export function serializeLibraryFilters(state: LibraryFilterState): URLSearchPar
 }
 
 export function hasActiveFilters(state: LibraryFilterState): boolean {
-  return state.concept !== DEFAULT_CONCEPT || state.rival !== DEFAULT_RIVAL
+  return state.concepts.length > 0 || state.rivals.length > 0
 }
 
 type ReadonlyURLSearchParams = Pick<URLSearchParams, 'get'>

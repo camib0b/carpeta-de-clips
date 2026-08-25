@@ -25,10 +25,10 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
   const [selectedVideo, setSelectedVideo] = useState<VideoClip | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const {
-    concept: selectedConcept,
-    rival: selectedRival,
-    setConcept: setSelectedConcept,
-    setRival: setSelectedRival,
+    concepts: selectedConcepts,
+    rivals: selectedRivals,
+    setConcepts: setSelectedConcepts,
+    setRivals: setSelectedRivals,
     clearFilters,
     hasActiveFilters,
   } = useLibraryFilters(rivals)
@@ -47,14 +47,14 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
   const filteredVideos = useMemo(() => {
     return videos.filter((video) => {
       const matchesConcept =
-        selectedConcept === 'Todos los Conceptos' || video.gameConcept === selectedConcept
+        selectedConcepts.length === 0 || selectedConcepts.includes(video.gameConcept)
       const matchesRival =
-        selectedRival === 'Todos los Rivales' || video.rivalTeam === selectedRival
+        selectedRivals.length === 0 || selectedRivals.includes(video.rivalTeam)
       return matchesConcept && matchesRival
     })
-  }, [videos, selectedConcept, selectedRival])
+  }, [videos, selectedConcepts, selectedRivals])
 
-  const showMatchContext = selectedRival !== 'Todos los Rivales'
+  const showMatchContext = selectedRivals.length > 0
 
   const matchContext = useMemo(() => {
     if (!showMatchContext) return []
@@ -127,10 +127,10 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
     <div className="space-y-10">
       {/* Filters */}
       <VideoFilters
-        selectedConcept={selectedConcept}
-        selectedRival={selectedRival}
-        onConceptChange={setSelectedConcept}
-        onRivalChange={setSelectedRival}
+        selectedConcepts={selectedConcepts}
+        selectedRivals={selectedRivals}
+        onConceptsChange={setSelectedConcepts}
+        onRivalsChange={setSelectedRivals}
         rivals={rivals}
         videos={videos}
         hasActiveFilters={hasActiveFilters}
