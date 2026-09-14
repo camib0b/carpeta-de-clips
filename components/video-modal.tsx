@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react'
-import { VideoClip, VideoNote } from '@/lib/types'
+import { VideoClip } from '@/lib/types'
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { VideoNotes } from './video-notes'
 import YouTube from 'react-youtube'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -24,12 +23,23 @@ const MINIMUM_HORIZONTAL_TO_VERTICAL_RATIO = 1.25
 const INTERACTIVE_TOUCH_TARGET_SELECTOR =
   'button, a, input, textarea, select, [contenteditable="true"], [role="button"]'
 
+const YOUTUBE_PLAYER_STATE = {
+  PLAYING: 1,
+  BUFFERING: 3,
+} as const
+
+const EDITABLE_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
+
+interface YouTubePlayer {
+  getPlayerState: () => number
+  playVideo: () => void
+  pauseVideo: () => void
+}
+
 interface VideoModalProps {
   video: VideoClip | null
-  notes: VideoNote[]
   open: boolean
   onOpenChange: (open: boolean) => void
-  onAddNote: (videoId: string, note: { content: string; authorName?: string }) => void
   canNavigatePrevious?: boolean
   canNavigateNext?: boolean
   onNavigatePrevious?: () => void
@@ -46,6 +56,16 @@ function isClipNavTarget(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest('[data-clip-nav]'))
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+  if (EDITABLE_TAGS.has(target.tagName)) {
+    return true
+  }
+  return target.isContentEditable
+}
+
 function ClipNavButton({ direction, onClick, className }: ClipNavButtonProps) {
   const isPrevious = direction === 'previous'
   const Icon = isPrevious ? ChevronLeft : ChevronRight
@@ -57,13 +77,21 @@ function ClipNavButton({ direction, onClick, className }: ClipNavButtonProps) {
     onClick()
   }
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === ' ' || event.key === 'Spacebar' || event.key === 'Enter') {
+      event.preventDefault()
+    }
+  }
+
   return (
     <Button
       type="button"
       variant="secondary"
       size="icon"
+      tabIndex={-1}
       data-clip-nav={direction}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       onPointerDown={(event) => event.stopPropagation()}
       aria-label={label}
       className={cn(
@@ -101,10 +129,8 @@ function SwipeNavigationHint() {
  */
 export function VideoModal({
   video,
-  notes,
   open,
   onOpenChange,
-  onAddNote,
   canNavigatePrevious = false,
   canNavigateNext = false,
   onNavigatePrevious,
@@ -113,6 +139,8 @@ export function VideoModal({
   const isMobile = useIsMobile()
   const showClipNavigation = open && (canNavigatePrevious || canNavigateNext)
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
   const [swipeHintDismissed, setSwipeHintDismissed] = useState(true)
 
   useEffect(() => {
@@ -122,6 +150,16 @@ export function VideoModal({
       setSwipeHintDismissed(false)
     }
   }, [])
+
+  useEffect(() => {
+    if (!open) {
+      youtubePlayerRef.current = null
+    }
+  }, [open])
+
+  useEffect(() => {
+    youtubePlayerRef.current = null
+  }, [video?.id])
 
   const dismissSwipeHint = useCallback(() => {
     setSwipeHintDismissed(true)
@@ -139,6 +177,32 @@ export function VideoModal({
     if (isClipNavTarget(event.target)) {
       event.preventDefault()
     }
+  }, [])
+
+  const handleYouTubeReady = useCallback((event: { target: YouTubePlayer }) => {
+    youtubePlayerRef.current = event.target
+  }, [])
+
+  const toggleYouTubePlayback = useCallback(() => {
+    const player = youtubePlayerRef.current
+    if (!player) {
+      return
+    }
+
+    const state = player.getPlayerState()
+    if (
+      state === YOUTUBE_PLAYER_STATE.PLAYING ||
+      state === YOUTUBE_PLAYER_STATE.BUFFERING
+    ) {
+      player.pauseVideo()
+    } else {
+      player.playVideo()
+    }
+  }, [])
+
+  const handleOpenAutoFocus = useCallback((event: Event) => {
+    event.preventDefault()
+    contentRef.current?.focus()
   }, [])
 
   const handleTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
@@ -198,9 +262,18 @@ export function VideoModal({
   ])
 
   useEffect(() => {
-    if (!open || (!canNavigatePrevious && !canNavigateNext)) return
+    if (!open) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === ' ' || event.key === 'Spacebar') {
+        if (isEditableTarget(event.target)) {
+          return
+        }
+        event.preventDefault()
+        toggleYouTubePlayback()
+        return
+      }
+
       if (event.key === 'ArrowLeft' && canNavigatePrevious && onNavigatePrevious) {
         event.preventDefault()
         onNavigatePrevious()
@@ -210,9 +283,16 @@ export function VideoModal({
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, canNavigatePrevious, canNavigateNext, onNavigatePrevious, onNavigateNext])
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
+  }, [
+    open,
+    canNavigatePrevious,
+    canNavigateNext,
+    onNavigatePrevious,
+    onNavigateNext,
+    toggleYouTubePlayback,
+  ])
 
   if (!video) return null
 
@@ -222,10 +302,6 @@ export function VideoModal({
   const scoreDisplay = score && video.shootoutWinner
     ? `${score} (${video.shootoutWinner} gana en penales)`
     : score
-
-  const handleAddNote = (note: { content: string; authorName?: string }) => {
-    onAddNote(video.id, note)
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -238,6 +314,7 @@ export function VideoModal({
           'max-h-[100dvh] sm:max-h-[94vh]',
           'md:w-[min(94vw,80rem)] md:max-h-[92vh]',
         )}
+        onOpenAutoFocus={handleOpenAutoFocus}
         onPointerDownOutside={preventCloseOnClipNav}
         onInteractOutside={preventCloseOnClipNav}
       >
@@ -270,8 +347,10 @@ export function VideoModal({
         )}
 
         <div
+          ref={contentRef}
+          tabIndex={-1}
           className={cn(
-            'flex max-h-[100dvh] flex-col overflow-hidden sm:max-h-[94vh] md:max-h-[92vh]',
+            'flex max-h-[100dvh] flex-col overflow-hidden outline-none sm:max-h-[94vh] md:max-h-[92vh]',
             'md:flex-row md:items-start',
           )}
           onTouchStart={handleTouchStart}
@@ -296,13 +375,14 @@ export function VideoModal({
                     rel: 0,
                   },
                 }}
+                onReady={handleYouTubeReady}
               />
 
               {showSwipeHint && <SwipeNavigationHint />}
             </div>
           </div>
 
-          {/* Metadata + notes — compact sidebar on desktop, scrollable below on mobile */}
+          {/* Metadata — compact sidebar on desktop, scrollable below on mobile */}
           <div
             className={cn(
               'overflow-y-auto border-border',
@@ -361,14 +441,6 @@ export function VideoModal({
                 )}
               </div>
             </dl>
-
-            <div className="my-3 border-t border-border md:my-4" />
-
-            <VideoNotes
-              videoId={video.id}
-              initialNotes={notes}
-              onAddNote={handleAddNote}
-            />
           </div>
         </div>
       </DialogContent>

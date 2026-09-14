@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { VideoClip, VideoNote } from '@/lib/types'
-import { getVideoNotes } from '@/lib/data'
+import { VideoClip } from '@/lib/types'
 import { VideoCard } from './video-card'
 import { VideoModal } from './video-modal'
 import { useLibraryFilters } from '@/hooks/use-library-filters'
@@ -19,7 +18,6 @@ interface VideoGridProps {
 /**
  * Video grid component with filtering
  * Displays videos in a responsive grid with client-side filtering
- * Manages notes state for all videos
  */
 export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridProps) {
   const [selectedVideo, setSelectedVideo] = useState<VideoClip | null>(null)
@@ -32,16 +30,6 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
     clearFilters,
     hasActiveFilters,
   } = useLibraryFilters(rivals)
-  
-  // Notes state - in production this would be fetched from/persisted to database
-  const [notesMap, setNotesMap] = useState<Record<string, VideoNote[]>>(() => {
-    // Initialize with sample notes from data
-    const map: Record<string, VideoNote[]> = {}
-    videos.forEach((video) => {
-      map[video.id] = getVideoNotes(video.id)
-    })
-    return map
-  })
 
   // Filter videos based on selected filters
   const filteredVideos = useMemo(() => {
@@ -65,25 +53,6 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
     setSelectedVideo(video)
     setModalOpen(true)
   }
-
-  // Add note handler - in production this would call an API
-  const handleAddNote = useCallback((videoId: string, note: { content: string; authorName?: string }) => {
-    const newNote: VideoNote = {
-      id: `note-${Date.now()}`,
-      videoId,
-      content: note.content,
-      authorName: note.authorName,
-      createdAt: new Date().toISOString(),
-    }
-    
-    setNotesMap((prev) => ({
-      ...prev,
-      [videoId]: [newNote, ...(prev[videoId] || [])],
-    }))
-  }, [])
-
-  // Get notes for selected video
-  const selectedVideoNotes = selectedVideo ? (notesMap[selectedVideo.id] || []) : []
 
   const selectedIndex =
     selectedVideo && modalOpen
@@ -176,10 +145,8 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
       {/* Video Modal */}
       <VideoModal
         video={selectedVideo}
-        notes={selectedVideoNotes}
         open={modalOpen}
         onOpenChange={setModalOpen}
-        onAddNote={handleAddNote}
         canNavigatePrevious={canNavigatePrevious}
         canNavigateNext={canNavigateNext}
         onNavigatePrevious={handleNavigatePrevious}
