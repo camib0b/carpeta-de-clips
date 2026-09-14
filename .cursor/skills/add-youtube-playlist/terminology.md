@@ -47,4 +47,4 @@ Configure AKA → full name aliases in `lib/team-perspective.ts` `OPPONENT_TITLE
 ## Score / shootout metadata (not concepts)
 
 - Regulation score → `homeGoals` / `awayGoals`
-- Penalty shoot-out winner → `shootoutWinner` set to the **winning team’s full name** as used in `homeTeam`/`awayTeam` (e.g. `'UC Primera B'`). Banner shows `L SP` / `V SP` from home/away.
+- Penalty shoot-out winner → `shootoutWinner` set to the **winning team’s full name** as used in `homeTeam`/`awayTeam` (e.g. `'UC Primera B'`). Banner and cards show compact labels like `1–1 (UCB S.O.)` via `lib/team-abbreviations.ts`.

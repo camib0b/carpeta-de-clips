@@ -1,5 +1,6 @@
 'use client'
 
+import { formatScoreWithShootout } from '@/lib/match-display'
 import { VideoClip } from '@/lib/types'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -15,11 +16,14 @@ interface VideoCardProps {
  */
 export function VideoCard({ video, onClick }: VideoCardProps) {
   const formattedDate = format(new Date(video.date), "d 'de' MMM, yyyy", { locale: es })
-  const hasScore = video.homeGoals !== undefined && video.awayGoals !== undefined
-  const score = hasScore ? `${video.homeGoals}–${video.awayGoals}` : null
-  const scoreDisplay = score && video.shootoutWinner
-    ? `${score} (${video.shootoutWinner === video.homeTeam ? 'L' : 'V'} SP)`
-    : score
+  const scoreDisplay =
+    video.homeGoals !== undefined && video.awayGoals !== undefined
+      ? formatScoreWithShootout(
+          video.homeGoals,
+          video.awayGoals,
+          video.shootoutWinner,
+        )
+      : null
   const matchupDisplay = video.collection
     ? `${video.homeTeam} vs ${video.awayTeam}`
     : `vs ${video.rivalTeam}`

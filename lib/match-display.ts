@@ -2,6 +2,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 import { buildMatchKeyFromClip, matchKeyToStorageSlug } from '@/lib/match-keys'
+import { getTeamAbbreviation } from '@/lib/team-abbreviations'
 import type { VideoClip } from '@/lib/types'
 
 export interface MatchMetadata {
@@ -72,15 +73,25 @@ export function getMatchXmlDownloadHref(
   return `/api/match-xml/${storageSlug}?${params.toString()}`
 }
 
+export function formatScoreWithShootout(
+  homeGoals: number,
+  awayGoals: number,
+  shootoutWinner?: string,
+): string {
+  const score = `${homeGoals}–${awayGoals}`
+  if (!shootoutWinner) return score
+
+  const winnerAbbrev = getTeamAbbreviation(shootoutWinner)
+  return `${score} (${winnerAbbrev} S.O.)`
+}
+
 export function formatMatchScore(match: MatchMetadata): string | null {
   const hasScore = match.homeGoals !== undefined && match.awayGoals !== undefined
   if (!hasScore) return null
 
-  const score = `${match.homeGoals}–${match.awayGoals}`
-  if (!match.shootoutWinner) return score
-
-  const shootoutLabel =
-    match.shootoutWinner === match.homeTeam ? 'L SP' : 'V SP'
-
-  return `${score} (${shootoutLabel})`
+  return formatScoreWithShootout(
+    match.homeGoals,
+    match.awayGoals,
+    match.shootoutWinner,
+  )
 }
