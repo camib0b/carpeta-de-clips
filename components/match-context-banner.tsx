@@ -1,5 +1,8 @@
 'use client'
 
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+
 import { MatchXmlDownloadButton } from '@/components/match-xml-download-button'
 import {
   formatMatchDate,
@@ -12,15 +15,34 @@ interface MatchContextBannerProps {
   matchXmlAvailability: Record<string, boolean>
 }
 
+// Parallel-rollout flag: the AVA Work Window link is hidden in production until enabled.
+// The existing YouTube modal remains the default clip-viewing surface regardless of this flag.
+const WORK_WINDOW_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_WORK_WINDOW === '1' ||
+  process.env.NEXT_PUBLIC_ENABLE_WORK_WINDOW === 'true'
+
+/** Extracts the team slug from the team library route (`/{teamSlug}`). */
+function teamSlugFromPathname(pathname: string | null): string | null {
+  if (!pathname) {
+    return null
+  }
+  const firstSegment = pathname.split('/').filter(Boolean)[0]
+  return firstSegment ?? null
+}
+
 function MatchContextBannerRow({
   match,
   xmlAvailable,
+  teamSlug,
 }: {
   match: MatchMetadata
   xmlAvailable: boolean
+  teamSlug: string | null
 }) {
   const formattedDate = formatMatchDate(match.date)
   const scoreDisplay = formatMatchScore(match)
+  const showWorkWindowLink =
+    WORK_WINDOW_ENABLED && xmlAvailable && teamSlug !== null
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -49,7 +71,17 @@ function MatchContextBannerRow({
       </span>
       <span>{formattedDate}</span>
       </div>
-      <MatchXmlDownloadButton match={match} available={xmlAvailable} />
+      <div className="flex items-center gap-2">
+        {showWorkWindowLink && (
+          <Link
+            href={`/${teamSlug}/partido/${match.storageSlug}`}
+            className="inline-flex items-center rounded-md border border-border/60 px-2 py-1 text-xs text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
+          >
+            Abrir Work Window
+          </Link>
+        )}
+        <MatchXmlDownloadButton match={match} available={xmlAvailable} />
+      </div>
     </div>
   )
 }
@@ -62,28 +94,23 @@ export function MatchContextBanner({
   matches,
   matchXmlAvailability,
 }: MatchContextBannerProps) {
-  if (matches.length === 0) return null
+  const pathname = usePathname()
+  const teamSlug = teamSlugFromPathname(pathname)
 
-  const anyXmlAvailable = matches.some(
-    (match) => matchXmlAvailability[match.storageSlug] === true,
-  )
+  if (matches.length === 0) return null
 
   return (
     <div
       className="rounded-md border border-border/60 bg-muted/30 px-3 py-2"
       aria-label="Contexto del partido"
     >
-      {anyXmlAvailable && (
-        <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-          Codificación de eventos (XML)
-        </p>
-      )}
       <div className="space-y-2">
         {matches.map((match) => (
           <MatchContextBannerRow
             key={match.storageSlug}
             match={match}
             xmlAvailable={matchXmlAvailability[match.storageSlug] === true}
+            teamSlug={teamSlug}
           />
         ))}
       </div>
