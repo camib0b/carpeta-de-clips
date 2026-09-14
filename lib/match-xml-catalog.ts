@@ -42,6 +42,10 @@ export const MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG: Record<
     objectKey: 'PWCC vs OGI.xml',
     downloadFilename: 'PWCC vs OGI.xml',
   },
+  '2026-08-22--PWCC--COGS--PWCC_vs_COGS--Others': {
+    objectKey: 'PWCC vs COGS.xml',
+    downloadFilename: 'PWCC vs COGS.xml',
+  },
 }
 
 export function getMatchXmlR2ObjectKey(storageSlug: string): string {
