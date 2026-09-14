@@ -11,8 +11,8 @@ interface VideoCardProps {
 }
 
 /**
- * Minimalist video card component
- * Shows thumbnail, title, and key metadata
+ * Minimalist video card component.
+ * Metadata hierarchy: clip title → match/score → date (and optional category).
  */
 export function VideoCard({ video, onClick }: VideoCardProps) {
   const formattedDate = format(new Date(video.date), "d 'de' MMM, yyyy", { locale: es })
@@ -59,23 +59,21 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
         <h3 className="text-sm font-medium leading-snug tracking-tight text-foreground">
           {video.title}
         </h3>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>{formattedDate}</span>
-          <span className="text-muted-foreground/50">·</span>
-          <span>{video.gameConcept}</span>
-          {video.category && (
-            <>
-              <span className="text-muted-foreground/50">·</span>
-              <span>{video.category}</span>
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-foreground/80">
           <span>{matchupDisplay}</span>
           {scoreDisplay && (
             <>
               <span className="text-muted-foreground/50">·</span>
               <span className="font-medium text-foreground">{scoreDisplay}</span>
+            </>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span>{formattedDate}</span>
+          {video.category && (
+            <>
+              <span className="text-muted-foreground/50">·</span>
+              <span>{video.category}</span>
             </>
           )}
         </div>
