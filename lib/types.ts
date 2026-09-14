@@ -22,20 +22,6 @@ export interface VideoClip {
 }
 
 /**
- * Note/comment attached to a video clip
- * Anonymous by default, optional author name
- * Future: will be associated with authenticated user
- */
-export interface VideoNote {
-  id: string
-  videoId: string
-  content: string
-  authorName?: string // Optional - anonymous if not provided
-  // Future: userId?: string // Will be added when auth is enabled
-  createdAt: string // ISO string
-}
-
-/**
  * Team data structure
  */
 export interface Team {

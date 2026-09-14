@@ -1,35 +1,38 @@
-# carpeta-de-clips
+# Carpeta de Clips
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+Hockey video library for working with the team. Source of truth is this GitHub repository. Production runs on Cloudflare Workers via [OpenNext](https://opennext.js.org/cloudflare) and Wrangler.
 
-## Built with v0
+Live site: [carpeta.cl](https://carpeta.cl)
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+## Getting started
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_WwnjTavhCP3Mxh6n14TGuRutYWIq)
-
-## Getting Started
-
-First, run the development server:
+Package manager is **pnpm** (`pnpm-lock.yaml`).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Edit `app/page.tsx` (home) or `app/[teamSlug]/page.tsx` (team libraries); the page reloads as you save.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy (Cloudflare)
 
-## Learn More
+Production uses OpenNext + Wrangler on Cloudflare Workers:
 
-To learn more, take a look at the following resources:
+```bash
+pnpm run deploy
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+Related scripts:
 
-<a href="https://v0.app/chat/api/kiro/clone/camib0b/carpeta-de-clips" alt="Open in Kiro"><img src="https://pdgvvgmkdvyeydso.public.blob.vercel-storage.com/open%20in%20kiro.svg?sanitize=true" /></a>
+- `pnpm run preview` — OpenNext build + local Workers preview
+- `pnpm run upload` — OpenNext build + upload without the full deploy flow
+- `pnpm run cf-typegen` — regenerate `cloudflare-env.d.ts` from Wrangler
+
+Worker config lives in `wrangler.jsonc` (OpenNext) with R2 binding `CLIPPED_XML` → bucket `clipped-xml`. Match XML downloads (`Descargar XML`) depend on that binding and `lib/match-xml-catalog.ts`.
+
+## Learn more
+
+- [Next.js documentation](https://nextjs.org/docs)
+- [OpenNext on Cloudflare](https://opennext.js.org/cloudflare)
+- [Wrangler](https://developers.cloudflare.com/workers/wrangler/)

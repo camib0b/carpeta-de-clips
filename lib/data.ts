@@ -1,4 +1,4 @@
-import { Team, VideoClip, VideoNote } from './types'
+import { Team, VideoClip } from './types'
 import { applyTeamPerspectiveConcept } from './team-perspective'
 
 /**
@@ -1850,12 +1850,6 @@ export const videoClips: VideoClip[] = [
 ]
 
 /**
- * Sample notes data
- * In production, this would come from a database
- */
-export const videoNotes: VideoNote[] = []
-
-/**
  * Helper function to get videos for a specific team
  */
 export function getTeamVideos(teamSlug: string): VideoClip[] {
@@ -1890,16 +1884,4 @@ export function getTeamRivals(teamSlug: string): string[] {
  */
 export function getTeamBySlug(slug: string): Team | undefined {
   return teams.find((t) => t.slug === slug)
-}
-
-/**
- * Helper function to get notes for a specific video
- */
-export function getVideoNotes(videoId: string): VideoNote[] {
-  return videoNotes
-    .filter((note) => note.videoId === videoId)
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
 }

@@ -3,7 +3,6 @@
 import { useCallback, useMemo } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
-  getDefaultLibraryFilters,
   hasActiveFilters,
   parseLibraryFilters,
   serializeLibraryFilters,
@@ -52,6 +51,5 @@ export function useLibraryFilters(rivals: string[]) {
     setRivals,
     clearFilters,
     hasActiveFilters: hasActiveFilters(filters),
-    defaultFilters: getDefaultLibraryFilters(),
   }
 }
