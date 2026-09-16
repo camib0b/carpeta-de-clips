@@ -12,7 +12,7 @@ interface VideoCardProps {
 
 /**
  * Minimalist video card component.
- * Metadata hierarchy: clip title → match/score → date (and optional category).
+ * Metadata hierarchy: clip title → match/score → date (and optional division).
  */
 export function VideoCard({ video, onClick }: VideoCardProps) {
   const formattedDate = format(new Date(video.date), "d 'de' MMM, yyyy", { locale: es })
@@ -24,7 +24,7 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
           video.shootoutWinner,
         )
       : null
-  const matchupDisplay = video.collection
+  const matchupDisplay = video.libraryName
     ? `${video.homeTeam} vs ${video.awayTeam}`
     : `vs ${video.rivalTeam}`
 
@@ -70,10 +70,10 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span>{formattedDate}</span>
-          {video.category && (
+          {video.division && (
             <>
               <span className="text-muted-foreground/50">·</span>
-              <span>{video.category}</span>
+              <span>{video.division}</span>
             </>
           )}
         </div>

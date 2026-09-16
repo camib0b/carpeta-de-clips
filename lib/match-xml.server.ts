@@ -5,7 +5,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare'
 
 import {
   getMatchXmlR2ObjectKey,
-  isMatchXmlCataloged,
+  hasMatchXmlR2ObjectOverride,
 } from '@/lib/match-xml-catalog'
 import { isValidMatchXmlStorageSlug, storageSlugFromClip } from '@/lib/match-keys'
 import type { VideoClip } from '@/lib/types'
@@ -74,22 +74,22 @@ export function isMatchXmlAvailable(storageSlug: string): boolean {
     return false
   }
 
-  if (isMatchXmlCataloged(storageSlug)) {
+  if (hasMatchXmlR2ObjectOverride(storageSlug)) {
     return true
   }
 
   return getMatchXmlFilePath(storageSlug) !== null
 }
 
-export function getMatchXmlAvailabilityForVideos(
-  videos: VideoClip[],
+export function getMatchXmlAvailabilityByStorageSlug(
+  clips: VideoClip[],
 ): Record<string, boolean> {
-  const slugs = new Set(videos.map((video) => storageSlugFromClip(video)))
-  const availability: Record<string, boolean> = {}
+  const storageSlugs = new Set(clips.map((clip) => storageSlugFromClip(clip)))
+  const availabilityByStorageSlug: Record<string, boolean> = {}
 
-  for (const slug of slugs) {
-    availability[slug] = isMatchXmlAvailable(slug)
+  for (const storageSlug of storageSlugs) {
+    availabilityByStorageSlug[storageSlug] = isMatchXmlAvailable(storageSlug)
   }
 
-  return availability
+  return availabilityByStorageSlug
 }

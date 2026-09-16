@@ -2,7 +2,8 @@ import type { VideoClip } from './types'
 
 const UC_PRIMERA_B = 'UC Primera B'
 
-const RIVAL_SUBJECT_CONCEPT_MAP: Record<string, string> = {
+/** Opponent-titled actions remapped to the analyzing team's filter concept. */
+const RIVAL_ACTION_TO_TEAM_PERSPECTIVE_CONCEPT: Record<string, string> = {
   'Ingresos al área': 'Defensa de área',
   Salidas: 'Presiones',
   'Juego 50-yds': 'Presiones',
@@ -52,7 +53,7 @@ function titleStartsWithOpponent(title: string, opponent: string): boolean {
   )
 }
 
-function isRivalSubjectClip(clip: VideoClip, teamName: string): boolean {
+function clipTitleDescribesRivalAction(clip: VideoClip, teamName: string): boolean {
   const opponent = getOpponentTeamName(clip, teamName)
 
   if (!opponent) {
@@ -68,15 +69,15 @@ function isRivalSubjectClip(clip: VideoClip, teamName: string): boolean {
   return titleStartsWithOpponent(title, opponent)
 }
 
-export function applyTeamPerspectiveConcept(
+export function remapGameConceptToTeamPerspective(
   clip: VideoClip,
   teamName: string
 ): VideoClip {
-  if (teamName !== UC_PRIMERA_B || !isRivalSubjectClip(clip, teamName)) {
+  if (teamName !== UC_PRIMERA_B || !clipTitleDescribesRivalAction(clip, teamName)) {
     return clip
   }
 
-  const remappedConcept = RIVAL_SUBJECT_CONCEPT_MAP[clip.gameConcept]
+  const remappedConcept = RIVAL_ACTION_TO_TEAM_PERSPECTIVE_CONCEPT[clip.gameConcept]
 
   if (!remappedConcept) {
     return clip

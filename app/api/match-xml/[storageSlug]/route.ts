@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 import { isValidMatchXmlStorageSlug } from '@/lib/match-keys'
 import { readMatchXmlBytes } from '@/lib/match-xml.server'
 
-interface RouteContext {
-  params: Promise<{ slug: string }>
+interface MatchXmlRouteContext {
+  params: Promise<{ storageSlug: string }>
 }
 
 function sanitizeDownloadFilename(raw: string | null): string | null {
@@ -19,14 +19,14 @@ function sanitizeDownloadFilename(raw: string | null): string | null {
   return trimmed
 }
 
-export async function GET(request: Request, context: RouteContext) {
-  const { slug } = await context.params
+export async function GET(request: Request, context: MatchXmlRouteContext) {
+  const { storageSlug } = await context.params
 
-  if (!isValidMatchXmlStorageSlug(slug)) {
+  if (!isValidMatchXmlStorageSlug(storageSlug)) {
     return NextResponse.json({ error: 'Invalid match identifier' }, { status: 400 })
   }
 
-  const xmlBytes = await readMatchXmlBytes(slug)
+  const xmlBytes = await readMatchXmlBytes(storageSlug)
   if (!xmlBytes) {
     return NextResponse.json({ error: 'Match XML not found' }, { status: 404 })
   }
@@ -34,7 +34,7 @@ export async function GET(request: Request, context: RouteContext) {
   const requestedName = sanitizeDownloadFilename(
     new URL(request.url).searchParams.get('filename'),
   )
-  const downloadName = requestedName ?? `${slug}.xml`
+  const downloadName = requestedName ?? `${storageSlug}.xml`
 
   return new NextResponse(new Uint8Array(xmlBytes), {
     status: 200,

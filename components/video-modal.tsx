@@ -415,12 +415,12 @@ export function VideoModal({
                   </dt>
                   <dd className="text-foreground">{formattedDate}</dd>
                 </div>
-                {video.category && (
+                {video.division && (
                   <div>
                     <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs md:text-[0.625rem]">
                       Categoría
                     </dt>
-                    <dd className="text-foreground">{video.category}</dd>
+                    <dd className="text-foreground">{video.division}</dd>
                   </div>
                 )}
                 {scoreDisplay && (

@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
-import { getTeamBySlug, getTeamRivals, getTeamVideos, teams } from '@/lib/data'
-import { getMatchXmlAvailabilityForVideos } from '@/lib/match-xml.server'
+import { getTeamBySlug, listTeamLibraryRivals, getTeamLibraryClips, teams } from '@/lib/clip-catalog'
+import { getMatchXmlAvailabilityByStorageSlug } from '@/lib/match-xml.server'
 import { TeamHeader } from '@/components/team-header'
 import { VideoGrid } from '@/components/video-grid'
 import { VideoGridSkeleton } from '@/components/video-grid-skeleton'
@@ -64,9 +64,9 @@ export default async function TeamPage({ params }: TeamPageProps) {
     notFound()
   }
 
-  const videos = getTeamVideos(teamSlug)
-  const rivals = getTeamRivals(teamSlug)
-  const matchXmlAvailability = getMatchXmlAvailabilityForVideos(videos)
+  const clips = getTeamLibraryClips(teamSlug)
+  const availableRivals = listTeamLibraryRivals(teamSlug)
+  const matchXmlAvailability = getMatchXmlAvailabilityByStorageSlug(clips)
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,8 +75,8 @@ export default async function TeamPage({ params }: TeamPageProps) {
       <main className="mx-auto max-w-6xl px-6 py-12">
         <Suspense fallback={<VideoGridSkeleton />}>
           <VideoGrid
-            videos={videos}
-            rivals={rivals}
+            videos={clips}
+            availableRivals={availableRivals}
             matchXmlAvailability={matchXmlAvailability}
           />
         </Suspense>

@@ -27,12 +27,12 @@ If metadata or the XML filename is missing for a new match, ask before inventing
 
 | User says | Where clips live | Key fields |
 |-----------|------------------|------------|
-| UC Primera B / UC Sub-16 A | That team's section in `lib/data.ts` | `homeTeam` / `awayTeam` includes UC; `rivalTeam` = **opponent only** (e.g. `COGS`) |
-| Others library / Category Others | `// Others - Primera A - …` section | `collection: 'Others'`, `category: 'Primera A'`, `rivalTeam: 'Club A vs Club B'` |
+| UC Primera B / UC Sub-16 A | That team's section in `lib/clip-catalog.ts` | `homeTeam` / `awayTeam` includes UC; `rivalTeam` = **opponent only** (e.g. `COGS`) |
+| Others library / Category Others | `// Others - Primera A - …` section | `libraryName: 'Others'`, `division: 'Primera A'`, `rivalTeam: 'Club A vs Club B'` |
 
 **Home team** = first club named in the matchup (e.g. “Manquehue vs Old Girls” → Manquehue home).
 
-**Primera A tournament** → set `category: 'Primera A'` on every clip in the match (common for Others and for UC away fixtures in Primera A).
+**Primera A** → set `division: 'Primera A'` on every clip in the match (common for Others and for UC away fixtures in Primera A).
 
 See [examples.md](examples.md) for copy-paste templates from real imports.
 
@@ -49,7 +49,7 @@ For **UC Primera B** specifically:
 | `Juego 75-yds` | `Presiones` |
 | `Ingresos al área` | `Defensa de área` |
 
-Do **not** store `Presiones` on rival clips when using the COGS-style pattern: store the literal concept and let `lib/team-perspective.ts` remap at read time. Titles must start with the rival name (or a configured alias like `MQA`, `OR`).
+Do **not** store `Presiones` on rival clips when using the COGS-style pattern: store the literal concept and let `remapGameConceptToTeamPerspective` remap at read time. Titles must start with the rival name (or a configured alias like `MQA`, `OR`).
 
 UC-subject titles (`UCB …`, `UC B …`, `Salidas`, `Presión sobre …`, etc.) are never remapped.
 
@@ -66,7 +66,7 @@ Playlist import:
 - [ ] 1. Fetch playlist videos (id + title)
 - [ ] 2. Diff against existing youtubeIds for that match/team
 - [ ] 3. Map each title → gameConcept (+ team aliases if needed)
-- [ ] 4. Append VideoClip entries in lib/data.ts
+- [ ] 4. Append VideoClip entries in lib/clip-catalog.ts
 - [ ] 5. Wire R2 XML in lib/match-xml-catalog.ts (enables Descargar XML)
 - [ ] 6. Optional: playlist id in db/seed.ts (if touching seed)
 - [ ] 7. Verify clips + XML availability (download button will show)
@@ -93,7 +93,7 @@ curl -sL "PLAYLIST_URL" \
 
 ### 2. Diff existing clips
 
-Find the match section in `lib/data.ts` (comment header includes playlist id). Compare playlist `youtubeId`s to existing ones.
+Find the match section in `lib/clip-catalog.ts` (comment header includes playlist id). Compare playlist `youtubeId`s to existing ones.
 
 - **New match** → add all non-deleted videos.
 - **Sync existing playlist** → append **only** missing `youtubeId`s (user: “new videos added to playlist”).
@@ -123,15 +123,15 @@ If the title uses a rival AKA (`MQA`, `OR`, …) that does not match `homeTeam`/
 
 **Old Gabs-style playlists** use neutral UC-perspective titles (`Ingresos al área`, `Defensa de área`, `Salidas`, `Presión sobre salidas`) — map directly; no rival-prefix remapping.
 
-### 4. Write `lib/data.ts` clips
+### 4. Write `lib/clip-catalog.ts` clips
 
 Follow the nearest existing playlist in that team section (see [examples.md](examples.md)).
 
 Every clip in the match shares:
 
 - `date`, `homeTeam`, `awayTeam`, `rivalTeam`
-- optional `homeGoals` / `awayGoals` / `shootoutWinner` / `category` / `place` / `collection`
-- unique numeric `id` — **grep all** `id: '` in `lib/data.ts` and use max + 1 (duplicate ids break filters)
+- optional `homeGoals` / `awayGoals` / `shootoutWinner` / `division` / `place` / `libraryName`
+- unique numeric `id` — **grep all** `id: '` in `lib/clip-catalog.ts` and use max + 1 (duplicate ids break filters)
 - `youtubeId`, `title` (exact YouTube title)
 - `uploadedAt` ISO timestamps, descending within the match (controls grid sort)
 - comment header: `// Team - Home vs Away (Playlist: PLxxxxx)` or `// Others - Primera A - …`
@@ -140,7 +140,7 @@ Place new **Others** sections near other Others blocks (end of `videoClips` arra
 
 Match key / storage slug (for XML / optional seed):
 
-- Key: `date|homeTeam|awayTeam|rivalTeam` (+ `|Others` when `collection: 'Others'`)
+- Key: `date|homeTeam|awayTeam|rivalTeam` (+ `|Others` when `libraryName: 'Others'`)
 - Slug: spaces → `_`, joined with `--` via `matchKeyToStorageSlug`
 
 ### 5. Wire match XML from R2 (required for new matches)
@@ -150,13 +150,13 @@ Match event XMLs live in the Cloudflare R2 bucket **`clipped-xml`** (binding `CL
 **How the button appears**
 
 1. `lib/match-xml-catalog.ts` catalogs the match `storageSlug` → R2 `objectKey`.
-2. `isMatchXmlAvailable(slug)` returns `true` when the slug is cataloged (`isMatchXmlCataloged`).
+2. `isMatchXmlAvailable(storageSlug)` returns `true` when the slug has an R2 override (`hasMatchXmlR2ObjectOverride`) or a local file.
 3. Team pages pass `matchXmlAvailability` into `MatchContextBanner`.
 4. `MatchXmlDownloadButton` renders **only when** `available === true` (label: “Descargar XML”). It links to `/api/match-xml/{storageSlug}?filename=…`, which reads bytes from R2 via `env.CLIPPED_XML`.
 
 **Do this every time you add a new match** (or when the user names an XML for an existing match):
 
-1. Compute `storageSlug` from the clips (`storageSlugFromClip` / `matchKeyToStorageSlug`) — must match `homeTeam` / `awayTeam` / `rivalTeam` / `collection` exactly.
+1. Compute `storageSlug` from the clips (`storageSlugFromClip` / `matchKeyToStorageSlug`) — must match `homeTeam` / `awayTeam` / `rivalTeam` / `libraryName` exactly.
 2. Ask for the exact R2 object name if the user did not provide it (do not guess filenames).
 3. Add an entry to `MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG` in `lib/match-xml-catalog.ts`:
 
@@ -167,7 +167,7 @@ Match event XMLs live in the Cloudflare R2 bucket **`clipped-xml`** (binding `CL
 },
 ```
 
-For Others matches the slug includes `--Others` (because `collection: 'Others'` is part of the match key).
+For Others matches the slug includes `--Others` (because `libraryName: 'Others'` is part of the match key).
 
 **Sync-only imports** (new videos on an already-cataloged match): skip this step unless XML was never wired.
 
@@ -175,18 +175,18 @@ Do **not** upload XML from the agent unless asked — the file must already exis
 
 ### 6. Optional `db/seed.ts`
 
-Add playlist id to `PLAYLIST_BY_MATCH_KEY` using the match key above. The whole `db/` tree is often **untracked local WIP** — updating seed is fine, but playlist commits that shipped historically included **`lib/data.ts`** (+ `lib/match-xml-catalog.ts` when XML was wired). App reads static data unless `USE_DATABASE=true`.
+Add playlist id to `PLAYLIST_BY_MATCH_KEY` using the match key above. The whole `db/` tree is often **untracked local WIP** — updating seed is fine, but playlist commits that shipped historically included **`lib/clip-catalog.ts`** (+ `lib/match-xml-catalog.ts` when XML was wired). App reads static data unless `USE_DATABASE=true`.
 
 ### 7. Verify
 
 ```bash
 npx tsx -e "
-import { getTeamVideos } from './lib/data'
+import { getTeamLibraryClips } from './lib/clip-catalog'
 import { storageSlugFromClip } from './lib/match-keys'
 import { isMatchXmlAvailable } from './lib/match-xml.server'
 import { getMatchXmlR2ObjectKey } from './lib/match-xml-catalog'
 
-const clips = getTeamVideos('TEAM-SLUG').filter(c => c.date === 'YYYY-MM-DD')
+const clips = getTeamLibraryClips('TEAM-SLUG').filter(c => c.date === 'YYYY-MM-DD')
 for (const c of clips) console.log(c.title, '->', c.gameConcept)
 const slug = storageSlugFromClip(clips[0])
 console.log('count:', clips.length)
@@ -204,19 +204,19 @@ For **XML**: `xmlAvailable` must be `true` after cataloging. That is enough for 
 
 ### 8. Ship
 
-Only when asked: commit **only** the files you changed for this import (`lib/data.ts`, `lib/match-xml-catalog.ts` when XML was wired, and `lib/team-perspective.ts` if aliases were added). Then `git push` and `pnpm run deploy`. Do not include unrelated WIP (`db/`, work-window, lockfile, `.gitignore`, etc.).
+Only when asked: commit **only** the files you changed for this import (`lib/clip-catalog.ts`, `lib/match-xml-catalog.ts` when XML was wired, and `lib/team-perspective.ts` if aliases were added). Then `git push` and `pnpm run deploy`. Do not include unrelated WIP (`db/`, work-window, lockfile, `.gitignore`, etc.).
 
 ## Key files
 
 | File | Role |
 |------|------|
-| `lib/data.ts` | Clip catalog + team sections (**primary ship target**) |
+| `lib/clip-catalog.ts` | Clip catalog + team sections (**primary ship target**) |
 | `lib/types.ts` | `GAME_CONCEPTS`, `VideoClip` |
 | `lib/team-perspective.ts` | UC Primera B POV remaps + title aliases |
 | `lib/match-xml-catalog.ts` | R2 XML object keys (**enables Descargar XML**) |
 | `lib/match-xml.server.ts` | Availability + R2/local read |
 | `components/match-xml-download-button.tsx` | Banner download UI (auto via `available`) |
-| `components/match-context-banner.tsx` | Passes `xmlAvailable` into the button |
+| `components/match-context-banner.tsx` | Passes `canDownloadMatchXml` into the button |
 | `lib/match-keys.ts` | Match key / storage slug |
 | `db/seed.ts` | Optional playlist id map (whole `db/` may be untracked WIP) |
 

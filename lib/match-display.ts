@@ -5,44 +5,41 @@ import { buildMatchKeyFromClip, matchKeyToStorageSlug } from '@/lib/match-keys'
 import { getTeamAbbreviation } from '@/lib/team-abbreviations'
 import type { VideoClip } from '@/lib/types'
 
-export interface MatchMetadata {
+export interface MatchSummary {
   date: string
-  tournament?: string
+  division?: string
   homeTeam: string
   awayTeam: string
   homeGoals?: number
   awayGoals?: number
   shootoutWinner?: string
-  /** Slug for public/match-xml/{storageSlug}.xml and /api/match-xml/[slug] */
+  /** Slug for public/match-xml/{storageSlug}.xml and /api/match-xml/[storageSlug] */
   storageSlug: string
 }
 
-function matchKey(video: VideoClip): string {
-  return buildMatchKeyFromClip(video)
-}
-
-function videoToMatchMetadata(video: VideoClip): MatchMetadata {
-  const storageSlug = matchKeyToStorageSlug(buildMatchKeyFromClip(video))
+function toMatchSummary(clip: VideoClip): MatchSummary {
+  const storageSlug = matchKeyToStorageSlug(buildMatchKeyFromClip(clip))
 
   return {
-    date: video.date,
-    tournament: video.category ?? video.collection,
-    homeTeam: video.homeTeam,
-    awayTeam: video.awayTeam,
-    homeGoals: video.homeGoals,
-    awayGoals: video.awayGoals,
-    shootoutWinner: video.shootoutWinner,
+    date: clip.date,
+    // Prefer league division; fall back to library name for older clips.
+    division: clip.division ?? clip.libraryName,
+    homeTeam: clip.homeTeam,
+    awayTeam: clip.awayTeam,
+    homeGoals: clip.homeGoals,
+    awayGoals: clip.awayGoals,
+    shootoutWinner: clip.shootoutWinner,
     storageSlug,
   }
 }
 
-export function getUniqueMatchesFromVideos(videos: VideoClip[]): MatchMetadata[] {
-  const matchesByKey = new Map<string, MatchMetadata>()
+export function listUniqueMatchSummaries(clips: VideoClip[]): MatchSummary[] {
+  const matchesByKey = new Map<string, MatchSummary>()
 
-  for (const video of videos) {
-    const key = matchKey(video)
+  for (const clip of clips) {
+    const key = buildMatchKeyFromClip(clip)
     if (!matchesByKey.has(key)) {
-      matchesByKey.set(key, videoToMatchMetadata(video))
+      matchesByKey.set(key, toMatchSummary(clip))
     }
   }
 
@@ -55,7 +52,7 @@ export function formatMatchDate(date: string): string {
   return format(new Date(date), "d 'de' MMM, yyyy", { locale: es })
 }
 
-export function buildMatchXmlDownloadFilename(match: MatchMetadata): string {
+export function buildMatchXmlDownloadFilename(match: MatchSummary): string {
   const datePart = match.date
   const teamsPart = `${match.homeTeam} vs ${match.awayTeam}`
     .replace(/[/\\?%*:|"<>]/g, '-')
@@ -85,13 +82,10 @@ export function formatScoreWithShootout(
   return `${score} (${winnerAbbrev} S.O.)`
 }
 
-export function formatMatchScore(match: MatchMetadata): string | null {
-  const hasScore = match.homeGoals !== undefined && match.awayGoals !== undefined
-  if (!hasScore) return null
+export function formatMatchScore(match: MatchSummary): string | null {
+  const homeGoals = match.homeGoals
+  const awayGoals = match.awayGoals
+  if (homeGoals === undefined || awayGoals === undefined) return null
 
-  return formatScoreWithShootout(
-    match.homeGoals,
-    match.awayGoals,
-    match.shootoutWinner,
-  )
+  return formatScoreWithShootout(homeGoals, awayGoals, match.shootoutWinner)
 }

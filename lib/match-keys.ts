@@ -2,13 +2,13 @@ import type { VideoClip } from '@/lib/types'
 
 /**
  * Stable identifier for a match (one XML file per key).
- * Aligns with db/seed.ts PLAYLIST_BY_MATCH_KEY entries.
+ * Shape: date|homeTeam|awayTeam|rivalTeam[|libraryName]
  */
 export function buildMatchKeyFromClip(clip: VideoClip): string {
   const parts = [clip.date, clip.homeTeam, clip.awayTeam, clip.rivalTeam]
 
-  if (clip.collection) {
-    parts.push(clip.collection)
+  if (clip.libraryName) {
+    parts.push(clip.libraryName)
   }
 
   return parts.join('|')

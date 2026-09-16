@@ -1,15 +1,26 @@
 /**
- * Video clip data structure for the hockey video library
+ * A YouTube clip filed in a team library, with match and filter metadata.
  */
 export interface VideoClip {
   id: string
   youtubeId: string
   title: string
   gameConcept: string
-  collection?: string
-  category?: string
+  /**
+   * Team library this clip is filed under when that is not inferred from
+   * home/away (currently `'Others'`).
+   */
+  libraryName?: string
+  /**
+   * League division of the match (e.g. `'Primera A'`). Shown as "Categoría" in the UI.
+   */
+  division?: string
+  /**
+   * Opponent club on a team-library clip, or a `'Home vs Away'` matchup label
+   * for third-party (Others) matches. Filter query param remains `rival`.
+   */
   rivalTeam: string
-  date: string // ISO string
+  date: string // ISO date
   time?: string
   place?: string
   homeTeam: string
@@ -18,26 +29,37 @@ export interface VideoClip {
   awayGoals?: number
   shootoutWinner?: string
   playerRoster?: string[]
-  uploadedAt: string // ISO string for sorting by upload date
+  /** ISO timestamp used only to sort clips in the library grid. */
+  uploadedAt: string
 }
 
 /**
- * Team data structure
+ * A team library shown on the home list and at `/{slug}`.
  */
 export interface Team {
   id: string
   name: string
   slug: string
-  country: string // ISO country code for flag
-  logo?: string // Optional logo URL
+  country: string
+  logo?: string
 }
 
 /**
- * Available game concepts for filtering (Spanish)
- * Based on real video categories from UC hockey playlists
+ * Label for the unfiltered "all concepts" dropdown state. Not a stored `gameConcept`.
+ */
+export const ALL_CONCEPTS_FILTER_LABEL = 'Todos los Conceptos'
+
+/**
+ * Label for the unfiltered "all rivals" dropdown state. Not a stored `rivalTeam`.
+ */
+export const ALL_RIVALS_FILTER_LABEL = 'Todos los Rivales'
+
+/**
+ * Stored game-concept values for filtering (Spanish).
+ * Based on real video categories from UC hockey playlists.
+ * Does not include the "all concepts" UI label.
  */
 export const GAME_CONCEPTS = [
-  'Todos los Conceptos',
   'Salidas',
   'Goles',
   'Corner Cortos',

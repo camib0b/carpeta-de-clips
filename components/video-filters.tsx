@@ -4,8 +4,8 @@ import { useEffect, useMemo } from 'react'
 import { CheckIcon, ChevronDownIcon } from 'lucide-react'
 import { GAME_CONCEPTS, VideoClip } from '@/lib/types'
 import {
-  DEFAULT_CONCEPT,
-  DEFAULT_RIVAL,
+  ALL_CONCEPTS_FILTER_LABEL,
+  ALL_RIVALS_FILTER_LABEL,
 } from '@/lib/library-filters/params'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,7 +21,7 @@ interface VideoFiltersProps {
   selectedRivals: string[]
   onConceptsChange: (concepts: string[]) => void
   onRivalsChange: (rivals: string[]) => void
-  rivals: string[]
+  availableRivals: string[]
   videos: VideoClip[]
   hasActiveFilters: boolean
 }
@@ -169,13 +169,12 @@ export function VideoFilters({
   selectedRivals,
   onConceptsChange,
   onRivalsChange,
-  rivals,
+  availableRivals,
   videos,
   hasActiveFilters,
 }: VideoFiltersProps) {
-  const availableConcepts = useMemo(() => {
-    const conceptHasVideos = (concept: (typeof GAME_CONCEPTS)[number]) => {
-      if (concept === DEFAULT_CONCEPT) return false
+  const selectableConcepts = useMemo(() => {
+    const conceptHasClips = (concept: (typeof GAME_CONCEPTS)[number]) => {
       if (selectedRivals.length === 0) {
         return videos.some((video) => video.gameConcept === concept)
       }
@@ -186,11 +185,11 @@ export function VideoFilters({
       )
     }
 
-    return GAME_CONCEPTS.filter(conceptHasVideos)
+    return GAME_CONCEPTS.filter(conceptHasClips)
   }, [videos, selectedRivals])
 
-  const availableRivals = useMemo(() => {
-    const rivalOptions = rivals.filter((rival) => rival !== DEFAULT_RIVAL)
+  const selectableRivals = useMemo(() => {
+    const rivalOptions = availableRivals.filter((rival) => rival !== ALL_RIVALS_FILTER_LABEL)
 
     if (selectedConcepts.length === 0) {
       return rivalOptions
@@ -203,33 +202,33 @@ export function VideoFilters({
           selectedConcepts.includes(video.gameConcept),
       ),
     )
-  }, [videos, selectedConcepts, rivals])
+  }, [videos, selectedConcepts, availableRivals])
 
   useEffect(() => {
     const nextConcepts = selectedConcepts.filter((concept) =>
-      availableConcepts.includes(concept as (typeof GAME_CONCEPTS)[number]),
+      selectableConcepts.includes(concept as (typeof GAME_CONCEPTS)[number]),
     )
     if (nextConcepts.length !== selectedConcepts.length) {
       onConceptsChange(nextConcepts)
     }
-  }, [selectedConcepts, availableConcepts, onConceptsChange])
+  }, [selectedConcepts, selectableConcepts, onConceptsChange])
 
   useEffect(() => {
     const nextRivals = selectedRivals.filter((rival) =>
-      availableRivals.includes(rival),
+      selectableRivals.includes(rival),
     )
     if (nextRivals.length !== selectedRivals.length) {
       onRivalsChange(nextRivals)
     }
-  }, [selectedRivals, availableRivals, onRivalsChange])
+  }, [selectedRivals, selectableRivals, onRivalsChange])
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
       <MultiSelectFilter
         id="concept-filter"
         label="Concepto"
-        allLabel={DEFAULT_CONCEPT}
-        options={availableConcepts}
+        allLabel={ALL_CONCEPTS_FILTER_LABEL}
+        options={selectableConcepts}
         selected={selectedConcepts}
         onChange={onConceptsChange}
         triggerClassName="w-[200px]"
@@ -239,8 +238,8 @@ export function VideoFilters({
       <MultiSelectFilter
         id="rival-filter"
         label="Rival"
-        allLabel={DEFAULT_RIVAL}
-        options={availableRivals}
+        allLabel={ALL_RIVALS_FILTER_LABEL}
+        options={selectableRivals}
         selected={selectedRivals}
         onChange={onRivalsChange}
         triggerClassName="w-[180px]"
