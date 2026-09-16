@@ -30,7 +30,7 @@ If metadata or the XML filename is missing for a new match, ask before inventing
 | User says | `library_id` | Key fields |
 |-----------|--------------|------------|
 | UC Primera B / UC Sub-16 A | `uc-primera-b` / `uc-sub-16-a` | `rival_label` = **opponent only** (e.g. `COGS`) |
-| Others library / Category Others | `others` | `rival_label` = `Club A vs Club B`; `division` usually `Primera A` |
+| Others library | `others` | `rival_label` = `Club A vs Club B`; `division` usually `Primera A` |
 
 **Home team** = first club named in the matchup (e.g. “Manquehue vs Old Girls” → Manquehue home).
 

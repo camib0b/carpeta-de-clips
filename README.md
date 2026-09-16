@@ -43,7 +43,7 @@ pnpm exec wrangler d1 migrations apply carpeta-de-clips --remote
 ```
 
 - `0001_create_catalog.sql` — `libraries`, `matches`, `clips` + indexes (`matches.division` is the league, e.g. Primera A)
-- `0002_seed_catalog.sql` — snapshot of the former `lib/clip-catalog.ts` `videoClips` array (scores/dates copied, not invented)
+- `0002_seed_catalog.sql` — snapshot of the former clip-catalog array (scores/dates copied, not invented; `libraryName` → `library_id`, `division` → `matches.division`)
 
 Regenerate `0002` only if the TypeScript sources are restored from git history:
 
@@ -81,7 +81,15 @@ Worker config lives in `wrangler.jsonc` (OpenNext):
 
 Home and team library pages are **dynamic** (`force-dynamic`) so they read D1 at request time instead of baking the catalog into the Worker bundle.
 
-**Dashboard check:** Wrangler config is enough to bind `DB` on the next deploy. Confirm in Cloudflare Dashboard → Workers → `carpeta-de-clips` → Bindings that `DB` points at database `carpeta-de-clips`. Apply remote migrations before or with that deploy.
+**Cloudflare Workers Builds** (Dashboard → Workers → Builds): set the build command to:
+
+```bash
+pnpm exec opennextjs-cloudflare build
+```
+
+Do not use `pnpm run build` there — that is Next.js only and does not produce the Worker.
+
+**Dashboard check:** Wrangler config is enough to bind `DB` on the next deploy. Confirm in Cloudflare Dashboard → Workers → `carpeta-de-clips` → Bindings that `DB` points at database `carpeta-de-clips`. Apply remote migrations before or with that deploy (`0001`/`0002` are `IF NOT EXISTS` / `INSERT OR IGNORE`, so re-running is safe).
 
 ## Learn more
 
