@@ -1,16 +1,15 @@
 import Link from 'next/link'
 import { TeamIcon } from '@/components/team-icon'
-import { teams, getTeamLibraryClips } from '@/lib/clip-catalog'
+import { listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
+
+export const dynamic = 'force-dynamic'
 
 /**
  * Home page - Team selection
  * Minimalist list of teams with video counts
  */
-export default function HomePage() {
-  const teamsWithClipCounts = teams.map((team) => ({
-    ...team,
-    clipCount: getTeamLibraryClips(team.slug).length,
-  }))
+export default async function HomePage() {
+  const teamsWithClipCounts = await listTeamLibrariesWithClipCounts()
 
   return (
     <div className="min-h-screen bg-background">

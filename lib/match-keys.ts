@@ -3,6 +3,7 @@ import type { VideoClip } from '@/lib/types'
 /**
  * Stable identifier for a match (one XML file per key).
  * Shape: date|homeTeam|awayTeam|rivalTeam[|libraryName]
+ * This is also D1 `matches.id` after slugification (`matchKeyToStorageSlug`).
  */
 export function buildMatchKeyFromClip(clip: VideoClip): string {
   const parts = [clip.date, clip.homeTeam, clip.awayTeam, clip.rivalTeam]

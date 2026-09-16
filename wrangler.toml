@@ -1,3 +1,4 @@
+# Unused leftover. Wrangler and OpenNext read wrangler.jsonc (D1 binding DB → carpeta-de-clips).
 name = "carpeta-de-clips"
 compatibility_date = "2025-05-24"
 

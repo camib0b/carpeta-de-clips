@@ -1,23 +1,20 @@
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
-import { getTeamBySlug, listTeamLibraryRivals, getTeamLibraryClips, teams } from '@/lib/clip-catalog'
+import {
+  getTeamBySlug,
+  getTeamLibraryClips,
+  listRivalsFromClips,
+} from '@/lib/clip-catalog'
 import { getMatchXmlAvailabilityByStorageSlug } from '@/lib/match-xml.server'
 import { TeamHeader } from '@/components/team-header'
 import { VideoGrid } from '@/components/video-grid'
 import { VideoGridSkeleton } from '@/components/video-grid-skeleton'
 import { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
+
 interface TeamPageProps {
   params: Promise<{ teamSlug: string }>
-}
-
-/**
- * Generate static params for all teams
- */
-export async function generateStaticParams() {
-  return teams.map((team) => ({
-    teamSlug: team.slug,
-  }))
 }
 
 /**
@@ -27,7 +24,7 @@ export async function generateMetadata({
   params,
 }: TeamPageProps): Promise<Metadata> {
   const { teamSlug } = await params
-  const team = getTeamBySlug(teamSlug)
+  const team = await getTeamBySlug(teamSlug)
 
   if (!team) {
     return {
@@ -58,14 +55,14 @@ export async function generateMetadata({
  */
 export default async function TeamPage({ params }: TeamPageProps) {
   const { teamSlug } = await params
-  const team = getTeamBySlug(teamSlug)
+  const team = await getTeamBySlug(teamSlug)
 
   if (!team) {
     notFound()
   }
 
-  const clips = getTeamLibraryClips(teamSlug)
-  const availableRivals = listTeamLibraryRivals(teamSlug)
+  const clips = await getTeamLibraryClips(teamSlug)
+  const availableRivals = listRivalsFromClips(clips)
   const matchXmlAvailability = getMatchXmlAvailabilityByStorageSlug(clips)
 
   return (

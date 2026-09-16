@@ -3,10 +3,7 @@ import path from 'path'
 
 import { getCloudflareContext } from '@opennextjs/cloudflare'
 
-import {
-  getMatchXmlR2ObjectKey,
-  hasMatchXmlR2ObjectOverride,
-} from '@/lib/match-xml-catalog'
+import { getMatchXmlObjectKey } from '@/lib/catalog'
 import { isValidMatchXmlStorageSlug, storageSlugFromClip } from '@/lib/match-keys'
 import type { VideoClip } from '@/lib/types'
 
@@ -28,7 +25,8 @@ export function getMatchXmlFilePath(storageSlug: string): string | null {
 async function readMatchXmlBytesFromR2(
   storageSlug: string,
 ): Promise<Buffer | null> {
-  const objectKey = getMatchXmlR2ObjectKey(storageSlug)
+  const catalogedObjectKey = await getMatchXmlObjectKey(storageSlug)
+  const objectKey = catalogedObjectKey ?? `${storageSlug}.xml`
 
   try {
     const { env } = await getCloudflareContext({ async: true })
@@ -69,12 +67,13 @@ export async function readMatchXmlBytes(
   return fs.readFileSync(filePath)
 }
 
-export function isMatchXmlAvailable(storageSlug: string): boolean {
+export async function isMatchXmlAvailable(storageSlug: string): Promise<boolean> {
   if (!isValidMatchXmlStorageSlug(storageSlug)) {
     return false
   }
 
-  if (hasMatchXmlR2ObjectOverride(storageSlug)) {
+  const catalogedObjectKey = await getMatchXmlObjectKey(storageSlug)
+  if (catalogedObjectKey) {
     return true
   }
 
@@ -88,7 +87,12 @@ export function getMatchXmlAvailabilityByStorageSlug(
   const availabilityByStorageSlug: Record<string, boolean> = {}
 
   for (const storageSlug of storageSlugs) {
-    availabilityByStorageSlug[storageSlug] = isMatchXmlAvailable(storageSlug)
+    const hasR2ObjectKey = clips.some(
+      (clip) =>
+        storageSlugFromClip(clip) === storageSlug && Boolean(clip.r2XmlObjectKey),
+    )
+    availabilityByStorageSlug[storageSlug] =
+      hasR2ObjectKey || getMatchXmlFilePath(storageSlug) !== null
   }
 
   return availabilityByStorageSlug
