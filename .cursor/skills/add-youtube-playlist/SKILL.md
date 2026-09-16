@@ -12,7 +12,9 @@ description: >-
 
 # Add YouTube Playlist Clips
 
-Import a YouTube playlist into the correct team section of this app so filters work.
+Import a YouTube playlist into the correct **D1 library** so filters work on carpeta.cl.
+
+The clip catalog is Cloudflare D1 (`carpeta-de-clips`, binding `DB`). XML blobs stay in R2 `clipped-xml`. Do **not** append to `lib/clip-catalog.ts` (the `videoClips` array was removed).
 
 ## Required inputs
 
@@ -25,16 +27,16 @@ If metadata or the XML filename is missing for a new match, ask before inventing
 
 ## Choose the library target
 
-| User says | Where clips live | Key fields |
-|-----------|------------------|------------|
-| UC Primera B / UC Sub-16 A | That team's section in `lib/clip-catalog.ts` | `homeTeam` / `awayTeam` includes UC; `rivalTeam` = **opponent only** (e.g. `COGS`) |
-| Others library / Category Others | `// Others - Primera A - …` section | `libraryName: 'Others'`, `division: 'Primera A'`, `rivalTeam: 'Club A vs Club B'` |
+| User says | `library_id` | Key fields |
+|-----------|--------------|------------|
+| UC Primera B / UC Sub-16 A | `uc-primera-b` / `uc-sub-16-a` | `rival_label` = **opponent only** (e.g. `COGS`) |
+| Others library / Category Others | `others` | `rival_label` = `Club A vs Club B`; `division` usually `Primera A` |
 
 **Home team** = first club named in the matchup (e.g. “Manquehue vs Old Girls” → Manquehue home).
 
-**Primera A** → set `division: 'Primera A'` on every clip in the match (common for Others and for UC away fixtures in Primera A).
+**Primera A** → set `division: 'Primera A'` on the **match** (common for Others and for UC away fixtures in Primera A).
 
-See [examples.md](examples.md) for copy-paste templates from real imports.
+See [examples.md](examples.md) for JSON/SQL templates from real imports.
 
 ## Point of view (critical)
 
@@ -42,8 +44,8 @@ The filters used on videos are from the team's point of view, so for example: wh
 
 For **UC Primera B** specifically:
 
-| Stored `gameConcept` (rival subject) | Shown filter after POV |
-|--------------------------------------|------------------------|
+| Stored `game_concept` (rival subject) | Shown filter after POV |
+|---------------------------------------|------------------------|
 | `Salidas` | `Presiones` |
 | `Juego 50-yds` | `Presiones` |
 | `Juego 75-yds` | `Presiones` |
@@ -64,13 +66,12 @@ Copy and track:
 ```
 Playlist import:
 - [ ] 1. Fetch playlist videos (id + title)
-- [ ] 2. Diff against existing youtubeIds for that match/team
-- [ ] 3. Map each title → gameConcept (+ team aliases if needed)
-- [ ] 4. Append VideoClip entries in lib/clip-catalog.ts
-- [ ] 5. Wire R2 XML in lib/match-xml-catalog.ts (enables Descargar XML)
-- [ ] 6. Optional: playlist id in db/seed.ts (if touching seed)
-- [ ] 7. Verify clips + XML availability (download button will show)
-- [ ] 8. Commit / push / deploy only if the user asks
+- [ ] 2. Diff against existing youtube_id rows in D1
+- [ ] 3. Map each title → game_concept (+ team aliases if needed)
+- [ ] 4. Upsert match + INSERT clips (ON CONFLICT youtube_id DO NOTHING)
+- [ ] 5. Set matches.r2_xml_object_key (enables Descargar XML)
+- [ ] 6. Verify clips + XML key in D1
+- [ ] 7. Commit / push / deploy only if the user asks
 ```
 
 ### 1. Fetch videos
@@ -93,19 +94,33 @@ curl -sL "PLAYLIST_URL" \
 
 ### 2. Diff existing clips
 
-Find the match section in `lib/clip-catalog.ts` (comment header includes playlist id). Compare playlist `youtubeId`s to existing ones.
+Query D1 (local while developing, `--remote` for production):
 
-- **New match** → add all non-deleted videos.
-- **Sync existing playlist** → append **only** missing `youtubeId`s (user: “new videos added to playlist”).
+```bash
+pnpm exec wrangler d1 execute carpeta-de-clips --local --json --command \
+  "SELECT youtube_id FROM clips INNER JOIN matches ON matches.id = clips.match_id WHERE matches.id = 'STORAGE_SLUG'"
+```
+
+Or by playlist:
+
+```bash
+pnpm exec wrangler d1 execute carpeta-de-clips --local --json --command \
+  "SELECT youtube_id FROM clips INNER JOIN matches ON matches.id = clips.match_id WHERE matches.youtube_playlist_id = 'PLxxxxx'"
+```
+
+- **New match** → insert all non-deleted videos.
+- **Sync existing playlist** → insert **only** missing `youtube_id`s (user: “new videos added to playlist”). `ON CONFLICT (youtube_id) DO NOTHING` is the safety net.
+
+Clip identity is **`youtube_id`**, not the integer `clips.id`.
 
 ### 3. Map titles → concepts
 
-Allowed `gameConcept` values live in `GAME_CONCEPTS` in `lib/types.ts` (never invent new ones).
+Allowed `game_concept` values live in `GAME_CONCEPTS` in `lib/types.ts` (never invent new ones). Dropdown “all” labels are `ALL_CONCEPTS_FILTER_LABEL` / `ALL_RIVALS_FILTER_LABEL` — do not store those.
 
 Common title → concept patterns:
 
-| Title cues | `gameConcept` |
-|------------|---------------|
+| Title cues | `game_concept` |
+|------------|----------------|
 | Salidas / build-out / exits | `Salidas` |
 | Presión / pressure (already UC POV) | `Presiones` |
 | Goles / Gol | `Goles` |
@@ -119,106 +134,96 @@ Common title → concept patterns:
 | Flicks | `Flicks` |
 | Pérdidas / turnovers | `Pérdidas` |
 
-If the title uses a rival AKA (`MQA`, `OR`, …) that does not match `homeTeam`/`awayTeam`, add the alias in `OPPONENT_TITLE_ALIASES` in `lib/team-perspective.ts`.
+If the title uses a rival AKA (`MQA`, `OR`, …) that does not match `home_team`/`away_team`, add the alias in `OPPONENT_TITLE_ALIASES` in `lib/team-perspective.ts`.
 
 **Old Gabs-style playlists** use neutral UC-perspective titles (`Ingresos al área`, `Defensa de área`, `Salidas`, `Presión sobre salidas`) — map directly; no rival-prefix remapping.
 
-### 4. Write `lib/clip-catalog.ts` clips
+### 4. Upsert match + insert clips
 
-Follow the nearest existing playlist in that team section (see [examples.md](examples.md)).
+Match id is the storage slug from `storageSlugFromClip` / `matchKeyToStorageSlug`:
 
-Every clip in the match shares:
+- Key: `date|homeTeam|awayTeam|rivalTeam` (+ `|Others` when `libraryName` is Others)
+- Slug: spaces → `_`, joined with `--`
 
-- `date`, `homeTeam`, `awayTeam`, `rivalTeam`
-- optional `homeGoals` / `awayGoals` / `shootoutWinner` / `division` / `place` / `libraryName`
-- unique numeric `id` — **grep all** `id: '` in `lib/clip-catalog.ts` and use max + 1 (duplicate ids break filters)
-- `youtubeId`, `title` (exact YouTube title)
-- `uploadedAt` ISO timestamps, descending within the match (controls grid sort)
-- comment header: `// Team - Home vs Away (Playlist: PLxxxxx)` or `// Others - Primera A - …`
+Every clip in the match shares match-level fields (`played_on`, teams, score, `rival_label`, `division`, `place`). Clips store `youtube_id`, `title`, `game_concept`, `uploaded_at` (ISO, descending within the match for grid sort).
 
-Place new **Others** sections near other Others blocks (end of `videoClips` array is fine). Group **UC Primera B** matches in the UC Primera B portion of the file.
+Write a payload JSON (see [examples.md](examples.md)) and apply:
 
-Match key / storage slug (for XML / optional seed):
+```bash
+pnpm exec tsx scripts/upsert-playlist.ts --sql-only payload.json
+pnpm exec tsx scripts/upsert-playlist.ts --local payload.json
+pnpm exec tsx scripts/upsert-playlist.ts --remote payload.json
+```
 
-- Key: `date|homeTeam|awayTeam|rivalTeam` (+ `|Others` when `libraryName: 'Others'`)
-- Slug: spaces → `_`, joined with `--` via `matchKeyToStorageSlug`
+The script upserts the match (`ON CONFLICT (id)`) and inserts clips with `ON CONFLICT (youtube_id) DO NOTHING`. It will not overwrite an existing `r2_xml_object_key` with NULL (`COALESCE`).
+
+SQL lives in `lib/catalog-upsert.ts` if you need to bind statements from a Worker.
 
 ### 5. Wire match XML from R2 (required for new matches)
 
-Match event XMLs live in the Cloudflare R2 bucket **`clipped-xml`** (binding `CLIPPED_XML`). Hooking the file up is what turns on the **Descargar XML** button in the match context banner — no separate UI change is needed.
+Match event XMLs live in the Cloudflare R2 bucket **`clipped-xml`** (binding `CLIPPED_XML`). Setting `matches.r2_xml_object_key` is what turns on the **Descargar XML** button — no separate UI change is needed.
 
 **How the button appears**
 
-1. `lib/match-xml-catalog.ts` catalogs the match `storageSlug` → R2 `objectKey`.
-2. `isMatchXmlAvailable(storageSlug)` returns `true` when the slug has an R2 override (`hasMatchXmlR2ObjectOverride`) or a local file.
-3. Team pages pass `matchXmlAvailability` into `MatchContextBanner`.
-4. `MatchXmlDownloadButton` renders **only when** `available === true` (label: “Descargar XML”). It links to `/api/match-xml/{storageSlug}?filename=…`, which reads bytes from R2 via `env.CLIPPED_XML`.
+1. Seed/upsert stores `r2_xml_object_key` on the match row (`matches.id` = storage slug).
+2. `getTeamLibraryClips` copies that key onto each `VideoClip.r2XmlObjectKey`.
+3. `getMatchXmlAvailabilityByStorageSlug` returns `true` when the key is set (or a local `public/match-xml/{slug}.xml` exists).
+4. `MatchXmlDownloadButton` renders **only when** `available === true`. It links to `/api/match-xml/{storageSlug}?filename=…`, which reads bytes from R2 via `env.CLIPPED_XML`.
 
 **Do this every time you add a new match** (or when the user names an XML for an existing match):
 
-1. Compute `storageSlug` from the clips (`storageSlugFromClip` / `matchKeyToStorageSlug`) — must match `homeTeam` / `awayTeam` / `rivalTeam` / `libraryName` exactly.
+1. Compute `storageSlug` — must match home / away / rival / Others suffix exactly.
 2. Ask for the exact R2 object name if the user did not provide it (do not guess filenames).
-3. Add an entry to `MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG` in `lib/match-xml-catalog.ts`:
+3. Set `r2XmlObjectKey` on the upsert payload (the object name is also the download filename).
 
-```ts
-'YYYY-MM-DD--Home--Away--Rival': {
-  objectKey: 'Exact R2 filename.xml',
-  downloadFilename: 'Exact R2 filename.xml',
-},
-```
+For Others matches the slug includes `--Others` because `libraryName: 'Others'` is part of the match key.
 
-For Others matches the slug includes `--Others` (because `libraryName: 'Others'` is part of the match key).
+**Sync-only imports**: skip this step unless XML was never wired.
 
-**Sync-only imports** (new videos on an already-cataloged match): skip this step unless XML was never wired.
+Do **not** upload XML from the agent unless asked — the file must already exist in R2.
 
-Do **not** upload XML from the agent unless asked — the file must already exist in R2. Cataloging alone enables the download button.
-
-### 6. Optional `db/seed.ts`
-
-Add playlist id to `PLAYLIST_BY_MATCH_KEY` using the match key above. The whole `db/` tree is often **untracked local WIP** — updating seed is fine, but playlist commits that shipped historically included **`lib/clip-catalog.ts`** (+ `lib/match-xml-catalog.ts` when XML was wired). App reads static data unless `USE_DATABASE=true`.
-
-### 7. Verify
+### 6. Verify
 
 ```bash
-npx tsx -e "
-import { getTeamLibraryClips } from './lib/clip-catalog'
-import { storageSlugFromClip } from './lib/match-keys'
-import { isMatchXmlAvailable } from './lib/match-xml.server'
-import { getMatchXmlR2ObjectKey } from './lib/match-xml-catalog'
-
-const clips = getTeamLibraryClips('TEAM-SLUG').filter(c => c.date === 'YYYY-MM-DD')
-for (const c of clips) console.log(c.title, '->', c.gameConcept)
-const slug = storageSlugFromClip(clips[0])
-console.log('count:', clips.length)
-console.log('slug:', slug)
-console.log('r2:', getMatchXmlR2ObjectKey(slug))
-console.log('xmlAvailable (→ Descargar XML button):', isMatchXmlAvailable(slug))
+pnpm exec wrangler d1 execute carpeta-de-clips --local --json --command "
+SELECT clips.title, clips.game_concept, matches.division, matches.r2_xml_object_key, matches.id
+FROM clips
+INNER JOIN matches ON matches.id = clips.match_id
+WHERE matches.played_on = 'YYYY-MM-DD'
+  AND matches.library_id = 'TEAM-SLUG'
+ORDER BY clips.uploaded_at DESC
 "
 ```
 
-For **UC Primera B**: confirm rival salidas / 50 / 75 → `Presiones` and rival ingresos → `Defensa de área`.
+POV remapping is **not** stored in D1. Confirm it by loading the team page (or calling `remapGameConceptToTeamPerspective`). For **UC Primera B**: rival salidas / 50 / 75 → `Presiones` and rival ingresos → `Defensa de área`.
 
 For **Others**: confirm clip count matches playlist (minus deleted videos).
 
-For **XML**: `xmlAvailable` must be `true` after cataloging. That is enough for the banner download button on the team page (filter by rival/date to see the match row).
+For **XML**: `r2_xml_object_key` must be non-null after cataloging.
 
-### 8. Ship
+Use `--remote` when verifying production.
 
-Only when asked: commit **only** the files you changed for this import (`lib/clip-catalog.ts`, `lib/match-xml-catalog.ts` when XML was wired, and `lib/team-perspective.ts` if aliases were added). Then `git push` and `pnpm run deploy`. Do not include unrelated WIP (`db/`, work-window, lockfile, `.gitignore`, etc.).
+### 7. Ship
+
+Only when asked: the catalog change is **in D1**, so run `tsx scripts/upsert-playlist.ts --remote payload.json`. Commit `lib/team-perspective.ts` if aliases were added. Then `git push` and `pnpm run deploy` if Worker code changed.
+
+Do not re-add clips to a TypeScript array. Do not invent scores or dates.
 
 ## Key files
 
 | File | Role |
 |------|------|
-| `lib/clip-catalog.ts` | Clip catalog + team sections (**primary ship target**) |
-| `lib/types.ts` | `GAME_CONCEPTS`, `VideoClip` |
-| `lib/team-perspective.ts` | UC Primera B POV remaps + title aliases |
-| `lib/match-xml-catalog.ts` | R2 XML object keys (**enables Descargar XML**) |
-| `lib/match-xml.server.ts` | Availability + R2/local read |
-| `components/match-xml-download-button.tsx` | Banner download UI (auto via `available`) |
-| `components/match-context-banner.tsx` | Passes `canDownloadMatchXml` into the button |
-| `lib/match-keys.ts` | Match key / storage slug |
-| `db/seed.ts` | Optional playlist id map (whole `db/` may be untracked WIP) |
+| `migrations/` | D1 schema + initial catalog seed |
+| `lib/clip-catalog.ts` | App-facing re-exports: `getTeamLibraryClips`, `listTeamLibraryRivals` |
+| `lib/catalog.ts` | D1 queries used by those re-exports |
+| `lib/catalog-upsert.ts` | Match upsert + clip insert SQL |
+| `scripts/upsert-playlist.ts` | Apply a playlist JSON to local or remote D1 |
+| `lib/types.ts` | `GAME_CONCEPTS`, `VideoClip`, `ALL_*_FILTER_LABEL` |
+| `lib/team-perspective.ts` | `remapGameConceptToTeamPerspective` + title aliases |
+| `lib/match-xml.server.ts` | `getMatchXmlAvailabilityByStorageSlug` + R2/local read |
+| `lib/match-display.ts` | `MatchSummary`, `listUniqueMatchSummaries` |
+| `lib/match-keys.ts` | Match key / storage slug (`matches.id`) |
+| `wrangler.jsonc` | Binding `DB` → D1 `carpeta-de-clips` |
 
 ## Additional resources
 

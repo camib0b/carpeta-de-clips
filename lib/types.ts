@@ -31,6 +31,8 @@ export interface VideoClip {
   playerRoster?: string[]
   /** ISO timestamp used only to sort clips in the library grid. */
   uploadedAt: string
+  /** R2 object key in the clipped-xml bucket when this match has XML. */
+  r2XmlObjectKey?: string
 }
 
 /**

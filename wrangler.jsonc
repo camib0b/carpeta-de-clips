@@ -24,6 +24,14 @@
       "remote": true
     }
   ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "carpeta-de-clips",
+      "database_id": "6ac20d29-8e80-42d2-8330-ed7a7901d103",
+      "migrations_dir": "migrations"
+    }
+  ],
   "observability": {
     "enabled": true
   }

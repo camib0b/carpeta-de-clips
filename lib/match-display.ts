@@ -15,6 +15,8 @@ export interface MatchSummary {
   shootoutWinner?: string
   /** Slug for public/match-xml/{storageSlug}.xml and /api/match-xml/[storageSlug] */
   storageSlug: string
+  /** R2 object key in clipped-xml when this match has XML cataloged in D1. */
+  xmlObjectKey?: string
 }
 
 function toMatchSummary(clip: VideoClip): MatchSummary {
@@ -30,6 +32,7 @@ function toMatchSummary(clip: VideoClip): MatchSummary {
     awayGoals: clip.awayGoals,
     shootoutWinner: clip.shootoutWinner,
     storageSlug,
+    xmlObjectKey: clip.r2XmlObjectKey,
   }
 }
 
@@ -88,4 +91,8 @@ export function formatMatchScore(match: MatchSummary): string | null {
   if (homeGoals === undefined || awayGoals === undefined) return null
 
   return formatScoreWithShootout(homeGoals, awayGoals, match.shootoutWinner)
+}
+
+export function resolveMatchXmlDownloadFilename(match: MatchSummary): string {
+  return match.xmlObjectKey ?? buildMatchXmlDownloadFilename(match)
 }
