@@ -31,7 +31,7 @@ Open [http://localhost:3000](http://localhost:3000). Edit `app/page.tsx` (home) 
 # Local (wrangler state under .wrangler/)
 pnpm run db:migrate:local
 
-# Production (must run before a deploy that reads D1, or the live site will be empty)
+# Production: schema (0001) + catalog seed (0002) in one command
 pnpm run db:migrate:remote
 ```
 
@@ -41,6 +41,8 @@ Those commands wrap:
 pnpm exec wrangler d1 migrations apply carpeta-de-clips --local
 pnpm exec wrangler d1 migrations apply carpeta-de-clips --remote
 ```
+
+There is **no separate remote seed command**. `0002_seed_catalog.sql` is the seed (`INSERT OR IGNORE` of libraries, matches, and clips). Apply `--remote` before a deploy that reads D1, or the live site will be empty.
 
 - `0001_create_catalog.sql` — `libraries`, `matches`, `clips` + indexes (`matches.division` is the league, e.g. Primera A)
 - `0002_seed_catalog.sql` — snapshot of the former clip-catalog array (scores/dates copied, not invented; `libraryName` → `library_id`, `division` → `matches.division`)
