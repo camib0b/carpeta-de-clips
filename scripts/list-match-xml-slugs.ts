@@ -1,4 +1,4 @@
-import { videoClips } from '../lib/data'
+import { videoClips } from '../lib/clip-catalog'
 import { buildMatchKeyFromClip, matchKeyToStorageSlug } from '../lib/match-keys'
 
 const slugs = new Map<string, string>()

@@ -21,8 +21,8 @@ Matches between two non-UC clubs. Appear on the **Others** team page (`slug: oth
   youtubeId: '…',
   title: 'Exact YouTube title',
   gameConcept: 'Goles',
-  collection: 'Others',
-  category: 'Primera A',
+  libraryName: 'Others',
+  division: 'Primera A',
   rivalTeam: 'Home Club vs Away Club',
   date: 'YYYY-MM-DD',
   homeTeam: 'Home Club',      // first name in matchup
@@ -41,7 +41,7 @@ YYYY-MM-DD|Home Club|Away Club|Home Club vs Away Club|Others
 
 ## UC Primera B (UC is one side)
 
-Clips appear on **UC Primera B** (`slug: uc-primera-b`). No `collection` field.
+Clips appear on **UC Primera B** (`slug: uc-primera-b`). No `libraryName` field.
 
 | Match | Playlist | `rivalTeam` | Home / away | Score |
 |-------|----------|-------------|---------------|-------|
@@ -57,7 +57,7 @@ Clips appear on **UC Primera B** (`slug: uc-primera-b`). No `collection` field.
   youtubeId: '…',
   title: 'COGS Salidas',           // rival prefix → POV remaps to Presiones
   gameConcept: 'Salidas',          // store literal; do not store Presiones
-  category: 'Primera A',           // when user specifies tournament
+  division: 'Primera A',           // when user specifies Primera A / league division
   rivalTeam: 'COGS',
   date: '2026-05-16',
   homeTeam: 'COGS',
@@ -79,7 +79,7 @@ YYYY-MM-DD|COGS|UC Primera B|COGS
 Example: COGS vs UC B started with 7 clips; playlist later gained 3 more.
 
 1. Re-fetch playlist ids.
-2. Grep `lib/data.ts` for the playlist comment header.
+2. Grep `lib/clip-catalog.ts` for the playlist comment header.
 3. Compare `youtubeId`s — only append missing entries.
 4. Re-run POV verify script for the match date.
 
@@ -129,7 +129,7 @@ After cataloging, `isMatchXmlAvailable(storageSlug)` is `true` → `MatchXmlDown
 Playlist + XML work that shipped:
 
 ```
-lib/data.ts                          # always
+lib/clip-catalog.ts                  # always
 lib/match-xml-catalog.ts             # when wiring / enabling Descargar XML
 lib/team-perspective.ts              # only when POV rules / aliases change
 ```

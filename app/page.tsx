@@ -1,16 +1,15 @@
 import Link from 'next/link'
 import { TeamIcon } from '@/components/team-icon'
-import { teams, getTeamVideos } from '@/lib/data'
+import { teams, getTeamLibraryClips } from '@/lib/clip-catalog'
 
 /**
  * Home page - Team selection
  * Minimalist list of teams with video counts
  */
 export default function HomePage() {
-  // Get video counts for each team
-  const teamsWithCounts = teams.map((team) => ({
+  const teamsWithClipCounts = teams.map((team) => ({
     ...team,
-    videoCount: getTeamVideos(team.slug).length,
+    clipCount: getTeamLibraryClips(team.slug).length,
   }))
 
   return (
@@ -34,7 +33,7 @@ export default function HomePage() {
       <main className="mx-auto max-w-2xl px-6 py-12">
         <nav>
           <ul className="divide-y divide-border">
-            {teamsWithCounts.map((team) => (
+            {teamsWithClipCounts.map((team) => (
               <li key={team.id}>
                 <Link
                   href={`/${team.slug}`}
@@ -48,7 +47,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">
-                      {team.videoCount} {team.videoCount === 1 ? 'clip' : 'clips'}
+                      {team.clipCount} {team.clipCount === 1 ? 'clip' : 'clips'}
                     </span>
                     <svg
                       className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1"

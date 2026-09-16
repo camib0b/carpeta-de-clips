@@ -7,11 +7,11 @@ import { VideoModal } from './video-modal'
 import { useLibraryFilters } from '@/hooks/use-library-filters'
 import { MatchContextBanner } from './match-context-banner'
 import { VideoFilters } from './video-filters'
-import { getUniqueMatchesFromVideos } from '@/lib/match-display'
+import { listUniqueMatchSummaries } from '@/lib/match-display'
 
 interface VideoGridProps {
   videos: VideoClip[]
-  rivals: string[]
+  availableRivals: string[]
   matchXmlAvailability: Record<string, boolean>
 }
 
@@ -19,19 +19,18 @@ interface VideoGridProps {
  * Video grid component with filtering
  * Displays videos in a responsive grid with client-side filtering
  */
-export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridProps) {
-  const [selectedVideo, setSelectedVideo] = useState<VideoClip | null>(null)
-  const [modalOpen, setModalOpen] = useState(false)
+export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: VideoGridProps) {
+  const [selectedClip, setSelectedClip] = useState<VideoClip | null>(null)
+  const [isClipModalOpen, setIsClipModalOpen] = useState(false)
   const {
-    concepts: selectedConcepts,
-    rivals: selectedRivals,
-    setConcepts: setSelectedConcepts,
-    setRivals: setSelectedRivals,
+    selectedConcepts,
+    selectedRivals,
+    setSelectedConcepts,
+    setSelectedRivals,
     clearFilters,
     hasActiveFilters,
-  } = useLibraryFilters(rivals)
+  } = useLibraryFilters(availableRivals)
 
-  // Filter videos based on selected filters
   const filteredVideos = useMemo(() => {
     return videos.filter((video) => {
       const matchesConcept =
@@ -42,21 +41,21 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
     })
   }, [videos, selectedConcepts, selectedRivals])
 
-  const showMatchContext = selectedRivals.length > 0
+  const shouldShowMatchBanner = selectedRivals.length > 0
 
-  const matchContext = useMemo(() => {
-    if (!showMatchContext) return []
-    return getUniqueMatchesFromVideos(filteredVideos)
-  }, [filteredVideos, showMatchContext])
+  const visibleMatchSummaries = useMemo(() => {
+    if (!shouldShowMatchBanner) return []
+    return listUniqueMatchSummaries(filteredVideos)
+  }, [filteredVideos, shouldShowMatchBanner])
 
-  const handleVideoClick = (video: VideoClip) => {
-    setSelectedVideo(video)
-    setModalOpen(true)
+  const openClipModal = (video: VideoClip) => {
+    setSelectedClip(video)
+    setIsClipModalOpen(true)
   }
 
   const selectedIndex =
-    selectedVideo && modalOpen
-      ? filteredVideos.findIndex((videoItem) => videoItem.id === selectedVideo.id)
+    selectedClip && isClipModalOpen
+      ? filteredVideos.findIndex((videoItem) => videoItem.id === selectedClip.id)
       : -1
 
   const canNavigatePrevious = selectedIndex > 0
@@ -64,7 +63,7 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
     selectedIndex >= 0 && selectedIndex < filteredVideos.length - 1
 
   const handleNavigatePrevious = useCallback(() => {
-    setSelectedVideo((current) => {
+    setSelectedClip((current) => {
       if (!current) return current
       const index = filteredVideos.findIndex((videoItem) => videoItem.id === current.id)
       if (index <= 0) return current
@@ -73,7 +72,7 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
   }, [filteredVideos])
 
   const handleNavigateNext = useCallback(() => {
-    setSelectedVideo((current) => {
+    setSelectedClip((current) => {
       if (!current) return current
       const index = filteredVideos.findIndex((videoItem) => videoItem.id === current.id)
       if (index < 0 || index >= filteredVideos.length - 1) return current
@@ -82,15 +81,15 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
   }, [filteredVideos])
 
   useEffect(() => {
-    if (!modalOpen || !selectedVideo) return
+    if (!isClipModalOpen || !selectedClip) return
     const stillInFilteredList = filteredVideos.some(
-      (videoItem) => videoItem.id === selectedVideo.id,
+      (videoItem) => videoItem.id === selectedClip.id,
     )
     if (!stillInFilteredList) {
-      setModalOpen(false)
-      setSelectedVideo(null)
+      setIsClipModalOpen(false)
+      setSelectedClip(null)
     }
-  }, [filteredVideos, modalOpen, selectedVideo])
+  }, [filteredVideos, isClipModalOpen, selectedClip])
 
   return (
     <div className="space-y-10">
@@ -100,14 +99,14 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
         selectedRivals={selectedRivals}
         onConceptsChange={setSelectedConcepts}
         onRivalsChange={setSelectedRivals}
-        rivals={rivals}
+        availableRivals={availableRivals}
         videos={videos}
         hasActiveFilters={hasActiveFilters}
       />
 
-      {showMatchContext && (
+      {shouldShowMatchBanner && (
         <MatchContextBanner
-          matches={matchContext}
+          matches={visibleMatchSummaries}
           matchXmlAvailability={matchXmlAvailability}
         />
       )}
@@ -124,7 +123,7 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
             <VideoCard
               key={video.id}
               video={video}
-              onClick={() => handleVideoClick(video)}
+              onClick={() => openClipModal(video)}
             />
           ))}
         </div>
@@ -144,9 +143,9 @@ export function VideoGrid({ videos, rivals, matchXmlAvailability }: VideoGridPro
 
       {/* Video Modal */}
       <VideoModal
-        video={selectedVideo}
-        open={modalOpen}
-        onOpenChange={setModalOpen}
+        video={selectedClip}
+        open={isClipModalOpen}
+        onOpenChange={setIsClipModalOpen}
         canNavigatePrevious={canNavigatePrevious}
         canNavigateNext={canNavigateNext}
         onNavigatePrevious={handleNavigatePrevious}

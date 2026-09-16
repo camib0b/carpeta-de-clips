@@ -1,4 +1,4 @@
-import type { MatchMetadata } from '@/lib/match-display'
+import type { MatchSummary } from '@/lib/match-display'
 import { buildMatchXmlDownloadFilename } from '@/lib/match-display'
 
 /**
@@ -57,11 +57,11 @@ export function getMatchXmlR2ObjectKey(storageSlug: string): string {
   return `${storageSlug}.xml`
 }
 
-export function isMatchXmlCataloged(storageSlug: string): boolean {
+export function hasMatchXmlR2ObjectOverride(storageSlug: string): boolean {
   return storageSlug in MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG
 }
 
-export function resolveMatchXmlDownloadFilename(match: MatchMetadata): string {
+export function resolveMatchXmlDownloadFilename(match: MatchSummary): string {
   const override =
     MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG[match.storageSlug]?.downloadFilename
 

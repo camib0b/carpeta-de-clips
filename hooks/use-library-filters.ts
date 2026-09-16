@@ -9,19 +9,19 @@ import {
   type LibraryFilterState,
 } from '@/lib/library-filters/params'
 
-export function useLibraryFilters(rivals: string[]) {
+export function useLibraryFilters(availableRivals: string[]) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const filters = useMemo(
-    () => parseLibraryFilters(searchParams, rivals),
-    [searchParams, rivals],
+    () => parseLibraryFilters(searchParams, availableRivals),
+    [searchParams, availableRivals],
   )
 
   const updateFilters = useCallback(
-    (next: Partial<LibraryFilterState>) => {
-      const merged: LibraryFilterState = { ...filters, ...next }
+    (partialFilters: Partial<LibraryFilterState>) => {
+      const merged: LibraryFilterState = { ...filters, ...partialFilters }
       const params = serializeLibraryFilters(merged)
       const query = params.toString()
       const href = query ? `${pathname}?${query}` : pathname
@@ -30,12 +30,12 @@ export function useLibraryFilters(rivals: string[]) {
     [filters, pathname, router],
   )
 
-  const setConcepts = useCallback(
+  const setSelectedConcepts = useCallback(
     (concepts: string[]) => updateFilters({ concepts }),
     [updateFilters],
   )
 
-  const setRivals = useCallback(
+  const setSelectedRivals = useCallback(
     (nextRivals: string[]) => updateFilters({ rivals: nextRivals }),
     [updateFilters],
   )
@@ -45,10 +45,10 @@ export function useLibraryFilters(rivals: string[]) {
   }, [pathname, router])
 
   return {
-    concepts: filters.concepts,
-    rivals: filters.rivals,
-    setConcepts,
-    setRivals,
+    selectedConcepts: filters.concepts,
+    selectedRivals: filters.rivals,
+    setSelectedConcepts,
+    setSelectedRivals,
     clearFilters,
     hasActiveFilters: hasActiveFilters(filters),
   }

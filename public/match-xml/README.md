@@ -12,7 +12,7 @@ Local copies in this folder are optional fallbacks for development.
 Name each file `{storageSlug}.xml` where `storageSlug` is derived from the match:
 
 ```
-{date}--{homeTeam}--{awayTeam}--{rivalTeam}[--{collection}]
+{date}--{homeTeam}--{awayTeam}--{rivalTeam}[--{libraryName}]
 ```
 
 Spaces become `_`; non-alphanumeric characters are removed from each segment.

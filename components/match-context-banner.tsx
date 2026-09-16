@@ -4,20 +4,20 @@ import { MatchXmlDownloadButton } from '@/components/match-xml-download-button'
 import {
   formatMatchDate,
   formatMatchScore,
-  type MatchMetadata,
+  type MatchSummary,
 } from '@/lib/match-display'
 
 interface MatchContextBannerProps {
-  matches: MatchMetadata[]
+  matches: MatchSummary[]
   matchXmlAvailability: Record<string, boolean>
 }
 
 function MatchContextBannerRow({
   match,
-  xmlAvailable,
+  canDownloadMatchXml,
 }: {
-  match: MatchMetadata
-  xmlAvailable: boolean
+  match: MatchSummary
+  canDownloadMatchXml: boolean
 }) {
   const formattedDate = formatMatchDate(match.date)
   const scoreDisplay = formatMatchScore(match)
@@ -36,12 +36,12 @@ function MatchContextBannerRow({
           <span className="font-medium text-foreground/70">{scoreDisplay}</span>
         </>
       )}
-      {match.tournament && (
+      {match.division && (
         <>
           <span aria-hidden className="text-muted-foreground/40">
             ·
           </span>
-          <span>{match.tournament}</span>
+          <span>{match.division}</span>
         </>
       )}
       <span aria-hidden className="text-muted-foreground/40">
@@ -49,7 +49,7 @@ function MatchContextBannerRow({
       </span>
       <span>{formattedDate}</span>
       </div>
-      <MatchXmlDownloadButton match={match} available={xmlAvailable} />
+      <MatchXmlDownloadButton match={match} available={canDownloadMatchXml} />
     </div>
   )
 }
@@ -64,7 +64,7 @@ export function MatchContextBanner({
 }: MatchContextBannerProps) {
   if (matches.length === 0) return null
 
-  const anyXmlAvailable = matches.some(
+  const hasAnyMatchXmlDownload = matches.some(
     (match) => matchXmlAvailability[match.storageSlug] === true,
   )
 
@@ -73,7 +73,7 @@ export function MatchContextBanner({
       className="rounded-md border border-border/60 bg-muted/30 px-3 py-2"
       aria-label="Contexto del partido"
     >
-      {anyXmlAvailable && (
+      {hasAnyMatchXmlDownload && (
         <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
           Codificación de eventos (XML)
         </p>
@@ -83,7 +83,7 @@ export function MatchContextBanner({
           <MatchContextBannerRow
             key={match.storageSlug}
             match={match}
-            xmlAvailable={matchXmlAvailability[match.storageSlug] === true}
+            canDownloadMatchXml={matchXmlAvailability[match.storageSlug] === true}
           />
         ))}
       </div>

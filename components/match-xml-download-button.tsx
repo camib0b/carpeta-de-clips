@@ -5,12 +5,12 @@ import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   getMatchXmlDownloadHref,
-  type MatchMetadata,
+  type MatchSummary,
 } from '@/lib/match-display'
 import { resolveMatchXmlDownloadFilename } from '@/lib/match-xml-catalog'
 
 interface MatchXmlDownloadButtonProps {
-  match: MatchMetadata
+  match: MatchSummary
   available: boolean
 }
 
