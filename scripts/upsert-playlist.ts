@@ -11,6 +11,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import type { ClipInstanceInsert } from '../lib/clip-instances'
 import type { CatalogClipInsert, CatalogMatchUpsert } from '../lib/catalog-upsert'
 
 const REPOSITORY_ROOT = path.resolve(
@@ -37,6 +38,37 @@ function sqlInteger(value: number | null | undefined): string {
   return String(value)
 }
 
+function sqlReal(value: number): string {
+  return String(value)
+}
+
+function renderClipInstancesSql(
+  youtubeId: string,
+  instances: ClipInstanceInsert[],
+): string {
+  const deleteSql = `DELETE FROM clip_instances WHERE clip_id = (SELECT id FROM clips WHERE youtube_id = ${sqlString(youtubeId)});`
+
+  const valueRows = instances
+    .map(
+      (instance) =>
+        `  (${sqlInteger(instance.ord)}, ${sqlReal(instance.offsetS)}, ${sqlReal(instance.durationS)}, ${sqlString(instance.quarter)}, ${sqlString(instance.scoreLabel)}, ${sqlInteger(instance.xmlInstanceId)})`,
+    )
+    .join(',\n')
+
+  const insertSql = `INSERT INTO clip_instances (clip_id, ord, offset_s, duration_s, quarter, score_label, xml_instance_id)
+SELECT clips.id, v.ord, v.offset_s, v.duration_s, v.quarter, v.score_label, v.xml_instance_id
+FROM clips
+CROSS JOIN (
+  VALUES
+${valueRows}
+) AS v(ord, offset_s, duration_s, quarter, score_label, xml_instance_id)
+WHERE clips.youtube_id = ${sqlString(youtubeId)};`
+
+  return `${deleteSql}
+
+${insertSql}`
+}
+
 function renderSql(payload: UpsertPayload): string {
   const match = payload.match
   const clipRows = payload.clips
@@ -52,6 +84,16 @@ function renderSql(payload: UpsertPayload): string {
       : `INSERT INTO clips (youtube_id, match_id, title, game_concept, uploaded_at) VALUES
 ${clipRows}
 ON CONFLICT (youtube_id) DO NOTHING;`
+
+  const instanceBlocks = payload.clips
+    .filter((clip) => Array.isArray(clip.instances) && clip.instances.length > 0)
+    .map((clip) =>
+      renderClipInstancesSql(clip.youtubeId, clip.instances as ClipInstanceInsert[]),
+    )
+    .join('\n\n')
+
+  const instanceSql =
+    instanceBlocks.length === 0 ? '-- no clip instances' : instanceBlocks
 
   return `-- Upsert match ${match.id}
 INSERT INTO matches (
@@ -88,6 +130,8 @@ ON CONFLICT (id) DO UPDATE SET
   r2_xml_object_key = COALESCE(excluded.r2_xml_object_key, matches.r2_xml_object_key);
 
 ${clipInsert}
+
+${instanceSql}
 `
 }
 

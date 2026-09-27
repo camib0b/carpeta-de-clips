@@ -1,3 +1,5 @@
+import type { ClipInstanceInsert } from './clip-instances'
+
 /**
  * SQL used to import a playlist into D1.
  * Match identity is the storage slug (`date--home--away--rival[--Others]`).
@@ -62,6 +64,12 @@ export type CatalogClipInsert = {
   title: string
   gameConcept: string
   uploadedAt: string
+  /**
+   * Compiled AVA mp4 basename (e.g. `UC B vs OR - 16-yd OR.mp4`) used to match
+   * `*.clips.json` sidecars during import.
+   */
+  sourceVideo?: string | null
+  instances?: ClipInstanceInsert[]
 }
 
 export function bindUpsertMatch(match: CatalogMatchUpsert): unknown[] {

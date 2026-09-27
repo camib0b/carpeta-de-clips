@@ -140,6 +140,26 @@ If the title uses a rival AKA (`MQA`, `OR`, …) that does not match `home_team`
 
 ### 4. Upsert match + insert clips
 
+#### AVA compiled clips (`*.clips.json` sidecars)
+
+Each YouTube upload is often one **compiled mp4** with several plays stitched back-to-back. AVA writes a sidecar next to the file (`UC B vs OR - 16-yd OR.clips.json`). Offsets in that JSON are the source of truth for play boundaries inside the YouTube timeline — do **not** derive offsets from match XML at import time.
+
+1. Build the usual playlist `payload.json` (clips need `youtubeId`, titles, concepts). Optionally set `sourceVideo` on each clip to the compiled mp4 basename (e.g. `UC B vs OR - 16-yd OR.mp4`) so sidecars match reliably.
+2. Merge sidecars from the match export folder:
+
+```bash
+pnpm exec tsx scripts/instances-from-sidecars.ts /path/to/match-folder payload.json > payload-with-instances.json
+# Unverified exports: add --allow-unverified
+```
+
+The script prints a per-clip summary on stderr (title, play count, compiled duration) and writes JSON with `clips[].instances` (`ord`, `offsetS`, `durationS`, `quarter`, `scoreLabel`, `xmlInstanceId`).
+
+3. Upsert as usual (instances replace any existing rows for that `youtube_id` when present; clips without `instances` are left unchanged):
+
+```bash
+pnpm exec tsx scripts/upsert-playlist.ts --local payload-with-instances.json
+```
+
 Match id is the storage slug from `storageSlugFromClip` / `matchKeyToStorageSlug`:
 
 - Key: `date|homeTeam|awayTeam|rivalTeam` (+ `|Others` when `libraryName` is Others)
@@ -218,6 +238,8 @@ Do not re-add clips to a TypeScript array. Do not invent scores or dates.
 | `lib/catalog.ts` | D1 queries used by those re-exports |
 | `lib/catalog-upsert.ts` | Match upsert + clip insert SQL |
 | `scripts/upsert-playlist.ts` | Apply a playlist JSON to local or remote D1 |
+| `scripts/instances-from-sidecars.ts` | Attach `instances` from AVA `*.clips.json` into a payload |
+| `migrations/0003_clip_instances.sql` | `clip_instances` table (per-play offsets inside a clip) |
 | `lib/types.ts` | `GAME_CONCEPTS`, `VideoClip`, `ALL_*_FILTER_LABEL` |
 | `lib/team-perspective.ts` | `remapGameConceptToTeamPerspective` + title aliases |
 | `lib/match-xml.server.ts` | `getMatchXmlAvailabilityByStorageSlug` + R2/local read |
