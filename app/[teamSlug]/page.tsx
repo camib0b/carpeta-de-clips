@@ -32,8 +32,8 @@ export async function generateMetadata({
     }
   }
 
-  const pageTitle = `${team.name} — Carpeta de Clips`
-  const pageDescription = `Clips ${team.name}`
+  const pageTitle = `Carpeta de ${team.name}`
+  const pageDescription = `Clips de partidos organizados por jugada.`
 
   return {
     title: pageTitle,

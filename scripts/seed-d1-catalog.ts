@@ -26,8 +26,8 @@ const SEED_MIGRATION_PATH = path.join(
 
 const LIBRARIES = [
   { id: 'uc-sub-16-a', name: 'UC Sub-16 A', sortOrder: 1 },
-  { id: 'uc-primera-b', name: 'UC Primera B', sortOrder: 2 },
-  { id: 'others', name: 'Others', sortOrder: 3 },
+  { id: 'uc-primera-b', name: 'UC 1°B', sortOrder: 2 },
+  { id: 'others', name: 'Otros - Torneo 1°A', sortOrder: 3 },
 ] as const
 
 type SeedMatch = {
@@ -72,7 +72,10 @@ function libraryIdFromClip(clip: VideoClip): string {
   if (clip.libraryName === 'Others') {
     return 'others'
   }
-  if (clip.homeTeam === 'UC Primera B' || clip.awayTeam === 'UC Primera B') {
+  if (clip.homeTeam === 'UC B' || clip.awayTeam === 'UC B') {
+    return 'uc-primera-b'
+  }
+  if (clip.homeTeam === 'UCB' || clip.awayTeam === 'UCB') {
     return 'uc-primera-b'
   }
   if (clip.homeTeam === 'UC Sub-16 A' || clip.awayTeam === 'UC Sub-16 A') {
