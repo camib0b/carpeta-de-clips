@@ -1,6 +1,6 @@
 import { remapGameConceptToTeamPerspective } from '@/lib/team-perspective'
 import { getCatalogDatabase } from '@/lib/d1'
-import type { Team, VideoClip } from '@/lib/types'
+import type { ClipInstance, Team, VideoClip } from '@/lib/types'
 
 const LIBRARY_COUNTRY = 'CL'
 
@@ -12,6 +12,16 @@ type LibraryRow = {
 
 type LibraryCountRow = LibraryRow & {
   clip_count: number
+}
+
+type ClipInstanceRow = {
+  clip_id: number
+  ord: number
+  offset_s: number
+  duration_s: number
+  quarter: string | null
+  score_label: string | null
+  xml_instance_id: number | null
 }
 
 type ClipJoinRow = {
@@ -53,6 +63,66 @@ function libraryRowToTeam(row: LibraryRow): Team {
     slug: row.id,
     country: LIBRARY_COUNTRY,
   }
+}
+
+function clipInstanceRowToClipInstance(row: ClipInstanceRow): ClipInstance {
+  return {
+    ord: row.ord,
+    offsetS: row.offset_s,
+    durationS: row.duration_s,
+    quarter: optionalString(row.quarter),
+    scoreLabel: optionalString(row.score_label),
+    xmlInstanceId: optionalNumber(row.xml_instance_id),
+  }
+}
+
+async function fetchClipInstancesByClipIds(
+  database: D1Database,
+  clipIds: number[],
+): Promise<Map<number, ClipInstance[]>> {
+  const instancesByClipId = new Map<number, ClipInstance[]>()
+  if (clipIds.length === 0) {
+    return instancesByClipId
+  }
+
+  const placeholders = clipIds.map(() => '?').join(', ')
+  const result = await database
+    .prepare(
+      `SELECT
+         clip_id,
+         ord,
+         offset_s,
+         duration_s,
+         quarter,
+         score_label,
+         xml_instance_id
+       FROM clip_instances
+       WHERE clip_id IN (${placeholders})
+       ORDER BY clip_id ASC, ord ASC`,
+    )
+    .bind(...clipIds)
+    .all<ClipInstanceRow>()
+
+  for (const row of result.results ?? []) {
+    const clipInstances = instancesByClipId.get(row.clip_id) ?? []
+    clipInstances.push(clipInstanceRowToClipInstance(row))
+    instancesByClipId.set(row.clip_id, clipInstances)
+  }
+
+  return instancesByClipId
+}
+
+function attachClipInstances(
+  clips: VideoClip[],
+  instancesByClipId: Map<number, ClipInstance[]>,
+): VideoClip[] {
+  return clips.map((clip) => {
+    const instances = instancesByClipId.get(Number(clip.id))
+    if (!instances || instances.length === 0) {
+      return clip
+    }
+    return { ...clip, instances }
+  })
 }
 
 function clipJoinRowToVideoClip(row: ClipJoinRow): VideoClip {
@@ -174,9 +244,14 @@ export async function getTeamLibraryClips(teamSlug: string): Promise<VideoClip[]
     .bind(teamSlug)
     .all<ClipJoinRow>()
 
-  return (result.results ?? [])
-    .map(clipJoinRowToVideoClip)
-    .map((clip) => remapGameConceptToTeamPerspective(clip, team.name))
+  const clips = (result.results ?? []).map(clipJoinRowToVideoClip)
+  const clipIds = clips.map((clip) => Number(clip.id))
+  const instancesByClipId = await fetchClipInstancesByClipIds(database, clipIds)
+  const clipsWithInstances = attachClipInstances(clips, instancesByClipId)
+
+  return clipsWithInstances.map((clip) =>
+    remapGameConceptToTeamPerspective(clip, team.name),
+  )
 }
 
 export function listRivalsFromClips(clips: VideoClip[]): string[] {

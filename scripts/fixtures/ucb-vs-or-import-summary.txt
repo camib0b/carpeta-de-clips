@@ -1,0 +1,13 @@
+UC B vs OR - 16-yd OR.mp4 (OR 16YD+): 4 XML subsets match the same timeline; using IDs [45, 82, 88, 98, 124, 132, 147, 149, 187, 209, 211, 219, 256, 282]
+UC B vs OR - 16-yd OR.mp4	14 plays	233.757s (OR 16YD+)
+UC B vs OR - 16-yd UC B.mp4	FAILED	UC B vs OR - 16-yd UC B.mp4 (UCB 16YD+): 2 distinct timelines; refusing to guess:
+XML IDs [5,15,23,31,51,70,78,94,114,128,161,205,207,242,276,284] boundaries 11.011 → 22.022 → 33.033 → 42.543 → 56.557 → 64.565 → 84.084 → 99.099 → 115.616 → 134.635 → 143.143 → 156.156 → 175.676 → 193.193 → 205.205 → 223.223
+XML IDs [5,15,23,31,51,70,78,94,114,128,161,199,207,242,276,284] boundaries 11.011 → 22.022 → 33.033 → 42.543 → 56.557 → 64.565 → 84.084 → 99.099 → 115.616 → 134.635 → 143.143 → 156.156 → 175.676 → 193.193 → 205.205 → 223.223
+XML IDs [5,15,23,31,51,70,78,94,114,128,161,195,207,242,276,284] boundaries 11.011 → 22.022 → 33.033 → 42.543 → 56.557 → 64.565 → 84.084 → 99.099 → 115.616 → 134.635 → 143.143 → 156.156 → 175.676 → 193.193 → 205.205 → 223.223
+XML IDs [5,15,23,31,51,70,78,94,114,128,161,181,207,242,276,284] boundaries 11.011 → 22.022 → 33.033 → 42.543 → 56.557 → 64.565 → 84.084 → 99.099 → 115.616 → 134.635 → 143.143 → 155.656 → 175.175 → 192.693 → 204.705 → 222.723
+UC B vs OR - Corto OR.mp4	FAILED	UC B vs OR - Corto OR.mp4 (OR SPC+): no valid XML instance subset matches keyframes
+UC B vs OR - Corto UC B.mp4	FAILED	UC B vs OR - Corto UC B.mp4 (UCB SPC+): no valid XML instance subset matches keyframes
+UC B vs OR - Gol OR.mp4	3 plays	30.554s (OR GOAL+)
+UC B vs OR - Gol UC B.mp4	1 plays	7.007s (UCB GOAL+)
+UC B vs OR - Ingreso área OR.mp4	FAILED	UC B vs OR - Ingreso área OR.mp4 (OR ENTRY+): no valid XML instance subset matches keyframes
+UC B vs OR - Ingreso área UC B.mp4	FAILED	UC B vs OR - Ingreso área UC B.mp4 (UCB ENTRY+): no valid XML instance subset matches keyframes

@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "folder": "/Users/cam/Documents/VA/UC/1B/2026 Torneo 1A/UCB vs OR",
+  "xmlPath": "/Users/cam/Documents/VA/UC/1B/2026 Torneo 1A/UCB vs OR/UC B vs OR.xml",
+  "videos": [
+    {
+      "sourceVideo": "UC B vs OR - 16-yd OR.mp4",
+      "teamCode": "OR 16YD+",
+      "durationS": 233.756924,
+      "fps": 23.976,
+      "instances": [
+        {
+          "ord": 1,
+          "offsetS": 0,
+          "durationS": 19.01901901901902,
+          "quarter": "Q1",
+          "scoreLabel": "UCB 0 - 1 OR",
+          "xmlInstanceId": 45
+        },
+        {
+          "ord": 2,
+          "offsetS": 19.01901901901902,
+          "durationS": 13.013013013013014,
+          "quarter": "Q2",
+          "scoreLabel": "UCB 0 - 1 OR",
+          "xmlInstanceId": 82
+        },
+        {
+          "ord": 3,
+          "offsetS": 32.032032032032035,
+          "durationS": 10.51051051051051,
+          "quarter": "Q2",
+          "scoreLabel": "UCB 0 - 1 OR",
+          "xmlInstanceId": 88
+        },
+        {
+          "ord": 4,
+          "offsetS": 42.54254254254255,
+          "durationS": 23.023023023023026,
+          "quarter": "Q2",
+          "scoreLabel": "UCB 0 - 1 OR",
+          "xmlInstanceId": 98
+        },
+        {
+          "ord": 5,
+          "offsetS": 65.56556556556558,
+          "durationS": 13.513513513513514,
+          "quarter": "Q2",
+          "scoreLabel": "UCB 0 - 1 OR",
+          "xmlInstanceId": 124
+        },
+        {
+          "ord": 6,
+          "offsetS": 79.0790790790791,
+          "durationS": 18.51851851851852,
+          "quarter": "Q2",
+          "scoreLabel": "UCB 0 - 1 OR",
+          "xmlInstanceId": 132
+        },
+        {
+          "ord": 7,
+          "offsetS": 97.59759759759761,
+          "durationS": 13.013013013013014,
+          "quarter": "Q3",
+          "scoreLabel": "UCB 0 - 2 OR",
+          "xmlInstanceId": 147
+        },
+        {
+          "ord": 8,
+          "offsetS": 110.61061061061062,
+          "durationS": 13.013013013013014,
+          "quarter": "Q3",
+          "scoreLabel": "UCB 0 - 2 OR",
+          "xmlInstanceId": 149
+        },
+        {
+          "ord": 9,
+          "offsetS": 123.62362362362363,
+          "durationS": 13.013013013013014,
+          "quarter": "Q3",
+          "scoreLabel": "UCB 1 - 2 OR",
+          "xmlInstanceId": 187
+        },
+        {
+          "ord": 10,
+          "offsetS": 136.63663663663664,
+          "durationS": 12.012012012012013,
+          "quarter": "Q3",
+          "scoreLabel": "UCB 1 - 2 OR",
+          "xmlInstanceId": 209
+        },
+        {
+          "ord": 11,
+          "offsetS": 148.64864864864865,
+          "durationS": 19.01901901901902,
+          "quarter": "Q3",
+          "scoreLabel": "UCB 1 - 2 OR",
+          "xmlInstanceId": 211
+        },
+        {
+          "ord": 12,
+          "offsetS": 167.66766766766767,
+          "durationS": 14.014014014014014,
+          "quarter": "Q3",
+          "scoreLabel": "UCB 1 - 2 OR",
+          "xmlInstanceId": 219
+        },
+        {
+          "ord": 13,
+          "offsetS": 181.68168168168168,
+          "durationS": 25.025025025025027,
+          "quarter": "Q4",
+          "scoreLabel": "UCB 1 - 2 OR",
+          "xmlInstanceId": 256
+        },
+        {
+          "ord": 14,
+          "offsetS": 206.7067067067067,
+          "durationS": 27.027027027027028,
+          "quarter": "Q4",
+          "scoreLabel": "UCB 1 - 3 OR",
+          "xmlInstanceId": 282
+        }
+      ]
+    },
+    {
+      "sourceVideo": "UC B vs OR - Gol OR.mp4",
+      "teamCode": "OR GOAL+",
+      "durationS": 30.55372,
+      "fps": 23.976,
+      "instances": [
+        {
+          "ord": 1,
+          "offsetS": 0,
+          "durationS": 8.008008008008009,
+          "quarter": "Q4",
+          "scoreLabel": "UCB 0 - 1 OR",
+          "xmlInstanceId": 17
+        },
+        {
+          "ord": 2,
+          "offsetS": 8.008008008008009,
+          "durationS": 15.515515515515515,
+          "quarter": "Q2",
+          "scoreLabel": "UCB 0 - 2 OR",
+          "xmlInstanceId": 136
+        },
+        {
+          "ord": 3,
+          "offsetS": 23.523523523523522,
+          "durationS": 7.007007007007007,
+          "quarter": "Q4",
+          "scoreLabel": "UCB 1 - 3 OR",
+          "xmlInstanceId": 272
+        }
+      ]
+    },
+    {
+      "sourceVideo": "UC B vs OR - Gol UC B.mp4",
+      "teamCode": "UCB GOAL+",
+      "durationS": 7.007007,
+      "fps": 23.976,
+      "instances": [
+        {
+          "ord": 1,
+          "offsetS": 0,
+          "durationS": 7.007007007007007,
+          "quarter": "Q3",
+          "scoreLabel": "UCB 1 - 2 OR",
+          "xmlInstanceId": 175
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "sourceVideo": "UC B vs OR - 16-yd UC B.mp4",
+      "message": "UC B vs OR - 16-yd UC B.mp4 (UCB 16YD+): 2 distinct timelines; refusing to guess:\nXML IDs [5,15,23,31,51,70,78,94,114,128,161,205,207,242,276,284] boundaries 11.011 → 22.022 → 33.033 → 42.543 → 56.557 → 64.565 → 84.084 → 99.099 → 115.616 → 134.635 → 143.143 → 156.156 → 175.676 → 193.193 → 205.205 → 223.223\nXML IDs [5,15,23,31,51,70,78,94,114,128,161,199,207,242,276,284] boundaries 11.011 → 22.022 → 33.033 → 42.543 → 56.557 → 64.565 → 84.084 → 99.099 → 115.616 → 134.635 → 143.143 → 156.156 → 175.676 → 193.193 → 205.205 → 223.223\nXML IDs [5,15,23,31,51,70,78,94,114,128,161,195,207,242,276,284] boundaries 11.011 → 22.022 → 33.033 → 42.543 → 56.557 → 64.565 → 84.084 → 99.099 → 115.616 → 134.635 → 143.143 → 156.156 → 175.676 → 193.193 → 205.205 → 223.223\nXML IDs [5,15,23,31,51,70,78,94,114,128,161,181,207,242,276,284] boundaries 11.011 → 22.022 → 33.033 → 42.543 → 56.557 → 64.565 → 84.084 → 99.099 → 115.616 → 134.635 → 143.143 → 155.656 → 175.175 → 192.693 → 204.705 → 222.723"
+    },
+    {
+      "sourceVideo": "UC B vs OR - Corto OR.mp4",
+      "message": "UC B vs OR - Corto OR.mp4 (OR SPC+): no valid XML instance subset matches keyframes"
+    },
+    {
+      "sourceVideo": "UC B vs OR - Corto UC B.mp4",
+      "message": "UC B vs OR - Corto UC B.mp4 (UCB SPC+): no valid XML instance subset matches keyframes"
+    },
+    {
+      "sourceVideo": "UC B vs OR - Ingreso área OR.mp4",
+      "message": "UC B vs OR - Ingreso área OR.mp4 (OR ENTRY+): no valid XML instance subset matches keyframes"
+    },
+    {
+      "sourceVideo": "UC B vs OR - Ingreso área UC B.mp4",
+      "message": "UC B vs OR - Ingreso área UC B.mp4 (UCB ENTRY+): no valid XML instance subset matches keyframes"
+    }
+  ]
+}

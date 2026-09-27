@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react'
-import { VideoClip } from '@/lib/types'
+import type { ClipInstance, VideoClip } from '@/lib/types'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import YouTube from 'react-youtube'
@@ -16,15 +16,19 @@ import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { findActiveInstanceIndex } from '@/lib/clip-instance-playback'
+import { formatPlayTimestamp } from '@/lib/format-play-timestamp'
 
 const MINIMUM_SWIPE_DISTANCE = 60
 const SWIPE_HINT_STORAGE_KEY = 'carpeta-de-clips-modal-swipe-hint-seen'
 const MINIMUM_HORIZONTAL_TO_VERTICAL_RATIO = 1.25
 const INTERACTIVE_TOUCH_TARGET_SELECTOR =
   'button, a, input, textarea, select, [contenteditable="true"], [role="button"]'
+const PLAYBACK_POLL_INTERVAL_MS = 250
 
 const YOUTUBE_PLAYER_STATE = {
   PLAYING: 1,
+  PAUSED: 2,
   BUFFERING: 3,
 } as const
 
@@ -32,14 +36,17 @@ const EDITABLE_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 
 interface YouTubePlayer {
   getPlayerState: () => number
+  getCurrentTime: () => number
   playVideo: () => void
   pauseVideo: () => void
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void
 }
 
 interface VideoModalProps {
   video: VideoClip | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialPlayOrd?: number
   canNavigatePrevious?: boolean
   canNavigateNext?: boolean
   onNavigatePrevious?: () => void
@@ -64,6 +71,15 @@ function isEditableTarget(target: EventTarget | null): boolean {
     return true
   }
   return target.isContentEditable
+}
+
+function formatMatchSummaryLine(video: VideoClip, formattedDate: string): string {
+  const hasScore =
+    video.homeGoals !== undefined && video.awayGoals !== undefined
+  const matchup = hasScore
+    ? `${video.homeTeam} ${video.homeGoals}–${video.awayGoals} ${video.awayTeam}`
+    : `${video.homeTeam} – ${video.awayTeam}`
+  return `${matchup} · ${formattedDate}`
 }
 
 function ClipNavButton({ direction, onClick, className }: ClipNavButtonProps) {
@@ -122,6 +138,91 @@ function SwipeNavigationHint() {
   )
 }
 
+interface JugadasListProps {
+  instances: ClipInstance[]
+  activeIndex: number
+  onSelectPlay: (instance: ClipInstance) => void
+  listClassName?: string
+}
+
+function JugadasList({
+  instances,
+  activeIndex,
+  onSelectPlay,
+  listClassName,
+}: JugadasListProps) {
+  const listRef = useRef<HTMLDivElement>(null)
+  const rowRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
+  const total = instances.length
+
+  useEffect(() => {
+    const activeInstance = instances[activeIndex]
+    if (!activeInstance) {
+      return
+    }
+    const row = rowRefs.current.get(activeInstance.ord)
+    row?.scrollIntoView({ block: 'nearest' })
+  }, [activeIndex, instances])
+
+  return (
+    <div className="mt-3 flex min-h-0 flex-col">
+      <h3 className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground md:text-[0.625rem]">
+        Jugadas
+      </h3>
+      <div
+        ref={listRef}
+        className={cn(
+          'mt-1.5 min-h-0 overflow-y-auto overscroll-contain border-t border-border/60',
+          listClassName,
+        )}
+      >
+        {instances.map((instance, index) => {
+          const isActive = index === activeIndex
+          const timestamp = formatPlayTimestamp(instance.offsetS)
+          const ariaLabel = `Jugada ${instance.ord} de ${total}, ${timestamp}`
+
+          return (
+            <button
+              key={instance.ord}
+              type="button"
+              ref={(element) => {
+                if (element) {
+                  rowRefs.current.set(instance.ord, element)
+                } else {
+                  rowRefs.current.delete(instance.ord)
+                }
+              }}
+              onClick={() => onSelectPlay(instance)}
+              aria-label={ariaLabel}
+              aria-current={isActive ? 'true' : undefined}
+              className={cn(
+                'flex w-full items-baseline gap-2 border-b border-border/40 px-0.5 py-2 text-left text-xs tabular-nums transition-colors sm:text-sm md:text-xs',
+                'hover:bg-muted/40',
+                isActive && 'bg-muted/60',
+              )}
+            >
+              <span className="w-9 shrink-0 text-muted-foreground">
+                {instance.ord}/{total}
+              </span>
+              <span className="w-10 shrink-0 text-foreground">{timestamp}</span>
+              {instance.quarter && (
+                <span className="w-7 shrink-0 text-muted-foreground">
+                  {instance.quarter}
+                </span>
+              )}
+              {instance.scoreLabel && (
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {instance.scoreLabel}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 /**
  * Modal component for playing YouTube videos
  * Desktop: wide layout with video dominant and compact sidebar
@@ -131,6 +232,7 @@ export function VideoModal({
   video,
   open,
   onOpenChange,
+  initialPlayOrd,
   canNavigatePrevious = false,
   canNavigateNext = false,
   onNavigatePrevious,
@@ -141,7 +243,14 @@ export function VideoModal({
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
+  const pendingInitialPlayOrdRef = useRef<number | undefined>(undefined)
   const [swipeHintDismissed, setSwipeHintDismissed] = useState(true)
+  const [playbackTimeS, setPlaybackTimeS] = useState(0)
+  const [isPlaybackPolling, setIsPlaybackPolling] = useState(false)
+  const [manualActiveIndex, setManualActiveIndex] = useState<number | null>(null)
+
+  const instances = video?.instances ?? []
+  const hasInstances = instances.length > 0
 
   useEffect(() => {
     try {
@@ -154,12 +263,19 @@ export function VideoModal({
   useEffect(() => {
     if (!open) {
       youtubePlayerRef.current = null
+      setIsPlaybackPolling(false)
+      setPlaybackTimeS(0)
+      setManualActiveIndex(null)
     }
   }, [open])
 
   useEffect(() => {
     youtubePlayerRef.current = null
-  }, [video?.id])
+    setIsPlaybackPolling(false)
+    setPlaybackTimeS(0)
+    setManualActiveIndex(null)
+    pendingInitialPlayOrdRef.current = initialPlayOrd
+  }, [video?.id, initialPlayOrd])
 
   const dismissSwipeHint = useCallback(() => {
     setSwipeHintDismissed(true)
@@ -179,9 +295,108 @@ export function VideoModal({
     }
   }, [])
 
-  const handleYouTubeReady = useCallback((event: { target: YouTubePlayer }) => {
-    youtubePlayerRef.current = event.target
-  }, [])
+  const seekToPlay = useCallback(
+    (instance: ClipInstance, instanceIndex: number) => {
+      const player = youtubePlayerRef.current
+      if (!player) {
+        return
+      }
+      player.seekTo(instance.offsetS, true)
+      player.playVideo()
+      setPlaybackTimeS(instance.offsetS)
+      setManualActiveIndex(instanceIndex)
+      setIsPlaybackPolling(true)
+    },
+    [],
+  )
+
+  const applyInitialPlayOrd = useCallback(() => {
+    const ord = pendingInitialPlayOrdRef.current
+    if (!ord || instances.length === 0) {
+      return
+    }
+
+    const index = instances.findIndex((instance) => instance.ord === ord)
+    const resolvedIndex = index >= 0 ? index : ord - 1
+    const instance = instances[resolvedIndex]
+    if (!instance) {
+      return
+    }
+
+    pendingInitialPlayOrdRef.current = undefined
+    seekToPlay(instance, resolvedIndex)
+  }, [instances, seekToPlay])
+
+  const handleYouTubeReady = useCallback(
+    (event: { target: YouTubePlayer }) => {
+      youtubePlayerRef.current = event.target
+      applyInitialPlayOrd()
+    },
+    [applyInitialPlayOrd],
+  )
+
+  useEffect(() => {
+    if (!open || !youtubePlayerRef.current) {
+      return
+    }
+    applyInitialPlayOrd()
+  }, [open, applyInitialPlayOrd])
+
+  const handleYouTubeStateChange = useCallback(
+    (event: { data: number }) => {
+      const state = event.data
+      if (
+        state === YOUTUBE_PLAYER_STATE.PLAYING ||
+        state === YOUTUBE_PLAYER_STATE.BUFFERING
+      ) {
+        setIsPlaybackPolling(true)
+      } else {
+        setIsPlaybackPolling(false)
+      }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (!open || !isPlaybackPolling) {
+      return
+    }
+
+    const intervalId = window.setInterval(() => {
+      const player = youtubePlayerRef.current
+      if (!player) {
+        return
+      }
+      const currentTime = player.getCurrentTime()
+      if (typeof currentTime === 'number' && Number.isFinite(currentTime)) {
+        setPlaybackTimeS(currentTime)
+        setManualActiveIndex(null)
+      }
+    }, PLAYBACK_POLL_INTERVAL_MS)
+
+    return () => window.clearInterval(intervalId)
+  }, [open, isPlaybackPolling, video?.id])
+
+  const computedActiveIndex = findActiveInstanceIndex(instances, playbackTimeS)
+  const activeIndex =
+    manualActiveIndex != null ? manualActiveIndex : computedActiveIndex
+
+  const navigatePlay = useCallback(
+    (direction: 'previous' | 'next') => {
+      if (instances.length === 0) {
+        return
+      }
+      const nextIndex =
+        direction === 'previous'
+          ? Math.max(0, activeIndex - 1)
+          : Math.min(instances.length - 1, activeIndex + 1)
+      const instance = instances[nextIndex]
+      if (instance) {
+        seekToPlay(instance, nextIndex)
+      }
+    },
+    [activeIndex, instances, seekToPlay],
+  )
 
   const toggleYouTubePlayback = useCallback(() => {
     const player = youtubePlayerRef.current
@@ -274,6 +489,15 @@ export function VideoModal({
         return
       }
 
+      if (hasInstances && (event.key === '[' || event.key === ']')) {
+        if (isEditableTarget(event.target)) {
+          return
+        }
+        event.preventDefault()
+        navigatePlay(event.key === '[' ? 'previous' : 'next')
+        return
+      }
+
       if (event.key === 'ArrowLeft' && canNavigatePrevious && onNavigatePrevious) {
         event.preventDefault()
         onNavigatePrevious()
@@ -287,28 +511,25 @@ export function VideoModal({
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
   }, [
     open,
+    hasInstances,
     canNavigatePrevious,
     canNavigateNext,
     onNavigatePrevious,
     onNavigateNext,
     toggleYouTubePlayback,
+    navigatePlay,
   ])
 
   if (!video) return null
 
   const formattedDate = format(parseISO(video.date), "d 'de' MMMM, yyyy", { locale: es })
-  const hasScore = video.homeGoals !== undefined && video.awayGoals !== undefined
-  const score = hasScore ? `${video.homeGoals}–${video.awayGoals}` : null
-  const scoreDisplay = score && video.shootoutWinner
-    ? `${score} (${video.shootoutWinner} gana en penales)`
-    : score
+  const matchSummaryLine = formatMatchSummaryLine(video, formattedDate)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
           'gap-0 overflow-hidden p-0',
-          // Override dialog defaults (sm:max-w-lg caps at 512px and breaks the wide layout)
           'max-w-none sm:max-w-none',
           'w-[min(calc(100vw-1rem),100%)]',
           'max-h-[100dvh] sm:max-h-[94vh]',
@@ -318,7 +539,6 @@ export function VideoModal({
         onPointerDownOutside={preventCloseOnClipNav}
         onInteractOutside={preventCloseOnClipNav}
       >
-        {/* Desktop clip navigation — must live inside DialogContent so clicks are not treated as outside dismiss */}
         {showClipNavigation && !isMobile && (
           <>
             {canNavigatePrevious && onNavigatePrevious && (
@@ -351,7 +571,7 @@ export function VideoModal({
           tabIndex={-1}
           className={cn(
             'flex max-h-[100dvh] flex-col overflow-hidden outline-none sm:max-h-[94vh] md:max-h-[92vh]',
-            'md:flex-row md:items-start',
+            'md:flex-row md:items-stretch',
           )}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -359,7 +579,6 @@ export function VideoModal({
             touchStartPoint.current = null
           }}
         >
-          {/* Video Player — primary focus; 16:9 aspect drives modal height on desktop */}
           <div className="relative min-w-0 shrink-0 bg-black md:flex-1">
             <div className="relative aspect-video w-full">
               <YouTube
@@ -376,71 +595,45 @@ export function VideoModal({
                   },
                 }}
                 onReady={handleYouTubeReady}
+                onStateChange={handleYouTubeStateChange}
               />
 
               {showSwipeHint && <SwipeNavigationHint />}
             </div>
           </div>
 
-          {/* Metadata — compact sidebar on desktop, scrollable below on mobile */}
           <div
             className={cn(
-              'overflow-y-auto border-border',
+              'flex min-h-0 flex-col border-border',
               'max-h-[42vh] border-t p-4 sm:p-5',
-              'md:max-h-[92vh] md:w-72 md:shrink-0 md:border-t-0 md:border-l md:p-4',
+              'md:max-h-[92vh] md:w-80 md:shrink-0 md:border-t-0 md:border-l md:p-4',
+              hasInstances && 'md:min-h-0',
             )}
           >
-            <DialogHeader className="space-y-1 text-left">
+            <DialogHeader className="shrink-0 space-y-1 text-left">
               <DialogTitle className="text-sm font-medium leading-snug tracking-tight sm:text-base md:text-[0.9375rem]">
                 {video.title}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground sm:text-sm md:text-xs">
-                {video.gameConcept}
+                {matchSummaryLine}
               </DialogDescription>
             </DialogHeader>
 
-            <dl className="mt-3 space-y-2 text-xs sm:text-sm md:text-xs">
-              <div>
-                <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs md:text-[0.625rem]">
-                  Partido
-                </dt>
-                <dd className="text-foreground">
-                  {video.homeTeam} vs {video.awayTeam}
-                </dd>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 md:grid-cols-1">
-                <div>
-                  <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs md:text-[0.625rem]">
-                    Fecha
-                  </dt>
-                  <dd className="text-foreground">{formattedDate}</dd>
-                </div>
-                {video.division && (
-                  <div>
-                    <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs md:text-[0.625rem]">
-                      Categoría
-                    </dt>
-                    <dd className="text-foreground">{video.division}</dd>
-                  </div>
+            {hasInstances && (
+              <JugadasList
+                instances={instances}
+                activeIndex={activeIndex}
+                onSelectPlay={(instance) => {
+                  const index = instances.findIndex(
+                    (row) => row.ord === instance.ord,
+                  )
+                  seekToPlay(instance, index >= 0 ? index : 0)
+                }}
+                listClassName={cn(
+                  'max-h-[28vh] md:max-h-none md:flex-1',
                 )}
-                {scoreDisplay && (
-                  <div>
-                    <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs md:text-[0.625rem]">
-                      Resultado
-                    </dt>
-                    <dd className="font-medium text-foreground">{scoreDisplay}</dd>
-                  </div>
-                )}
-                {video.place && (
-                  <div>
-                    <dt className="mb-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground sm:text-xs md:text-[0.625rem]">
-                      Lugar
-                    </dt>
-                    <dd className="text-foreground">{video.place}</dd>
-                  </div>
-                )}
-              </div>
-            </dl>
+              />
+            )}
           </div>
         </div>
       </DialogContent>

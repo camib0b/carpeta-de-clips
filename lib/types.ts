@@ -1,4 +1,16 @@
 /**
+ * One play inside a compiled YouTube clip (timeline offset from AVA sidecar / import).
+ */
+export interface ClipInstance {
+  ord: number
+  offsetS: number
+  durationS: number
+  quarter?: string
+  scoreLabel?: string
+  xmlInstanceId?: number
+}
+
+/**
  * A YouTube clip filed in a team library, with match and filter metadata.
  */
 export interface VideoClip {
@@ -33,6 +45,8 @@ export interface VideoClip {
   uploadedAt: string
   /** R2 object key in the clipped-xml bucket when this match has XML. */
   r2XmlObjectKey?: string
+  /** Per-play segments inside this compiled upload, when cataloged in D1. */
+  instances?: ClipInstance[]
 }
 
 /**

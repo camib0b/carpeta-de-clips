@@ -48,21 +48,17 @@ function renderClipInstancesSql(
 ): string {
   const deleteSql = `DELETE FROM clip_instances WHERE clip_id = (SELECT id FROM clips WHERE youtube_id = ${sqlString(youtubeId)});`
 
-  const valueRows = instances
+  const insertStatements = instances
     .map(
       (instance) =>
-        `  (${sqlInteger(instance.ord)}, ${sqlReal(instance.offsetS)}, ${sqlReal(instance.durationS)}, ${sqlString(instance.quarter)}, ${sqlString(instance.scoreLabel)}, ${sqlInteger(instance.xmlInstanceId)})`,
-    )
-    .join(',\n')
-
-  const insertSql = `INSERT INTO clip_instances (clip_id, ord, offset_s, duration_s, quarter, score_label, xml_instance_id)
-SELECT clips.id, v.ord, v.offset_s, v.duration_s, v.quarter, v.score_label, v.xml_instance_id
+        `INSERT INTO clip_instances (clip_id, ord, offset_s, duration_s, quarter, score_label, xml_instance_id)
+SELECT clips.id, ${sqlInteger(instance.ord)}, ${sqlReal(instance.offsetS)}, ${sqlReal(instance.durationS)}, ${sqlString(instance.quarter)}, ${sqlString(instance.scoreLabel)}, ${sqlInteger(instance.xmlInstanceId)}
 FROM clips
-CROSS JOIN (
-  VALUES
-${valueRows}
-) AS v(ord, offset_s, duration_s, quarter, score_label, xml_instance_id)
-WHERE clips.youtube_id = ${sqlString(youtubeId)};`
+WHERE clips.youtube_id = ${sqlString(youtubeId)};`,
+    )
+    .join('\n\n')
+
+  const insertSql = insertStatements
 
   return `${deleteSql}
 

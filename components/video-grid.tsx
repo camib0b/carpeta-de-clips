@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { VideoClip } from '@/lib/types'
 import { VideoCard } from './video-card'
 import { VideoModal } from './video-modal'
@@ -20,8 +21,34 @@ interface VideoGridProps {
  * Displays videos in a responsive grid with client-side filtering
  */
 export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: VideoGridProps) {
+  const searchParams = useSearchParams()
+  const initialPlayOrd = useMemo(() => {
+    const raw = searchParams.get('jugada')
+    if (!raw) return undefined
+    const parsed = Number.parseInt(raw, 10)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+  }, [searchParams])
+
   const [selectedClip, setSelectedClip] = useState<VideoClip | null>(null)
   const [isClipModalOpen, setIsClipModalOpen] = useState(false)
+  const jugadaAutoOpenDoneRef = useRef(false)
+
+  useEffect(() => {
+    if (jugadaAutoOpenDoneRef.current || initialPlayOrd == null) {
+      return
+    }
+
+    const clipWithPlay = videos.find((videoItem) =>
+      videoItem.instances?.some((instance) => instance.ord === initialPlayOrd),
+    )
+    if (!clipWithPlay) {
+      return
+    }
+
+    jugadaAutoOpenDoneRef.current = true
+    setSelectedClip(clipWithPlay)
+    setIsClipModalOpen(true)
+  }, [initialPlayOrd, videos])
   const {
     selectedConcepts,
     selectedRivals,
@@ -146,6 +173,7 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
         video={selectedClip}
         open={isClipModalOpen}
         onOpenChange={setIsClipModalOpen}
+        initialPlayOrd={initialPlayOrd}
         canNavigatePrevious={canNavigatePrevious}
         canNavigateNext={canNavigateNext}
         onNavigatePrevious={handleNavigatePrevious}

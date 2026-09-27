@@ -16,7 +16,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply carpeta-de-clips --remote",
     "db:seed:generate": "tsx scripts/seed-d1-catalog.ts",
     "db:list-xml": "wrangler d1 execute carpeta-de-clips --local --command \"SELECT id, r2_xml_object_key FROM matches WHERE r2_xml_object_key IS NOT NULL ORDER BY played_on\"",
-    "db:parity": "tsx scripts/verify-catalog-parity.ts"
+    "db:parity": "tsx scripts/verify-catalog-parity.ts",
+    "test": "tsx --test lib/**/*.test.ts scripts/**/*.test.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.19.11",
