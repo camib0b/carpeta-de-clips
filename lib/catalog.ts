@@ -86,24 +86,35 @@ async function fetchClipInstancesByClipIds(
   }
 
   const placeholders = clipIds.map(() => '?').join(', ')
-  const result = await database
-    .prepare(
-      `SELECT
-         clip_id,
-         ord,
-         offset_s,
-         duration_s,
-         quarter,
-         score_label,
-         xml_instance_id
-       FROM clip_instances
-       WHERE clip_id IN (${placeholders})
-       ORDER BY clip_id ASC, ord ASC`,
+  let rows: ClipInstanceRow[] = []
+  try {
+    const result = await database
+      .prepare(
+        `SELECT
+           clip_id,
+           ord,
+           offset_s,
+           duration_s,
+           quarter,
+           score_label,
+           xml_instance_id
+         FROM clip_instances
+         WHERE clip_id IN (${placeholders})
+         ORDER BY clip_id ASC, ord ASC`,
+      )
+      .bind(...clipIds)
+      .all<ClipInstanceRow>()
+    rows = result.results ?? []
+  } catch (error) {
+    // Deploy can land before `0003_clip_instances` is applied on remote D1.
+    console.error(
+      'clip_instances query failed; serving clips without jugadas',
+      error,
     )
-    .bind(...clipIds)
-    .all<ClipInstanceRow>()
+    return instancesByClipId
+  }
 
-  for (const row of result.results ?? []) {
+  for (const row of rows) {
     const clipInstances = instancesByClipId.get(row.clip_id) ?? []
     clipInstances.push(clipInstanceRowToClipInstance(row))
     instancesByClipId.set(row.clip_id, clipInstances)
