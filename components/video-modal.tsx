@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import YouTube from 'react-youtube'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -296,7 +296,7 @@ export function VideoModal({
 
   if (!video) return null
 
-  const formattedDate = format(new Date(video.date), "d 'de' MMMM, yyyy", { locale: es })
+  const formattedDate = format(parseISO(video.date), "d 'de' MMMM, yyyy", { locale: es })
   const hasScore = video.homeGoals !== undefined && video.awayGoals !== undefined
   const score = hasScore ? `${video.homeGoals}–${video.awayGoals}` : null
   const scoreDisplay = score && video.shootoutWinner

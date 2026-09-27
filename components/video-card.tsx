@@ -2,7 +2,7 @@
 
 import { formatScoreWithShootout } from '@/lib/match-display'
 import { VideoClip } from '@/lib/types'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 interface VideoCardProps {
@@ -15,7 +15,7 @@ interface VideoCardProps {
  * Metadata hierarchy: clip title → match/score → date (and optional division).
  */
 export function VideoCard({ video, onClick }: VideoCardProps) {
-  const formattedDate = format(new Date(video.date), "d 'de' MMM, yyyy", { locale: es })
+  const formattedDate = format(parseISO(video.date), "d 'de' MMM, yyyy", { locale: es })
   const scoreDisplay =
     video.homeGoals !== undefined && video.awayGoals !== undefined
       ? formatScoreWithShootout(

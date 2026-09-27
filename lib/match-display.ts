@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 import { buildMatchKeyFromClip, matchKeyToStorageSlug } from '@/lib/match-keys'
@@ -52,7 +52,7 @@ export function listUniqueMatchSummaries(clips: VideoClip[]): MatchSummary[] {
 }
 
 export function formatMatchDate(date: string): string {
-  return format(new Date(date), "d 'de' MMM, yyyy", { locale: es })
+  return format(parseISO(date), "d 'de' MMM, yyyy", { locale: es })
 }
 
 export function buildMatchXmlDownloadFilename(match: MatchSummary): string {
