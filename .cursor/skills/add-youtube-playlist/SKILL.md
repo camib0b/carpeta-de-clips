@@ -156,6 +156,20 @@ The script prints a per-clip summary on stderr (title, play count, compiled dura
 
 3. Upsert as usual (instances replace any existing rows for that `youtube_id` when present; clips without `instances` are left unchanged):
 
+**Backfill without sidecars** (older published matches): derive timelines locally from compiled mp4 keyframes + match XML. This is a dev-only script — never bundled into the Worker.
+
+```bash
+pnpm exec tsx scripts/derive-clip-instances.ts /path/to/match-folder match.xml --out instances.json
+```
+
+Merge `instances.json` `videos[].instances` into your payload (`sourceVideo` basename), or hand-edit. The matcher refuses ambiguous timelines (zero or multiple distinct boundary sequences). When several XML ID paths share one timeline, it picks the lexicographically smallest ID list and warns on stderr.
+
+```bash
+pnpm exec tsx --test scripts/derive-clip-instances-ground-truth.test.ts
+```
+
+Ground-truth test (optional, uses a local AVA export path): `UC B vs OR - 16-yd OR.mp4` → 14 plays at offsets `0, 19.0, 32.0, …` — compare after XML updates; report drift, do not force old IDs.
+
 ```bash
 pnpm exec tsx scripts/upsert-playlist.ts --local payload-with-instances.json
 ```
@@ -239,6 +253,7 @@ Do not re-add clips to a TypeScript array. Do not invent scores or dates.
 | `lib/catalog-upsert.ts` | Match upsert + clip insert SQL |
 | `scripts/upsert-playlist.ts` | Apply a playlist JSON to local or remote D1 |
 | `scripts/instances-from-sidecars.ts` | Attach `instances` from AVA `*.clips.json` into a payload |
+| `scripts/derive-clip-instances.ts` | Backfill `instances` from mp4 keyframes + match XML (local only) |
 | `migrations/0003_clip_instances.sql` | `clip_instances` table (per-play offsets inside a clip) |
 | `lib/types.ts` | `GAME_CONCEPTS`, `VideoClip`, `ALL_*_FILTER_LABEL` |
 | `lib/team-perspective.ts` | `remapGameConceptToTeamPerspective` + title aliases |
