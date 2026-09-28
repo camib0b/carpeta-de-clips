@@ -1,6 +1,6 @@
 'use client'
 
-import { Share2 } from 'lucide-react'
+import { Share } from 'lucide-react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -40,7 +40,7 @@ export function ShareClipButton({ clipId, jugadaOrd, title }: ShareClipButtonPro
 
     try {
       await navigator.clipboard.writeText(url)
-      toast.success('Enlace copiado al portapapeles')
+      toast.success('Enlace copiado.')
     } catch {
       toast.error('No se pudo copiar el enlace')
     }
@@ -50,13 +50,14 @@ export function ShareClipButton({ clipId, jugadaOrd, title }: ShareClipButtonPro
     <Button
       type="button"
       variant="outline"
-      size="icon-sm"
+      size="sm"
       onClick={handleShare}
       className="shrink-0"
       aria-label="Compartir clip"
       title="Compartir clip"
     >
-      <Share2 className="h-3.5 w-3.5" />
+      <Share className="h-3.5 w-3.5" />
+      Compartir
     </Button>
   )
 }

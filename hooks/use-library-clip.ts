@@ -98,6 +98,7 @@ export function useLibraryClipSelection(videos: VideoClip[]) {
       const params = new URLSearchParams(searchParams.toString())
       params.set('clip', video.id)
       params.delete('jugada')
+      isClosingRef.current = false
       pushedClipRef.current = true
       router.push(toLibraryHref(pathname, params), { scroll: false })
     },
@@ -139,7 +140,10 @@ export function useLibraryClipSelection(videos: VideoClip[]) {
     }
 
     const params = new URLSearchParams(searchParams.toString())
-    if (!params.has('clip') && !params.has('jugada')) return
+    if (!params.has('clip') && !params.has('jugada')) {
+      isClosingRef.current = false
+      return
+    }
     params.delete('clip')
     params.delete('jugada')
     router.replace(toLibraryHref(pathname, params), { scroll: false })

@@ -1,6 +1,6 @@
 'use client'
 
-import { Share2 } from 'lucide-react'
+import { Share } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 
@@ -14,7 +14,7 @@ export function ShareFiltersButton({ visible }: ShareFiltersButtonProps) {
   async function handleCopyLink() {
     try {
       await navigator.clipboard.writeText(window.location.href)
-      toast.success('Enlace copiado al portapapeles')
+      toast.success('Enlace copiado.')
     } catch {
       toast.error('No se pudo copiar el enlace')
     }
@@ -24,13 +24,14 @@ export function ShareFiltersButton({ visible }: ShareFiltersButtonProps) {
     <Button
       type="button"
       variant="outline"
-      size="icon-sm"
+      size="sm"
       onClick={handleCopyLink}
       className="shrink-0"
       aria-label="Copiar enlace con filtros"
       title="Copiar enlace"
     >
-      <Share2 className="h-3.5 w-3.5" />
+      <Share className="h-3.5 w-3.5" />
+      Compartir
     </Button>
   )
 }
