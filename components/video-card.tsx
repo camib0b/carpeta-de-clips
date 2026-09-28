@@ -12,7 +12,7 @@ interface VideoCardProps {
 
 /**
  * Minimalist video card component.
- * Metadata hierarchy: clip title → match/score → date (and optional division).
+ * Metadata hierarchy: clip title → home vs away (and score) → date (and optional division).
  */
 export function VideoCard({ video, onClick }: VideoCardProps) {
   const formattedDate = format(parseISO(video.date), "d 'de' MMM, yyyy", { locale: es })
@@ -24,9 +24,10 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
           video.shootoutWinner,
         )
       : null
-  const matchupDisplay = video.libraryName
-    ? `${video.homeTeam} vs ${video.awayTeam}`
-    : `vs ${video.rivalTeam}`
+  const matchupDisplay =
+    video.homeTeam && video.awayTeam
+      ? `${video.homeTeam} vs ${video.awayTeam}`
+      : `vs ${video.rivalTeam}`
 
   return (
     <button
