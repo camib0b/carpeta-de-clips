@@ -1,24 +1,41 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
+import {
+  siteAuthor,
+  siteDescription,
+  siteLocale,
+  siteName,
+  siteTitle,
+  siteTitleTemplate,
+} from '@/lib/site-metadata'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
-const siteTitle = 'carpeta.cl | Video análisis'
-const siteDescription = 'Video análisis de hockey césped, jugada por jugada.'
 
 export const metadata: Metadata = {
-  title: siteTitle,
+  title: {
+    default: siteTitle,
+    template: siteTitleTemplate,
+  },
   description: siteDescription,
+  applicationName: siteName,
+  authors: [siteAuthor],
+  creator: siteAuthor.name,
   metadataBase: new URL('https://carpeta.cl'),
   openGraph: {
     title: siteTitle,
     description: siteDescription,
-    siteName: 'carpeta.cl',
+    siteName,
     url: '/',
-    locale: 'es_CL',
+    locale: siteLocale,
     type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: siteTitle,
+    description: siteDescription,
   },
   icons: {
     icon: [

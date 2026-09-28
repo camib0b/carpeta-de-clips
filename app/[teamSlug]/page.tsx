@@ -10,6 +10,12 @@ import { TeamHeader } from '@/components/team-header'
 import { VideoGrid } from '@/components/video-grid'
 import { VideoGridSkeleton } from '@/components/video-grid-skeleton'
 import { Metadata } from 'next'
+import {
+  siteLocale,
+  siteName,
+  teamOpenGraphTitle,
+  teamPageDescription,
+} from '@/lib/site-metadata'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,23 +34,28 @@ export async function generateMetadata({
 
   if (!team) {
     return {
-      title: 'Equipo No Encontrado',
+      title: 'Equipo no encontrado',
     }
   }
 
-  const pageTitle = `Carpeta de ${team.name}`
-  const pageDescription = `Clips de partidos organizados por jugada.`
+  const pageDescription = teamPageDescription(team.name)
+  const openGraphTitle = teamOpenGraphTitle(team.name)
 
   return {
-    title: pageTitle,
+    title: team.name,
     description: pageDescription,
     openGraph: {
-      title: pageTitle,
+      title: openGraphTitle,
       description: pageDescription,
       url: `/${team.slug}`,
-      siteName: 'Carpeta de Clips',
-      locale: 'es_CL',
+      siteName,
+      locale: siteLocale,
       type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title: openGraphTitle,
+      description: pageDescription,
     },
   }
 }

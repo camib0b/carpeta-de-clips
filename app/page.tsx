@@ -73,7 +73,7 @@ export default async function HomePage() {
       <footer className="border-t border-border mt-auto">
         <div className="mx-auto max-w-2xl px-6 py-8">
           <p className="text-xs text-muted-foreground">
-            carpeta.cl — Biblioteca de partidos.
+            carpeta.cl — Clips de partido.
           </p>
           <p className="text-xs text-muted-foreground">
             camilaescudero@uc.cl
