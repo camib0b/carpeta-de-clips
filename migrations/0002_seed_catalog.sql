@@ -5,7 +5,7 @@
 INSERT OR IGNORE INTO libraries (id, name, sort_order) VALUES
   ('uc-sub-16-a', 'UC Sub-16 A', 1),
   ('uc-primera-b', 'UC Primera B', 2),
-  ('others', 'Others', 3);
+  ('others', 'Otros', 3);
 
 INSERT OR IGNORE INTO matches (
   id,

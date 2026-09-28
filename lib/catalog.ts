@@ -57,10 +57,17 @@ function optionalNumber(value: number | null | undefined): number | undefined {
   return value == null ? undefined : value
 }
 
+function libraryDisplayName(row: LibraryRow): string {
+  if (row.id === 'others') {
+    return 'Otros'
+  }
+  return row.name
+}
+
 function libraryRowToTeam(row: LibraryRow): Team {
   return {
     id: row.id,
-    name: row.name,
+    name: libraryDisplayName(row),
     slug: row.id,
     country: LIBRARY_COUNTRY,
   }
@@ -138,10 +145,7 @@ function attachClipInstances(
 }
 
 function clipJoinRowToVideoClip(row: ClipJoinRow): VideoClip {
-  const libraryName =
-    row.library_id === 'others' || row.library_name === 'Others'
-      ? 'Others'
-      : undefined
+  const libraryName = row.library_id === 'others' ? 'Others' : undefined
 
   return {
     id: String(row.clip_id),

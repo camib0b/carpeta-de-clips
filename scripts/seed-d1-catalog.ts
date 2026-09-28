@@ -27,7 +27,7 @@ const SEED_MIGRATION_PATH = path.join(
 const LIBRARIES = [
   { id: 'uc-sub-16-a', name: 'UC Sub-16 A', sortOrder: 1 },
   { id: 'uc-primera-b', name: 'UC 1°B', sortOrder: 2 },
-  { id: 'others', name: 'Otros - Torneo 1°A', sortOrder: 3 },
+  { id: 'others', name: 'Otros', sortOrder: 3 },
 ] as const
 
 type SeedMatch = {
