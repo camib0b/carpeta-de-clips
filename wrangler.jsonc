@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
+  "main": "worker.ts",
   "name": "carpeta-de-clips",
   "compatibility_date": "2026-05-28",
   "compatibility_flags": ["nodejs_compat"],
@@ -33,6 +33,7 @@
     }
   ],
   "observability": {
-    "enabled": true
+    "enabled": true,
+    "head_sampling_rate": 1
   }
 }
