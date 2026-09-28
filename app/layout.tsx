@@ -9,6 +9,7 @@ import {
   siteTitle,
   siteTitleTemplate,
 } from '@/lib/site-metadata'
+import { siteOrigin } from '@/lib/site-url'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
   applicationName: siteName,
   authors: [siteAuthor],
   creator: siteAuthor.name,
-  metadataBase: new URL('https://carpeta.cl'),
+  metadataBase: new URL(siteOrigin),
   openGraph: {
     title: siteTitle,
     description: siteDescription,
