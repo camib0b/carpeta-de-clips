@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { TeamIcon } from '@/components/team-icon'
 import { listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
+import { siteDescription, siteName } from '@/lib/site-metadata'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,13 +18,10 @@ export default async function HomePage() {
       <header className="border-b border-border">
         <div className="mx-auto max-w-2xl px-6 py-16 md:py-24">
           <h1 className="text-2xl font-medium tracking-tight text-foreground md:text-3xl">
-            CC
+            {siteName}
           </h1>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-            <strong className="font-semibold text-foreground">
-              Carpeta de Clips
-            </strong>{' '}
-            para trabajar con el equipo.
+            {siteDescription}
           </p>
         </div>
       </header>
@@ -73,7 +71,7 @@ export default async function HomePage() {
       <footer className="border-t border-border mt-auto">
         <div className="mx-auto max-w-2xl px-6 py-8">
           <p className="text-xs text-muted-foreground">
-            carpeta.cl — Clips de partido.
+            {siteName} — Clips de partido.
           </p>
           <p className="text-xs text-muted-foreground">
             camilaescudero@uc.cl
