@@ -9,12 +9,15 @@ export function VideoGridSkeleton() {
         <div className="h-9 w-[180px] animate-pulse rounded-md bg-muted" />
       </div>
       <div className="h-5 w-16 animate-pulse rounded bg-muted" />
-      <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="space-y-3">
-            <div className="aspect-video animate-pulse rounded-lg bg-muted" />
-            <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
-            <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+          <div key={index} className="overflow-hidden rounded-lg border border-border">
+            <div className="aspect-video animate-pulse bg-muted" />
+            <div className="space-y-2 border-t border-border/70 bg-muted/40 px-3 py-2.5">
+              <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
+              <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+              <div className="h-3 w-2/5 animate-pulse rounded bg-muted" />
+            </div>
           </div>
         ))}
       </div>

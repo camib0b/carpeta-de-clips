@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useMemo, useCallback } from 'react'
 import { VideoClip } from '@/lib/types'
 import { VideoCard } from './video-card'
 import { VideoModal } from './video-modal'
+import { useLibraryClipSelection } from '@/hooks/use-library-clip'
 import { useLibraryFilters } from '@/hooks/use-library-filters'
 import { MatchContextBanner } from './match-context-banner'
 import { VideoFilters } from './video-filters'
@@ -21,34 +21,15 @@ interface VideoGridProps {
  * Displays videos in a responsive grid with client-side filtering
  */
 export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: VideoGridProps) {
-  const searchParams = useSearchParams()
-  const initialPlayOrd = useMemo(() => {
-    const raw = searchParams.get('jugada')
-    if (!raw) return undefined
-    const parsed = Number.parseInt(raw, 10)
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
-  }, [searchParams])
-
-  const [selectedClip, setSelectedClip] = useState<VideoClip | null>(null)
-  const [isClipModalOpen, setIsClipModalOpen] = useState(false)
-  const jugadaAutoOpenDoneRef = useRef(false)
-
-  useEffect(() => {
-    if (jugadaAutoOpenDoneRef.current || initialPlayOrd == null) {
-      return
-    }
-
-    const clipWithPlay = videos.find((videoItem) =>
-      videoItem.instances?.some((instance) => instance.ord === initialPlayOrd),
-    )
-    if (!clipWithPlay) {
-      return
-    }
-
-    jugadaAutoOpenDoneRef.current = true
-    setSelectedClip(clipWithPlay)
-    setIsClipModalOpen(true)
-  }, [initialPlayOrd, videos])
+  const {
+    selectedClip,
+    isOpen: isClipModalOpen,
+    initialPlayOrd,
+    openClip,
+    navigateToClip,
+    setJugadaOrd,
+    closeClip,
+  } = useLibraryClipSelection(videos)
   const {
     selectedConcepts,
     selectedRivals,
@@ -75,11 +56,6 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
     return listUniqueMatchSummaries(filteredVideos)
   }, [filteredVideos, shouldShowMatchBanner])
 
-  const openClipModal = (video: VideoClip) => {
-    setSelectedClip(video)
-    setIsClipModalOpen(true)
-  }
-
   const selectedIndex =
     selectedClip && isClipModalOpen
       ? filteredVideos.findIndex((videoItem) => videoItem.id === selectedClip.id)
@@ -90,33 +66,18 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
     selectedIndex >= 0 && selectedIndex < filteredVideos.length - 1
 
   const handleNavigatePrevious = useCallback(() => {
-    setSelectedClip((current) => {
-      if (!current) return current
-      const index = filteredVideos.findIndex((videoItem) => videoItem.id === current.id)
-      if (index <= 0) return current
-      return filteredVideos[index - 1]
-    })
-  }, [filteredVideos])
+    if (!selectedClip) return
+    const index = filteredVideos.findIndex((videoItem) => videoItem.id === selectedClip.id)
+    if (index <= 0) return
+    navigateToClip(filteredVideos[index - 1])
+  }, [filteredVideos, navigateToClip, selectedClip])
 
   const handleNavigateNext = useCallback(() => {
-    setSelectedClip((current) => {
-      if (!current) return current
-      const index = filteredVideos.findIndex((videoItem) => videoItem.id === current.id)
-      if (index < 0 || index >= filteredVideos.length - 1) return current
-      return filteredVideos[index + 1]
-    })
-  }, [filteredVideos])
-
-  useEffect(() => {
-    if (!isClipModalOpen || !selectedClip) return
-    const stillInFilteredList = filteredVideos.some(
-      (videoItem) => videoItem.id === selectedClip.id,
-    )
-    if (!stillInFilteredList) {
-      setIsClipModalOpen(false)
-      setSelectedClip(null)
-    }
-  }, [filteredVideos, isClipModalOpen, selectedClip])
+    if (!selectedClip) return
+    const index = filteredVideos.findIndex((videoItem) => videoItem.id === selectedClip.id)
+    if (index < 0 || index >= filteredVideos.length - 1) return
+    navigateToClip(filteredVideos[index + 1])
+  }, [filteredVideos, navigateToClip, selectedClip])
 
   return (
     <div className="space-y-10">
@@ -145,12 +106,12 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
 
       {/* Video Grid */}
       {filteredVideos.length > 0 ? (
-        <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filteredVideos.map((video) => (
             <VideoCard
               key={video.id}
               video={video}
-              onClick={() => openClipModal(video)}
+              onClick={() => openClip(video)}
             />
           ))}
         </div>
@@ -172,12 +133,15 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
       <VideoModal
         video={selectedClip}
         open={isClipModalOpen}
-        onOpenChange={setIsClipModalOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) closeClip()
+        }}
         initialPlayOrd={initialPlayOrd}
         canNavigatePrevious={canNavigatePrevious}
         canNavigateNext={canNavigateNext}
         onNavigatePrevious={handleNavigatePrevious}
         onNavigateNext={handleNavigateNext}
+        onJugadaOrdChange={setJugadaOrd}
       />
     </div>
   )

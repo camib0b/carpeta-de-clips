@@ -3,9 +3,13 @@
 import { useCallback, useMemo } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
+  toLibraryHref,
+  withLibraryFilters,
+  withoutLibraryFilters,
+} from '@/lib/library-filters/clip-params'
+import {
   hasActiveFilters,
   parseLibraryFilters,
-  serializeLibraryFilters,
   type LibraryFilterState,
 } from '@/lib/library-filters/params'
 
@@ -22,12 +26,10 @@ export function useLibraryFilters(availableRivals: string[]) {
   const updateFilters = useCallback(
     (partialFilters: Partial<LibraryFilterState>) => {
       const merged: LibraryFilterState = { ...filters, ...partialFilters }
-      const params = serializeLibraryFilters(merged)
-      const query = params.toString()
-      const href = query ? `${pathname}?${query}` : pathname
-      router.replace(href, { scroll: false })
+      const params = withLibraryFilters(searchParams, merged)
+      router.replace(toLibraryHref(pathname, params), { scroll: false })
     },
-    [filters, pathname, router],
+    [filters, pathname, router, searchParams],
   )
 
   const setSelectedConcepts = useCallback(
@@ -41,8 +43,9 @@ export function useLibraryFilters(availableRivals: string[]) {
   )
 
   const clearFilters = useCallback(() => {
-    router.replace(pathname, { scroll: false })
-  }, [pathname, router])
+    const params = withoutLibraryFilters(searchParams)
+    router.replace(toLibraryHref(pathname, params), { scroll: false })
+  }, [pathname, router, searchParams])
 
   return {
     selectedConcepts: filters.concepts,

@@ -12,9 +12,9 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import YouTube from 'react-youtube'
-import { format, parseISO } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { ShareClipButton } from '@/components/share-clip-button'
 import { cn } from '@/lib/utils'
+import { formatClipMatchSummary } from '@/lib/match-display'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { findActiveInstanceIndex } from '@/lib/clip-instance-playback'
 import { formatPlayTimestamp } from '@/lib/format-play-timestamp'
@@ -51,6 +51,7 @@ interface VideoModalProps {
   canNavigateNext?: boolean
   onNavigatePrevious?: () => void
   onNavigateNext?: () => void
+  onJugadaOrdChange?: (jugadaOrd: number) => void
 }
 
 interface ClipNavButtonProps {
@@ -71,15 +72,6 @@ function isEditableTarget(target: EventTarget | null): boolean {
     return true
   }
   return target.isContentEditable
-}
-
-function formatMatchSummaryLine(video: VideoClip, formattedDate: string): string {
-  const hasScore =
-    video.homeGoals !== undefined && video.awayGoals !== undefined
-  const matchup = hasScore
-    ? `${video.homeTeam} ${video.homeGoals}–${video.awayGoals} ${video.awayTeam}`
-    : `${video.homeTeam} – ${video.awayTeam}`
-  return `${matchup} · ${formattedDate}`
 }
 
 function ClipNavButton({ direction, onClick, className }: ClipNavButtonProps) {
@@ -165,14 +157,14 @@ function JugadasList({
   }, [activeIndex, instances])
 
   return (
-    <div className="mt-3 flex min-h-0 flex-col">
-      <h3 className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground md:text-[0.625rem]">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <h3 className="px-3 pt-2 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
         Jugadas
       </h3>
       <div
         ref={listRef}
         className={cn(
-          'mt-1.5 min-h-0 overflow-y-auto overscroll-contain border-t border-border/60',
+          'mt-1.5 min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-border/60',
           listClassName,
         )}
       >
@@ -196,25 +188,21 @@ function JugadasList({
               aria-label={ariaLabel}
               aria-current={isActive ? 'true' : undefined}
               className={cn(
-                'flex w-full items-baseline gap-2 border-b border-border/40 px-0.5 py-2 text-left text-xs tabular-nums transition-colors sm:text-sm md:text-xs',
+                'grid w-full grid-cols-[auto_auto_auto_minmax(0,1fr)] items-baseline gap-x-2 border-b border-border/40 px-3 py-2 text-left text-xs tabular-nums transition-colors',
                 'hover:bg-muted/40',
                 isActive && 'bg-muted/60',
               )}
             >
-              <span className="w-9 shrink-0 text-muted-foreground">
+              <span className="whitespace-nowrap text-muted-foreground">
                 {instance.ord}/{total}
               </span>
-              <span className="w-10 shrink-0 text-foreground">{timestamp}</span>
-              {instance.quarter && (
-                <span className="w-7 shrink-0 text-muted-foreground">
-                  {instance.quarter}
-                </span>
-              )}
-              {instance.scoreLabel && (
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                  {instance.scoreLabel}
-                </span>
-              )}
+              <span className="whitespace-nowrap text-foreground">{timestamp}</span>
+              <span className="whitespace-nowrap text-muted-foreground">
+                {instance.quarter}
+              </span>
+              <span className="min-w-0 truncate text-muted-foreground">
+                {instance.scoreLabel}
+              </span>
             </button>
           )
         })}
@@ -224,9 +212,10 @@ function JugadasList({
 }
 
 /**
- * Modal component for playing YouTube videos
- * Desktop: wide layout with video dominant and compact sidebar
- * Mobile: full-width video with overlay navigation controls
+ * Modal component for playing YouTube videos.
+ * The player uses the widest 16:9 that fits the viewport. The jugadas
+ * column is only as wide as its rows, and it scrolls beside the video
+ * instead of stretching the dialog.
  */
 export function VideoModal({
   video,
@@ -237,6 +226,7 @@ export function VideoModal({
   canNavigateNext = false,
   onNavigatePrevious,
   onNavigateNext,
+  onJugadaOrdChange,
 }: VideoModalProps) {
   const isMobile = useIsMobile()
   const showClipNavigation = open && (canNavigatePrevious || canNavigateNext)
@@ -244,6 +234,9 @@ export function VideoModal({
   const contentRef = useRef<HTMLDivElement>(null)
   const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
   const pendingInitialPlayOrdRef = useRef<number | undefined>(undefined)
+  const initialPlayOrdRef = useRef(initialPlayOrd)
+  initialPlayOrdRef.current = initialPlayOrd
+  const [shareJugadaOrd, setShareJugadaOrd] = useState<number | undefined>(initialPlayOrd)
   const [swipeHintDismissed, setSwipeHintDismissed] = useState(true)
   const [playbackTimeS, setPlaybackTimeS] = useState(0)
   const [isPlaybackPolling, setIsPlaybackPolling] = useState(false)
@@ -274,8 +267,9 @@ export function VideoModal({
     setIsPlaybackPolling(false)
     setPlaybackTimeS(0)
     setManualActiveIndex(null)
-    pendingInitialPlayOrdRef.current = initialPlayOrd
-  }, [video?.id, initialPlayOrd])
+    pendingInitialPlayOrdRef.current = initialPlayOrdRef.current
+    setShareJugadaOrd(initialPlayOrdRef.current)
+  }, [video?.id])
 
   const dismissSwipeHint = useCallback(() => {
     setSwipeHintDismissed(true)
@@ -310,6 +304,15 @@ export function VideoModal({
     [],
   )
 
+  const selectPlay = useCallback(
+    (instance: ClipInstance, instanceIndex: number) => {
+      seekToPlay(instance, instanceIndex)
+      setShareJugadaOrd(instance.ord)
+      onJugadaOrdChange?.(instance.ord)
+    },
+    [onJugadaOrdChange, seekToPlay],
+  )
+
   const applyInitialPlayOrd = useCallback(() => {
     const ord = pendingInitialPlayOrdRef.current
     if (!ord || instances.length === 0) {
@@ -317,14 +320,13 @@ export function VideoModal({
     }
 
     const index = instances.findIndex((instance) => instance.ord === ord)
-    const resolvedIndex = index >= 0 ? index : ord - 1
-    const instance = instances[resolvedIndex]
-    if (!instance) {
+    const instance = index >= 0 ? instances[index] : undefined
+    if (!instance || index < 0) {
       return
     }
 
     pendingInitialPlayOrdRef.current = undefined
-    seekToPlay(instance, resolvedIndex)
+    seekToPlay(instance, index)
   }, [instances, seekToPlay])
 
   const handleYouTubeReady = useCallback(
@@ -392,10 +394,10 @@ export function VideoModal({
           : Math.min(instances.length - 1, activeIndex + 1)
       const instance = instances[nextIndex]
       if (instance) {
-        seekToPlay(instance, nextIndex)
+        selectPlay(instance, nextIndex)
       }
     },
-    [activeIndex, instances, seekToPlay],
+    [activeIndex, instances, selectPlay],
   )
 
   const toggleYouTubePlayback = useCallback(() => {
@@ -522,56 +524,25 @@ export function VideoModal({
 
   if (!video) return null
 
-  const formattedDate = format(parseISO(video.date), "d 'de' MMMM, yyyy", { locale: es })
-  const matchSummaryLine = formatMatchSummaryLine(video, formattedDate)
+  const matchSummaryLine = formatClipMatchSummary(video)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          'gap-0 overflow-hidden p-0',
-          'max-w-none sm:max-w-none',
-          'w-[min(calc(100vw-1rem),100%)]',
-          'max-h-[100dvh] sm:max-h-[94vh]',
-          'md:w-[min(94vw,80rem)] md:max-h-[92vh]',
+          'flex w-[calc(100%-0.5rem)] max-w-none flex-col gap-0 overflow-hidden p-0',
+          'max-h-[calc(100dvh-0.5rem)] sm:max-w-none',
         )}
         onOpenAutoFocus={handleOpenAutoFocus}
         onPointerDownOutside={preventCloseOnClipNav}
         onInteractOutside={preventCloseOnClipNav}
       >
-        {showClipNavigation && !isMobile && (
-          <>
-            {canNavigatePrevious && onNavigatePrevious && (
-              <ClipNavButton
-                direction="previous"
-                onClick={onNavigatePrevious}
-                className={cn(
-                  'fixed top-1/2 z-[60] hidden -translate-y-1/2 md:flex',
-                  'size-10 border-border/60 bg-background/55 text-foreground/90 hover:bg-background/75',
-                  'left-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3rem))]',
-                )}
-              />
-            )}
-            {canNavigateNext && onNavigateNext && (
-              <ClipNavButton
-                direction="next"
-                onClick={onNavigateNext}
-                className={cn(
-                  'fixed top-1/2 z-[60] hidden -translate-y-1/2 md:flex',
-                  'size-10 border-border/60 bg-background/55 text-foreground/90 hover:bg-background/75',
-                  'right-[max(0.75rem,calc((100vw-min(94vw,80rem))/2-3rem))]',
-                )}
-              />
-            )}
-          </>
-        )}
-
         <div
           ref={contentRef}
           tabIndex={-1}
           className={cn(
-            'flex max-h-[100dvh] flex-col overflow-hidden outline-none sm:max-h-[94vh] md:max-h-[92vh]',
-            'md:flex-row md:items-stretch',
+            'flex max-h-[calc(100dvh-0.5rem)] w-full min-h-0 flex-col outline-none',
+            hasInstances && 'md:flex-row md:items-start',
           )}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -579,8 +550,16 @@ export function VideoModal({
             touchStartPoint.current = null
           }}
         >
-          <div className="relative min-w-0 shrink-0 bg-black md:flex-1">
-            <div className="relative aspect-video w-full">
+          <div
+            className={cn(
+              'flex w-full min-w-0 justify-center bg-black max-md:shrink-0',
+              hasInstances && 'md:w-auto md:flex-1',
+            )}
+          >
+            <div
+              className="relative aspect-video"
+              style={{ width: 'min(100%, calc((100dvh - 0.5rem) * 16 / 9))' }}
+            >
               <YouTube
                 videoId={video.youtubeId}
                 className="absolute inset-0"
@@ -598,42 +577,68 @@ export function VideoModal({
                 onStateChange={handleYouTubeStateChange}
               />
 
+              {showClipNavigation && canNavigatePrevious && onNavigatePrevious && (
+                <ClipNavButton
+                  direction="previous"
+                  onClick={onNavigatePrevious}
+                  className="absolute top-1/2 left-2 z-20 hidden -translate-y-1/2 md:flex"
+                />
+              )}
+              {showClipNavigation && canNavigateNext && onNavigateNext && (
+                <ClipNavButton
+                  direction="next"
+                  onClick={onNavigateNext}
+                  className="absolute top-1/2 right-2 z-20 hidden -translate-y-1/2 md:flex"
+                />
+              )}
+
               {showSwipeHint && <SwipeNavigationHint />}
             </div>
           </div>
 
           <div
             className={cn(
-              'flex min-h-0 flex-col border-border',
-              'max-h-[42vh] border-t p-4 sm:p-5',
-              'md:max-h-[92vh] md:w-80 md:shrink-0 md:border-t-0 md:border-l md:p-4',
-              hasInstances && 'md:min-h-0',
+              'relative flex min-h-0 w-full flex-col overflow-hidden border-t border-border',
+              hasInstances
+                ? 'max-h-[38dvh] md:max-h-none md:w-56 md:shrink-0 md:self-stretch md:border-t-0 md:border-l'
+                : 'shrink-0',
             )}
           >
-            <DialogHeader className="shrink-0 space-y-1 text-left">
-              <DialogTitle className="text-sm font-medium leading-snug tracking-tight sm:text-base md:text-[0.9375rem]">
-                {video.title}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground sm:text-sm md:text-xs">
-                {matchSummaryLine}
-              </DialogDescription>
-            </DialogHeader>
+            <div
+              className={cn(
+                'flex min-h-0 flex-1 flex-col overflow-hidden',
+                hasInstances && 'md:absolute md:inset-0',
+              )}
+            >
+              <DialogHeader className="shrink-0 space-y-1 px-3 pt-3 pr-12 pb-2 text-left">
+                <div className="flex items-start gap-2">
+                  <DialogTitle className="min-w-0 flex-1 text-sm font-medium leading-snug tracking-tight">
+                    {video.title}
+                  </DialogTitle>
+                  <ShareClipButton
+                    clipId={video.id}
+                    jugadaOrd={shareJugadaOrd}
+                    title={video.title}
+                  />
+                </div>
+                <DialogDescription className="text-xs leading-snug text-muted-foreground">
+                  {matchSummaryLine}
+                </DialogDescription>
+              </DialogHeader>
 
-            {hasInstances && (
-              <JugadasList
-                instances={instances}
-                activeIndex={activeIndex}
-                onSelectPlay={(instance) => {
-                  const index = instances.findIndex(
-                    (row) => row.ord === instance.ord,
-                  )
-                  seekToPlay(instance, index >= 0 ? index : 0)
-                }}
-                listClassName={cn(
-                  'max-h-[28vh] md:max-h-none md:flex-1',
-                )}
-              />
-            )}
+              {hasInstances && (
+                <JugadasList
+                  instances={instances}
+                  activeIndex={activeIndex}
+                  onSelectPlay={(instance) => {
+                    const index = instances.findIndex(
+                      (row) => row.ord === instance.ord,
+                    )
+                    selectPlay(instance, index >= 0 ? index : 0)
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>

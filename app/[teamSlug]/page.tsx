@@ -10,6 +10,15 @@ import { TeamHeader } from '@/components/team-header'
 import { VideoGrid } from '@/components/video-grid'
 import { VideoGridSkeleton } from '@/components/video-grid-skeleton'
 import { Metadata } from 'next'
+import type { Team, VideoClip } from '@/lib/types'
+import { formatClipMatchSummary } from '@/lib/match-display'
+import {
+  buildClipOpenGraphQuery,
+  parseClipId,
+  parseJugadaOrd,
+  readQueryValue,
+  toLibraryHref,
+} from '@/lib/library-filters/clip-params'
 import {
   siteLocale,
   siteName,
@@ -21,23 +30,10 @@ export const dynamic = 'force-dynamic'
 
 interface TeamPageProps {
   params: Promise<{ teamSlug: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-/**
- * Generate metadata for team pages
- */
-export async function generateMetadata({
-  params,
-}: TeamPageProps): Promise<Metadata> {
-  const { teamSlug } = await params
-  const team = await getTeamBySlug(teamSlug)
-
-  if (!team) {
-    return {
-      title: 'Equipo no encontrado',
-    }
-  }
-
+function teamPageMetadata(team: Team): Metadata {
   const pageDescription = teamPageDescription(team.name)
   const openGraphTitle = teamOpenGraphTitle(team.name)
 
@@ -58,6 +54,76 @@ export async function generateMetadata({
       description: pageDescription,
     },
   }
+}
+
+function clipPageMetadata(team: Team, clip: VideoClip, query: URLSearchParams): Metadata {
+  const description = formatClipMatchSummary(clip)
+  const openGraphTitle = `${clip.title} · ${siteName}`
+  const url = toLibraryHref(`/${team.slug}`, query)
+
+  return {
+    title: clip.title,
+    description,
+    openGraph: {
+      title: openGraphTitle,
+      description,
+      url,
+      siteName,
+      locale: siteLocale,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title: openGraphTitle,
+      description,
+    },
+  }
+}
+
+/**
+ * Generate metadata for team pages.
+ * A valid `clip` query makes the preview describe that clip. Any other URL
+ * keeps the team library preview.
+ */
+export async function generateMetadata({
+  params,
+  searchParams,
+}: TeamPageProps): Promise<Metadata> {
+  const { teamSlug } = await params
+  const team = await getTeamBySlug(teamSlug)
+
+  if (!team) {
+    return {
+      title: 'Equipo no encontrado',
+    }
+  }
+
+  const query = await searchParams
+  const clipId = parseClipId(readQueryValue(query.clip))
+  if (!clipId) {
+    return teamPageMetadata(team)
+  }
+
+  const clips = await getTeamLibraryClips(teamSlug)
+  const clip = clips.find((candidate) => candidate.id === clipId)
+  if (!clip) {
+    return teamPageMetadata(team)
+  }
+
+  const jugadaOrd = parseJugadaOrd(readQueryValue(query.jugada))
+  const jugadaBelongs =
+    jugadaOrd != null && clip.instances?.some((instance) => instance.ord === jugadaOrd)
+
+  return clipPageMetadata(
+    team,
+    clip,
+    buildClipOpenGraphQuery({
+      concept: readQueryValue(query.concept),
+      rival: readQueryValue(query.rival),
+      clipId,
+      jugadaOrd: jugadaBelongs ? jugadaOrd : undefined,
+    }),
+  )
 }
 
 /**

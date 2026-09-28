@@ -1,9 +1,7 @@
 'use client'
 
-import { formatScoreWithShootout } from '@/lib/match-display'
+import { formatMatchDate, formatScoreWithShootout } from '@/lib/match-display'
 import { VideoClip } from '@/lib/types'
-import { format, parseISO } from 'date-fns'
-import { es } from 'date-fns/locale'
 
 interface VideoCardProps {
   video: VideoClip
@@ -11,11 +9,12 @@ interface VideoCardProps {
 }
 
 /**
- * Minimalist video card component.
+ * One library clip. Thumbnail and caption share a bordered card so the title
+ * belongs to the image above it.
  * Metadata hierarchy: clip title → home vs away (and score) → date (and optional division).
  */
 export function VideoCard({ video, onClick }: VideoCardProps) {
-  const formattedDate = format(parseISO(video.date), "d 'de' MMM, yyyy", { locale: es })
+  const formattedDate = formatMatchDate(video.date)
   const scoreDisplay =
     video.homeGoals !== undefined && video.awayGoals !== undefined
       ? formatScoreWithShootout(
@@ -32,7 +31,7 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
+      className="group w-full overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm transition-colors hover:border-foreground/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
     >
       {/* Thumbnail */}
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
@@ -55,12 +54,12 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
         </div>
       </div>
 
-      {/* Metadata */}
-      <div className="mt-4 space-y-2">
+      {/* Caption sits inside the same card as the thumbnail above it. */}
+      <div className="space-y-1 border-t border-border/70 bg-muted/40 px-3 py-2.5">
         <h3 className="text-sm font-medium leading-snug tracking-tight text-foreground">
           {video.title}
         </h3>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-foreground/80">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-foreground/80">
           <span>{matchupDisplay}</span>
           {scoreDisplay && (
             <>
@@ -69,7 +68,7 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
             </>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
           <span>{formattedDate}</span>
           {video.division && (
             <>

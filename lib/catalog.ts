@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { remapGameConceptToTeamPerspective } from '@/lib/team-perspective'
 import { getCatalogDatabase } from '@/lib/d1'
 import type { ClipInstance, Team, VideoClip } from '@/lib/types'
@@ -239,7 +240,9 @@ export async function getTeamBySlug(slug: string): Promise<Team | undefined> {
   return row ? libraryRowToTeam(row) : undefined
 }
 
-export async function getTeamLibraryClips(teamSlug: string): Promise<VideoClip[]> {
+export const getTeamLibraryClips = cache(async function getTeamLibraryClips(
+  teamSlug: string,
+): Promise<VideoClip[]> {
   const team = await getTeamBySlug(teamSlug)
   if (!team) {
     return []
@@ -263,7 +266,7 @@ export async function getTeamLibraryClips(teamSlug: string): Promise<VideoClip[]
   return clipsWithInstances.map((clip) =>
     remapGameConceptToTeamPerspective(clip, team.name),
   )
-}
+})
 
 export function listRivalsFromClips(clips: VideoClip[]): string[] {
   return [...new Set(clips.map((clip) => clip.rivalTeam))]

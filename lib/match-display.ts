@@ -1,6 +1,3 @@
-import { format, parseISO } from 'date-fns'
-import { es } from 'date-fns/locale'
-
 import { buildMatchKeyFromClip, matchKeyToStorageSlug } from '@/lib/match-keys'
 import { getTeamAbbreviation } from '@/lib/team-abbreviations'
 import type { VideoClip } from '@/lib/types'
@@ -51,8 +48,46 @@ export function listUniqueMatchSummaries(clips: VideoClip[]): MatchSummary[] {
   )
 }
 
+const COMPACT_MONTH_LABELS = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sept',
+  'oct',
+  'nov',
+  'dic',
+] as const
+
+/** Home, score, away, and date — the line shown in the clip modal and in link previews. */
+export function formatClipMatchSummary(clip: VideoClip): string {
+  const formattedDate = formatMatchDate(clip.date)
+  const hasScore = clip.homeGoals !== undefined && clip.awayGoals !== undefined
+  const matchup = hasScore
+    ? `${clip.homeTeam} ${clip.homeGoals}–${clip.awayGoals} ${clip.awayTeam}`
+    : `${clip.homeTeam} – ${clip.awayTeam}`
+  return `${matchup} · ${formattedDate}`
+}
+
+/**
+ * Compact calendar date, e.g. `26-sept-2026`.
+ * Reads the `YYYY-MM-DD` prefix so the day does not shift with timezone.
+ */
 export function formatMatchDate(date: string): string {
-  return format(parseISO(date), "d 'de' MMM, yyyy", { locale: es })
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(date)
+  if (!match) return date
+
+  const year = Number(match[1])
+  const monthIndex = Number(match[2]) - 1
+  const day = Number(match[3])
+  const monthLabel = COMPACT_MONTH_LABELS[monthIndex]
+  if (!monthLabel || day < 1 || day > 31) return date
+
+  return `${day}-${monthLabel}-${year}`
 }
 
 export function buildMatchXmlDownloadFilename(match: MatchSummary): string {
