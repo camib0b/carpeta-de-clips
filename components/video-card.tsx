@@ -1,6 +1,7 @@
 'use client'
 
 import { formatMatchDate, formatScoreWithShootout } from '@/lib/match-display'
+import { formatHomeAwayMatchup, getTeamAbbreviation } from '@/lib/team-abbreviations'
 import { VideoClip } from '@/lib/types'
 
 interface VideoCardProps {
@@ -25,8 +26,8 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
       : null
   const matchupDisplay =
     video.homeTeam && video.awayTeam
-      ? `${video.homeTeam} vs ${video.awayTeam}`
-      : `vs ${video.rivalTeam}`
+      ? formatHomeAwayMatchup(video.homeTeam, video.awayTeam)
+      : `vs ${getTeamAbbreviation(video.rivalTeam)}`
 
   return (
     <button
