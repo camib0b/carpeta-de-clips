@@ -18,6 +18,7 @@ import { formatClipMatchSummary } from '@/lib/match-display'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
   findActiveInstanceIndex,
+  playbackTimeIsBeforePlay,
   stepPlayIndex,
 } from '@/lib/clip-instance-playback'
 import { formatPlayTimestamp } from '@/lib/format-play-timestamp'
@@ -239,6 +240,7 @@ export function VideoModal({
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
+  const seekHoldIndexRef = useRef<number | null>(null)
   const pendingInitialPlayOrdRef = useRef<number | undefined>(undefined)
   const initialPlayOrdRef = useRef(initialPlayOrd)
   initialPlayOrdRef.current = initialPlayOrd
@@ -250,6 +252,8 @@ export function VideoModal({
 
   const instances = video?.instances ?? []
   const hasInstances = instances.length > 0
+  const instancesRef = useRef(instances)
+  instancesRef.current = instances
 
   useEffect(() => {
     try {
@@ -262,6 +266,7 @@ export function VideoModal({
   useEffect(() => {
     if (!open) {
       youtubePlayerRef.current = null
+      seekHoldIndexRef.current = null
       setIsPlaybackPolling(false)
       setPlaybackTimeS(0)
       setManualActiveIndex(null)
@@ -270,6 +275,7 @@ export function VideoModal({
 
   useEffect(() => {
     youtubePlayerRef.current = null
+    seekHoldIndexRef.current = null
     setIsPlaybackPolling(false)
     setPlaybackTimeS(0)
     setManualActiveIndex(null)
@@ -301,6 +307,7 @@ export function VideoModal({
       if (!player) {
         return
       }
+      seekHoldIndexRef.current = instanceIndex
       player.seekTo(instance.offsetS, true)
       player.playVideo()
       setPlaybackTimeS(instance.offsetS)
@@ -376,10 +383,19 @@ export function VideoModal({
         return
       }
       const currentTime = player.getCurrentTime()
-      if (typeof currentTime === 'number' && Number.isFinite(currentTime)) {
-        setPlaybackTimeS(currentTime)
-        setManualActiveIndex(null)
+      if (typeof currentTime !== 'number' || !Number.isFinite(currentTime)) {
+        return
       }
+      const heldIndex = seekHoldIndexRef.current
+      if (
+        heldIndex != null &&
+        playbackTimeIsBeforePlay(instancesRef.current, heldIndex, currentTime)
+      ) {
+        return
+      }
+      seekHoldIndexRef.current = null
+      setPlaybackTimeS(currentTime)
+      setManualActiveIndex(null)
     }, PLAYBACK_POLL_INTERVAL_MS)
 
     return () => window.clearInterval(intervalId)

@@ -18,6 +18,24 @@ export function findActiveInstanceIndex(
   return activeIndex
 }
 
+const SEEK_LEAD_TOLERANCE_S = 0.35
+
+/**
+ * True while reported playback is still earlier than this play.
+ * A seek to that play has not landed yet, so the selection should stay put.
+ */
+export function playbackTimeIsBeforePlay(
+  instances: ClipInstance[],
+  playIndex: number,
+  currentTimeS: number,
+): boolean {
+  const play = instances[playIndex]
+  if (!play || !Number.isFinite(currentTimeS)) {
+    return false
+  }
+  return currentTimeS < play.offsetS - SEEK_LEAD_TOLERANCE_S
+}
+
 /**
  * Index of the previous or next play inside the open clip.
  * Null at either end: playback does not wrap and does not leave the clip.

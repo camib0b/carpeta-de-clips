@@ -2,7 +2,11 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import type { ClipInstance } from './types'
-import { findActiveInstanceIndex, stepPlayIndex } from './clip-instance-playback'
+import {
+  findActiveInstanceIndex,
+  playbackTimeIsBeforePlay,
+  stepPlayIndex,
+} from './clip-instance-playback'
 
 const instances: ClipInstance[] = [
   { ord: 1, offsetS: 0, durationS: 19 },
@@ -34,6 +38,15 @@ test('stepPlayIndex moves to the neighboring play and stops at the ends', () => 
   assert.equal(stepPlayIndex(4, 2, 'next'), 3)
   assert.equal(stepPlayIndex(4, 3, 'previous'), 2)
   assert.equal(stepPlayIndex(4, 3, 'next'), null)
+})
+
+test('playbackTimeIsBeforePlay stays true until the seek reaches that play', () => {
+  assert.equal(playbackTimeIsBeforePlay(instances, 1, 0), true)
+  assert.equal(playbackTimeIsBeforePlay(instances, 1, 18.6), true)
+  assert.equal(playbackTimeIsBeforePlay(instances, 1, 18.7), false)
+  assert.equal(playbackTimeIsBeforePlay(instances, 1, 19), false)
+  assert.equal(playbackTimeIsBeforePlay(instances, 0, 0), false)
+  assert.equal(playbackTimeIsBeforePlay(instances, 9, 0), false)
 })
 
 test('stepPlayIndex stays inside a clip that has no further play', () => {
