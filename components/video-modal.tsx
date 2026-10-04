@@ -16,7 +16,11 @@ import { ShareClipButton } from '@/components/share-clip-button'
 import { cn } from '@/lib/utils'
 import { formatClipMatchSummary } from '@/lib/match-display'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { findActiveInstanceIndex } from '@/lib/clip-instance-playback'
+import {
+  findActiveInstanceIndex,
+  playbackTimeIsBeforePlay,
+  stepPlayIndex,
+} from '@/lib/clip-instance-playback'
 import { formatPlayTimestamp } from '@/lib/format-play-timestamp'
 
 const MINIMUM_SWIPE_DISTANCE = 60
@@ -47,16 +51,13 @@ interface VideoModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   initialPlayOrd?: number
-  canNavigatePrevious?: boolean
-  canNavigateNext?: boolean
-  onNavigatePrevious?: () => void
-  onNavigateNext?: () => void
   onJugadaOrdChange?: (jugadaOrd: number) => void
 }
 
 interface ClipNavButtonProps {
   direction: 'previous' | 'next'
   onClick: () => void
+  disabled?: boolean
   className?: string
 }
 
@@ -74,14 +75,22 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return target.isContentEditable
 }
 
-function ClipNavButton({ direction, onClick, className }: ClipNavButtonProps) {
+function ClipNavButton({
+  direction,
+  onClick,
+  disabled = false,
+  className,
+}: ClipNavButtonProps) {
   const isPrevious = direction === 'previous'
   const Icon = isPrevious ? ChevronLeft : ChevronRight
-  const label = isPrevious ? 'Clip anterior' : 'Clip siguiente'
+  const label = isPrevious ? 'Jugada anterior' : 'Jugada siguiente'
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     event.stopPropagation()
+    if (disabled) {
+      return
+    }
     onClick()
   }
 
@@ -98,13 +107,16 @@ function ClipNavButton({ direction, onClick, className }: ClipNavButtonProps) {
       size="icon"
       tabIndex={-1}
       data-clip-nav={direction}
+      disabled={disabled}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onPointerDown={(event) => event.stopPropagation()}
       aria-label={label}
+      style={{ pointerEvents: 'auto' }}
       className={cn(
         'rounded-full border border-white/15 bg-black/40 text-white/80 shadow-md backdrop-blur-sm',
         'hover:bg-black/55 hover:text-white',
+        'disabled:hover:bg-black/40 disabled:hover:text-white/80',
         'focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black/50',
         'size-10 sm:size-11',
         className,
@@ -124,7 +136,7 @@ function SwipeNavigationHint() {
     >
       <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-xs font-medium text-white/95 backdrop-blur-sm">
         <MoveHorizontal className="size-4 shrink-0 animate-pulse" aria-hidden />
-        <span>Desliza para cambiar de clip</span>
+        <span>Desliza para cambiar de jugada</span>
       </div>
     </div>
   )
@@ -222,17 +234,13 @@ export function VideoModal({
   open,
   onOpenChange,
   initialPlayOrd,
-  canNavigatePrevious = false,
-  canNavigateNext = false,
-  onNavigatePrevious,
-  onNavigateNext,
   onJugadaOrdChange,
 }: VideoModalProps) {
   const isMobile = useIsMobile()
-  const showClipNavigation = open && (canNavigatePrevious || canNavigateNext)
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
+  const seekHoldIndexRef = useRef<number | null>(null)
   const pendingInitialPlayOrdRef = useRef<number | undefined>(undefined)
   const initialPlayOrdRef = useRef(initialPlayOrd)
   initialPlayOrdRef.current = initialPlayOrd
@@ -244,6 +252,8 @@ export function VideoModal({
 
   const instances = video?.instances ?? []
   const hasInstances = instances.length > 0
+  const instancesRef = useRef(instances)
+  instancesRef.current = instances
 
   useEffect(() => {
     try {
@@ -256,6 +266,7 @@ export function VideoModal({
   useEffect(() => {
     if (!open) {
       youtubePlayerRef.current = null
+      seekHoldIndexRef.current = null
       setIsPlaybackPolling(false)
       setPlaybackTimeS(0)
       setManualActiveIndex(null)
@@ -264,6 +275,7 @@ export function VideoModal({
 
   useEffect(() => {
     youtubePlayerRef.current = null
+    seekHoldIndexRef.current = null
     setIsPlaybackPolling(false)
     setPlaybackTimeS(0)
     setManualActiveIndex(null)
@@ -281,7 +293,7 @@ export function VideoModal({
   }, [])
 
   const showSwipeHint =
-    isMobile && open && showClipNavigation && !swipeHintDismissed
+    isMobile && open && instances.length > 1 && !swipeHintDismissed
 
   const preventCloseOnClipNav = useCallback((event: Event) => {
     if (isClipNavTarget(event.target)) {
@@ -295,6 +307,7 @@ export function VideoModal({
       if (!player) {
         return
       }
+      seekHoldIndexRef.current = instanceIndex
       player.seekTo(instance.offsetS, true)
       player.playVideo()
       setPlaybackTimeS(instance.offsetS)
@@ -370,10 +383,19 @@ export function VideoModal({
         return
       }
       const currentTime = player.getCurrentTime()
-      if (typeof currentTime === 'number' && Number.isFinite(currentTime)) {
-        setPlaybackTimeS(currentTime)
-        setManualActiveIndex(null)
+      if (typeof currentTime !== 'number' || !Number.isFinite(currentTime)) {
+        return
       }
+      const heldIndex = seekHoldIndexRef.current
+      if (
+        heldIndex != null &&
+        playbackTimeIsBeforePlay(instancesRef.current, heldIndex, currentTime)
+      ) {
+        return
+      }
+      seekHoldIndexRef.current = null
+      setPlaybackTimeS(currentTime)
+      setManualActiveIndex(null)
     }, PLAYBACK_POLL_INTERVAL_MS)
 
     return () => window.clearInterval(intervalId)
@@ -383,19 +405,23 @@ export function VideoModal({
   const activeIndex =
     manualActiveIndex != null ? manualActiveIndex : computedActiveIndex
 
+  const canStepToPreviousPlay =
+    stepPlayIndex(instances.length, activeIndex, 'previous') != null
+  const canStepToNextPlay =
+    stepPlayIndex(instances.length, activeIndex, 'next') != null
+
   const navigatePlay = useCallback(
     (direction: 'previous' | 'next') => {
-      if (instances.length === 0) {
-        return
+      const nextIndex = stepPlayIndex(instances.length, activeIndex, direction)
+      if (nextIndex == null) {
+        return false
       }
-      const nextIndex =
-        direction === 'previous'
-          ? Math.max(0, activeIndex - 1)
-          : Math.min(instances.length - 1, activeIndex + 1)
       const instance = instances[nextIndex]
-      if (instance) {
-        selectPlay(instance, nextIndex)
+      if (!instance) {
+        return false
       }
+      selectPlay(instance, nextIndex)
+      return true
     },
     [activeIndex, instances, selectPlay],
   )
@@ -462,21 +488,11 @@ export function VideoModal({
       return
     }
 
-    if (deltaX < 0 && canNavigateNext && onNavigateNext) {
+    const direction = deltaX < 0 ? 'next' : 'previous'
+    if (navigatePlay(direction)) {
       dismissSwipeHint()
-      onNavigateNext()
-    } else if (deltaX > 0 && canNavigatePrevious && onNavigatePrevious) {
-      dismissSwipeHint()
-      onNavigatePrevious()
     }
-  }, [
-    open,
-    canNavigateNext,
-    canNavigatePrevious,
-    onNavigateNext,
-    onNavigatePrevious,
-    dismissSwipeHint,
-  ])
+  }, [open, navigatePlay, dismissSwipeHint])
 
   useEffect(() => {
     if (!open) return
@@ -500,12 +516,12 @@ export function VideoModal({
         return
       }
 
-      if (event.key === 'ArrowLeft' && canNavigatePrevious && onNavigatePrevious) {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        if (!hasInstances || isEditableTarget(event.target)) {
+          return
+        }
         event.preventDefault()
-        onNavigatePrevious()
-      } else if (event.key === 'ArrowRight' && canNavigateNext && onNavigateNext) {
-        event.preventDefault()
-        onNavigateNext()
+        navigatePlay(event.key === 'ArrowLeft' ? 'previous' : 'next')
       }
     }
 
@@ -514,10 +530,6 @@ export function VideoModal({
   }, [
     open,
     hasInstances,
-    canNavigatePrevious,
-    canNavigateNext,
-    onNavigatePrevious,
-    onNavigateNext,
     toggleYouTubePlayback,
     navigatePlay,
   ])
@@ -577,17 +589,19 @@ export function VideoModal({
                 onStateChange={handleYouTubeStateChange}
               />
 
-              {showClipNavigation && canNavigatePrevious && onNavigatePrevious && (
+              {open && hasInstances && (
                 <ClipNavButton
                   direction="previous"
-                  onClick={onNavigatePrevious}
+                  disabled={!canStepToPreviousPlay}
+                  onClick={() => navigatePlay('previous')}
                   className="absolute top-1/2 left-2 z-20 hidden -translate-y-1/2 md:flex"
                 />
               )}
-              {showClipNavigation && canNavigateNext && onNavigateNext && (
+              {open && hasInstances && (
                 <ClipNavButton
                   direction="next"
-                  onClick={onNavigateNext}
+                  disabled={!canStepToNextPlay}
+                  onClick={() => navigatePlay('next')}
                   className="absolute top-1/2 right-2 z-20 hidden -translate-y-1/2 md:flex"
                 />
               )}
