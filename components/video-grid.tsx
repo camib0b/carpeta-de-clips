@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useCallback } from 'react'
+import { useMemo } from 'react'
 import { VideoClip } from '@/lib/types'
 import { VideoCard } from './video-card'
 import { VideoModal } from './video-modal'
@@ -26,7 +26,6 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
     isOpen: isClipModalOpen,
     initialPlayOrd,
     openClip,
-    navigateToClip,
     setJugadaOrd,
     closeClip,
   } = useLibraryClipSelection(videos)
@@ -55,29 +54,6 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
     if (!shouldShowMatchBanner) return []
     return listUniqueMatchSummaries(filteredVideos)
   }, [filteredVideos, shouldShowMatchBanner])
-
-  const selectedIndex =
-    selectedClip && isClipModalOpen
-      ? filteredVideos.findIndex((videoItem) => videoItem.id === selectedClip.id)
-      : -1
-
-  const canNavigatePrevious = selectedIndex > 0
-  const canNavigateNext =
-    selectedIndex >= 0 && selectedIndex < filteredVideos.length - 1
-
-  const handleNavigatePrevious = useCallback(() => {
-    if (!selectedClip) return
-    const index = filteredVideos.findIndex((videoItem) => videoItem.id === selectedClip.id)
-    if (index <= 0) return
-    navigateToClip(filteredVideos[index - 1])
-  }, [filteredVideos, navigateToClip, selectedClip])
-
-  const handleNavigateNext = useCallback(() => {
-    if (!selectedClip) return
-    const index = filteredVideos.findIndex((videoItem) => videoItem.id === selectedClip.id)
-    if (index < 0 || index >= filteredVideos.length - 1) return
-    navigateToClip(filteredVideos[index + 1])
-  }, [filteredVideos, navigateToClip, selectedClip])
 
   return (
     <div className="space-y-10">
@@ -137,10 +113,6 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
           if (!nextOpen) closeClip()
         }}
         initialPlayOrd={initialPlayOrd}
-        canNavigatePrevious={canNavigatePrevious}
-        canNavigateNext={canNavigateNext}
-        onNavigatePrevious={handleNavigatePrevious}
-        onNavigateNext={handleNavigateNext}
         onJugadaOrdChange={setJugadaOrd}
       />
     </div>

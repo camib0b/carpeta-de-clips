@@ -1,5 +1,7 @@
 import type { ClipInstance } from '@/lib/types'
 
+export type PlayStepDirection = 'previous' | 'next'
+
 /** Index of the play whose offset is at or before `currentTimeS`. */
 export function findActiveInstanceIndex(
   instances: ClipInstance[],
@@ -14,4 +16,29 @@ export function findActiveInstanceIndex(
     }
   }
   return activeIndex
+}
+
+/**
+ * Index of the previous or next play inside the open clip.
+ * Null at either end: playback does not wrap and does not leave the clip.
+ */
+export function stepPlayIndex(
+  instanceCount: number,
+  activeIndex: number,
+  direction: PlayStepDirection,
+): number | null {
+  if (!Number.isInteger(instanceCount) || instanceCount <= 0) {
+    return null
+  }
+  if (
+    !Number.isInteger(activeIndex) ||
+    activeIndex < 0 ||
+    activeIndex >= instanceCount
+  ) {
+    return null
+  }
+  if (direction === 'previous') {
+    return activeIndex === 0 ? null : activeIndex - 1
+  }
+  return activeIndex === instanceCount - 1 ? null : activeIndex + 1
 }

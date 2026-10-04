@@ -105,16 +105,6 @@ export function useLibraryClipSelection(videos: VideoClip[]) {
     [pathname, router, searchParams],
   )
 
-  const navigateToClip = useCallback(
-    (video: VideoClip) => {
-      const params = new URLSearchParams(searchParams.toString())
-      params.set('clip', video.id)
-      params.delete('jugada')
-      router.replace(toLibraryHref(pathname, params), { scroll: false })
-    },
-    [pathname, router, searchParams],
-  )
-
   const setJugadaOrd = useCallback(
     (ord: number) => {
       if (!selectedClip) return
@@ -154,7 +144,6 @@ export function useLibraryClipSelection(videos: VideoClip[]) {
     isOpen: selectedClip != null,
     initialPlayOrd,
     openClip,
-    navigateToClip,
     setJugadaOrd,
     closeClip,
   }
