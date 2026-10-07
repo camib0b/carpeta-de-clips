@@ -1090,7 +1090,7 @@ export function VideoModal({
               </DialogHeader>
 
               <p className="shrink-0 px-3 pb-2 text-[0.65rem] leading-snug text-muted-foreground">
-                <kbd>←</kbd> <kbd>→</kbd> avanzan 5 s.
+                <kbd>←</kbd> <kbd>→</kbd> avanzan 3 s.
                 {hasInstances ? (
                   <>
                     {' '}
