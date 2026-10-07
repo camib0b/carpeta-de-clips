@@ -66,7 +66,7 @@ pnpm run db:parity
 
 ## Self-hosted clip video
 
-Playback is still YouTube. Optional MP4 object keys can be stored on `clips` for the public R2 bucket `carpeta-clips` (custom domain planned as `https://media.carpeta.cl`).
+The clip modal plays a native `<video>` when `mediaUrl()` returns a URL, and otherwise keeps the YouTube embed. Thumbnails stay on YouTube. Files live in the public R2 bucket `carpeta-clips` at `https://media.carpeta.cl`.
 
 `migrations/0005_clip_self_hosted_media.sql` adds:
 
@@ -80,11 +80,20 @@ Playback is still YouTube. Optional MP4 object keys can be stored on `clips` for
 
 Existing rows stay playable: the media columns are null and `visibility` is `public`. A playlist import that omits those fields does not clear them (`COALESCE` on `youtube_id` conflict). New rows still default `visibility` to `public`.
 
-`mediaUrl()` in `lib/media-url.ts` is the only builder of self-hosted video URLs. It reads `NEXT_PUBLIC_MEDIA_BASE_URL` and returns null when that variable is unset, when the clip has no `r2_key`, or when `visibility` is not `public`. The null restricted case is the hook for a later gated Worker or signed URL. The player does not call `mediaUrl` yet.
+`mediaUrl()` in `lib/media-url.ts` is the only builder of self-hosted video URLs. It reads `NEXT_PUBLIC_MEDIA_BASE_URL` and returns null when that variable is unset, when the clip has no `r2_key`, or when `visibility` is not `public`. The null restricted case is the hook for a later gated Worker or signed URL.
 
-Next inlines `NEXT_PUBLIC_*` at build time. Set the variable in `.env.local` for `pnpm dev`, and in the Cloudflare Workers build environment before `next build`. See `.env.example`.
+The modal asks for the 720p object (`r2_key_low`) when the viewport is under 768px, when `navigator.connection.saveData` is set, or when `downlink` is under 3 Mbps. Otherwise it plays the 1080p key. While that video is paused, `,` and `.` step one frame (`fps`, or 30). Speed presets are 0.25×, 0.5×, 1×, and 2×.
 
-Apply the migration to production D1 before deploying the code that selects the new columns:
+Next inlines `NEXT_PUBLIC_*` at **build** time, into the browser bundle. This repo commits the public origin:
+
+| File | When Next loads it |
+|---|---|
+| `.env.production` | `next build`, including `opennextjs-cloudflare build` |
+| `.env.development` | `pnpm dev` |
+
+`wrangler.jsonc` `vars` are Worker runtime bindings. OpenNext copies them onto `process.env` inside the Worker after the client bundle already exists, so they do **not** set `NEXT_PUBLIC_MEDIA_BASE_URL` for the player. A variable of that name in the Cloudflare Workers Builds environment does override `.env.production`, because Next leaves variables that are already set. Changing the URL requires a new build. See `.env.example`.
+
+Production D1 already has this migration applied. On a database that does not, apply it before deploying the code that selects the new columns:
 
 ```bash
 pnpm exec wrangler d1 migrations apply carpeta-de-clips --remote

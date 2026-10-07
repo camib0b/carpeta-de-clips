@@ -15,19 +15,30 @@ import YouTube from 'react-youtube'
 import { ShareClipButton } from '@/components/share-clip-button'
 import { cn } from '@/lib/utils'
 import { formatClipMatchSummary } from '@/lib/match-display'
+import { mediaUrl } from '@/lib/media-url'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
   findActiveInstanceIndex,
   playbackTimeIsBeforePlay,
   stepPlayIndex,
 } from '@/lib/clip-instance-playback'
+import {
+  PLAYBACK_RATES,
+  formatPlaybackRate,
+  htmlVideoPlaybackHandle,
+  readMediaConnectionSnapshot,
+  shouldPreferLowMedia,
+  stepPausedFrameTime,
+  type ClipPlaybackHandle,
+  type PlaybackRate,
+} from '@/lib/clip-player'
 import { formatPlayTimestamp } from '@/lib/format-play-timestamp'
 
 const MINIMUM_SWIPE_DISTANCE = 60
 const SWIPE_HINT_STORAGE_KEY = 'carpeta-de-clips-modal-swipe-hint-seen'
 const MINIMUM_HORIZONTAL_TO_VERTICAL_RATIO = 1.25
 const INTERACTIVE_TOUCH_TARGET_SELECTOR =
-  'button, a, input, textarea, select, [contenteditable="true"], [role="button"]'
+  'button, a, input, textarea, select, video, [contenteditable="true"], [role="button"]'
 const PLAYBACK_POLL_INTERVAL_MS = 250
 
 const YOUTUBE_PLAYER_STATE = {
@@ -44,6 +55,28 @@ interface YouTubePlayer {
   playVideo: () => void
   pauseVideo: () => void
   seekTo: (seconds: number, allowSeekAhead: boolean) => void
+}
+
+function youtubePlaybackHandle(player: YouTubePlayer): ClipPlaybackHandle {
+  return {
+    getCurrentTime: () => player.getCurrentTime(),
+    seekTo: (seconds) => {
+      player.seekTo(seconds, true)
+    },
+    play: () => {
+      player.playVideo()
+    },
+    pause: () => {
+      player.pauseVideo()
+    },
+    isPlaying: () => {
+      const state = player.getPlayerState()
+      return (
+        state === YOUTUBE_PLAYER_STATE.PLAYING ||
+        state === YOUTUBE_PLAYER_STATE.BUFFERING
+      )
+    },
+  }
 }
 
 interface VideoModalProps {
@@ -149,6 +182,42 @@ interface JugadasListProps {
   listClassName?: string
 }
 
+function PlaybackRateControl({
+  rate,
+  onChange,
+}: {
+  rate: number
+  onChange: (rate: PlaybackRate) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2">
+      <span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
+        Velocidad
+      </span>
+      {PLAYBACK_RATES.map((preset) => {
+        const selected = preset === rate
+        return (
+          <button
+            key={preset}
+            type="button"
+            aria-pressed={selected}
+            aria-label={`Velocidad ${formatPlaybackRate(preset)}`}
+            onClick={() => onChange(preset)}
+            className={cn(
+              'rounded-full px-2 py-0.5 text-[0.7rem] tabular-nums',
+              selected
+                ? 'bg-foreground text-background'
+                : 'bg-muted text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {formatPlaybackRate(preset)}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function JugadasList({
   instances,
   activeIndex,
@@ -224,7 +293,8 @@ function JugadasList({
 }
 
 /**
- * Modal component for playing YouTube videos.
+ * Modal player. A public self-hosted file uses a native video element.
+ * Every other clip keeps the YouTube embed.
  * The player uses the widest 16:9 that fits the viewport. The jugadas
  * column is only as wide as its rows, and it scrolls beside the video
  * instead of stretching the dialog.
@@ -239,19 +309,26 @@ export function VideoModal({
   const isMobile = useIsMobile()
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
-  const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
+  const playerRef = useRef<ClipPlaybackHandle | null>(null)
+  const hostedVideoRef = useRef<HTMLVideoElement | null>(null)
   const seekHoldIndexRef = useRef<number | null>(null)
   const pendingInitialPlayOrdRef = useRef<number | undefined>(undefined)
   const initialPlayOrdRef = useRef(initialPlayOrd)
   initialPlayOrdRef.current = initialPlayOrd
+  const playbackRateRef = useRef<PlaybackRate>(1)
   const [shareJugadaOrd, setShareJugadaOrd] = useState<number | undefined>(initialPlayOrd)
   const [swipeHintDismissed, setSwipeHintDismissed] = useState(true)
   const [playbackTimeS, setPlaybackTimeS] = useState(0)
   const [isPlaybackPolling, setIsPlaybackPolling] = useState(false)
   const [manualActiveIndex, setManualActiveIndex] = useState<number | null>(null)
+  const [qualityReady, setQualityReady] = useState(false)
+  const [preferLow, setPreferLow] = useState(false)
+  const [playbackRate, setPlaybackRate] = useState<PlaybackRate>(1)
+  playbackRateRef.current = playbackRate
 
   const instances = video?.instances ?? []
   const hasInstances = instances.length > 0
+  const hasSelfHostedFile = video != null && mediaUrl(video) != null
   const instancesRef = useRef(instances)
   instancesRef.current = instances
 
@@ -265,20 +342,25 @@ export function VideoModal({
 
   useEffect(() => {
     if (!open) {
-      youtubePlayerRef.current = null
+      playerRef.current = null
       seekHoldIndexRef.current = null
       setIsPlaybackPolling(false)
       setPlaybackTimeS(0)
       setManualActiveIndex(null)
+      setQualityReady(false)
+      return
     }
-  }, [open])
+    setPreferLow(shouldPreferLowMedia(readMediaConnectionSnapshot()))
+    setQualityReady(true)
+  }, [open, video?.id])
 
   useEffect(() => {
-    youtubePlayerRef.current = null
+    playerRef.current = null
     seekHoldIndexRef.current = null
     setIsPlaybackPolling(false)
     setPlaybackTimeS(0)
     setManualActiveIndex(null)
+    setPlaybackRate(1)
     pendingInitialPlayOrdRef.current = initialPlayOrdRef.current
     setShareJugadaOrd(initialPlayOrdRef.current)
   }, [video?.id])
@@ -303,13 +385,13 @@ export function VideoModal({
 
   const seekToPlay = useCallback(
     (instance: ClipInstance, instanceIndex: number) => {
-      const player = youtubePlayerRef.current
+      const player = playerRef.current
       if (!player) {
         return
       }
       seekHoldIndexRef.current = instanceIndex
-      player.seekTo(instance.offsetS, true)
-      player.playVideo()
+      player.seekTo(instance.offsetS)
+      player.play()
       setPlaybackTimeS(instance.offsetS)
       setManualActiveIndex(instanceIndex)
       setIsPlaybackPolling(true)
@@ -344,14 +426,43 @@ export function VideoModal({
 
   const handleYouTubeReady = useCallback(
     (event: { target: YouTubePlayer }) => {
-      youtubePlayerRef.current = event.target
+      playerRef.current = youtubePlaybackHandle(event.target)
       applyInitialPlayOrd()
     },
     [applyInitialPlayOrd],
   )
 
+  const handleHostedMetadata = useCallback(
+    (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      const element = event.currentTarget
+      element.playbackRate = playbackRateRef.current
+      playerRef.current = htmlVideoPlaybackHandle(element)
+      applyInitialPlayOrd()
+    },
+    [applyInitialPlayOrd],
+  )
+
+  const handleHostedRateChange = useCallback(
+    (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      const rate = event.currentTarget.playbackRate
+      const preset = PLAYBACK_RATES.find((candidate) => candidate === rate)
+      if (preset != null) {
+        setPlaybackRate(preset)
+      }
+    },
+    [],
+  )
+
   useEffect(() => {
-    if (!open || !youtubePlayerRef.current) {
+    const element = hostedVideoRef.current
+    if (!element) {
+      return
+    }
+    element.playbackRate = playbackRate
+  }, [playbackRate])
+
+  useEffect(() => {
+    if (!open || !playerRef.current) {
       return
     }
     applyInitialPlayOrd()
@@ -378,7 +489,7 @@ export function VideoModal({
     }
 
     const intervalId = window.setInterval(() => {
-      const player = youtubePlayerRef.current
+      const player = playerRef.current
       if (!player) {
         return
       }
@@ -426,22 +537,43 @@ export function VideoModal({
     [activeIndex, instances, selectPlay],
   )
 
-  const toggleYouTubePlayback = useCallback(() => {
-    const player = youtubePlayerRef.current
+  const togglePlayback = useCallback(() => {
+    const player = playerRef.current
     if (!player) {
       return
     }
 
-    const state = player.getPlayerState()
-    if (
-      state === YOUTUBE_PLAYER_STATE.PLAYING ||
-      state === YOUTUBE_PLAYER_STATE.BUFFERING
-    ) {
-      player.pauseVideo()
+    if (player.isPlaying()) {
+      player.pause()
     } else {
-      player.playVideo()
+      player.play()
     }
   }, [])
+
+  const stepPausedFrame = useCallback(
+    (direction: -1 | 1) => {
+      const player = playerRef.current
+      if (!player || player.isPlaying()) {
+        return false
+      }
+      const mediaDuration = hostedVideoRef.current?.duration
+      const durationS = Number.isFinite(mediaDuration)
+        ? mediaDuration
+        : video?.durationS
+      const nextTime = stepPausedFrameTime({
+        currentTimeS: player.getCurrentTime(),
+        direction,
+        fps: video?.fps,
+        durationS,
+      })
+      player.seekTo(nextTime)
+      seekHoldIndexRef.current = null
+      setPlaybackTimeS(nextTime)
+      setManualActiveIndex(null)
+      return true
+    },
+    [video?.durationS, video?.fps],
+  )
 
   const handleOpenAutoFocus = useCallback((event: Event) => {
     event.preventDefault()
@@ -503,7 +635,27 @@ export function VideoModal({
           return
         }
         event.preventDefault()
-        toggleYouTubePlayback()
+        event.stopPropagation()
+        togglePlayback()
+        return
+      }
+
+      if (
+        (event.key === ',' || event.key === '.') &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.shiftKey
+      ) {
+        if (isEditableTarget(event.target) || !hasSelfHostedFile) {
+          return
+        }
+        const stepped = stepPausedFrame(event.key === ',' ? -1 : 1)
+        if (!stepped) {
+          return
+        }
+        event.preventDefault()
+        event.stopPropagation()
         return
       }
 
@@ -512,6 +664,7 @@ export function VideoModal({
           return
         }
         event.preventDefault()
+        event.stopPropagation()
         navigatePlay(event.key === '[' ? 'previous' : 'next')
         return
       }
@@ -521,6 +674,7 @@ export function VideoModal({
           return
         }
         event.preventDefault()
+        event.stopPropagation()
         navigatePlay(event.key === 'ArrowLeft' ? 'previous' : 'next')
       }
     }
@@ -530,13 +684,17 @@ export function VideoModal({
   }, [
     open,
     hasInstances,
-    toggleYouTubePlayback,
+    togglePlayback,
     navigatePlay,
+    hasSelfHostedFile,
+    stepPausedFrame,
   ])
 
   if (!video) return null
 
   const matchSummaryLine = formatClipMatchSummary(video)
+  const hostedUrl =
+    hasSelfHostedFile && qualityReady ? mediaUrl(video, { preferLow }) : null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -572,22 +730,43 @@ export function VideoModal({
               className="relative aspect-video"
               style={{ width: 'min(100%, calc((100dvh - 0.5rem) * 16 / 9))' }}
             >
-              <YouTube
-                videoId={video.youtubeId}
-                className="absolute inset-0"
-                iframeClassName="h-full w-full"
-                opts={{
-                  width: '100%',
-                  height: '100%',
-                  playerVars: {
-                    autoplay: 1,
-                    modestbranding: 1,
-                    rel: 0,
-                  },
-                }}
-                onReady={handleYouTubeReady}
-                onStateChange={handleYouTubeStateChange}
-              />
+              {hostedUrl ? (
+                <video
+                  key={hostedUrl}
+                  ref={hostedVideoRef}
+                  src={hostedUrl}
+                  className="absolute inset-0 h-full w-full bg-black"
+                  playsInline
+                  controls
+                  autoPlay
+                  crossOrigin="anonymous"
+                  preload="auto"
+                  onLoadedMetadata={handleHostedMetadata}
+                  onPlay={() => setIsPlaybackPolling(true)}
+                  onPlaying={() => setIsPlaybackPolling(true)}
+                  onWaiting={() => setIsPlaybackPolling(true)}
+                  onPause={() => setIsPlaybackPolling(false)}
+                  onEnded={() => setIsPlaybackPolling(false)}
+                  onRateChange={handleHostedRateChange}
+                />
+              ) : hasSelfHostedFile ? null : (
+                <YouTube
+                  videoId={video.youtubeId}
+                  className="absolute inset-0"
+                  iframeClassName="h-full w-full"
+                  opts={{
+                    width: '100%',
+                    height: '100%',
+                    playerVars: {
+                      autoplay: 1,
+                      modestbranding: 1,
+                      rel: 0,
+                    },
+                  }}
+                  onReady={handleYouTubeReady}
+                  onStateChange={handleYouTubeStateChange}
+                />
+              )}
 
               {open && hasInstances && (
                 <ClipNavButton
@@ -639,6 +818,18 @@ export function VideoModal({
                   {matchSummaryLine}
                 </DialogDescription>
               </DialogHeader>
+
+              {hostedUrl && (
+                <>
+                  <PlaybackRateControl
+                    rate={playbackRate}
+                    onChange={setPlaybackRate}
+                  />
+                  <p className="px-3 pb-2 text-[0.65rem] leading-snug text-muted-foreground">
+                    En pausa, <kbd>,</kbd> y <kbd>.</kbd> mueven un cuadro.
+                  </p>
+                </>
+              )}
 
               {hasInstances && (
                 <JugadasList

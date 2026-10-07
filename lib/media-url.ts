@@ -17,10 +17,11 @@ export type MediaUrlOptions = {
 }
 
 /**
- * Public origin of the `carpeta-clips` bucket (planned: https://media.carpeta.cl).
- * Next inlines `NEXT_PUBLIC_*` at build time, so production must set this before
- * `next build`. When it is missing, `mediaUrl` returns null and playback stays
- * on YouTube.
+ * Public origin of the `carpeta-clips` bucket (`https://media.carpeta.cl`).
+ * Next inlines `NEXT_PUBLIC_*` when `next build` runs. Production reads
+ * `.env.production`; `pnpm dev` reads `.env.development`. wrangler `vars` are
+ * not inlined into the client bundle. When this is missing, `mediaUrl` returns
+ * null and playback stays on YouTube.
  */
 function configuredMediaBaseUrl(): string | null {
   const raw = process.env.NEXT_PUBLIC_MEDIA_BASE_URL
