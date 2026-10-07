@@ -12,7 +12,10 @@ export type MediaUrlClip = {
 }
 
 export type MediaUrlOptions = {
-  /** Use `r2KeyLow` when it is set. Otherwise use the 1080p `r2Key`. */
+  /**
+   * Use `r2KeyLow` when it is set. A null or blank low key plays `r2Key`
+   * (many sources are already 720p and only fill that column).
+   */
   preferLow?: boolean
 }
 
@@ -71,8 +74,9 @@ function objectKeyPath(objectKey: string | null | undefined): string | null {
 /**
  * The only builder of self-hosted clip video URLs.
  *
- * Returns null (YouTube fallback) when the clip has no 1080p `r2Key`, when
+ * Returns null (YouTube fallback) when the clip has no `r2Key`, when
  * `visibility` is not public, or when `NEXT_PUBLIC_MEDIA_BASE_URL` is unset.
+ * `preferLow` never invents a second file: a missing `r2KeyLow` uses `r2Key`.
  * Restricted clips stay null on purpose: a later gated Worker or signed URL
  * can replace this branch without another call site inventing a public URL.
  */

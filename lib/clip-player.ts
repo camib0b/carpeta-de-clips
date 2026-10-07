@@ -77,16 +77,21 @@ export function readMediaConnectionSnapshot(): MediaConnectionSnapshot {
   }
 }
 
-export function frameDurationSeconds(fps: number | null | undefined): number {
-  if (fps == null || !Number.isFinite(fps) || fps <= 0) {
-    return 1 / DEFAULT_CLIP_FPS
+function playbackFps(fps: number | null | undefined): number {
+  if (typeof fps !== 'number' || !Number.isFinite(fps) || fps <= 0) {
+    return DEFAULT_CLIP_FPS
   }
-  return 1 / fps
+  return fps
+}
+
+export function frameDurationSeconds(fps: number | null | undefined): number {
+  return 1 / playbackFps(fps)
 }
 
 /**
- * Move one frame while paused. Times are clamped to the file when its
- * duration is known.
+ * Move one frame while paused. The step is `frameIndex / fps`, so a stored
+ * rate such as 59.94 stays on that grid. Adding `1/fps` on each press drifts.
+ * Times are clamped to the file when its duration is known.
  */
 export function stepPausedFrameTime(input: {
   currentTimeS: number
@@ -94,14 +99,18 @@ export function stepPausedFrameTime(input: {
   fps: number | null | undefined
   durationS?: number | null
 }): number {
-  const current = Number.isFinite(input.currentTimeS) ? input.currentTimeS : 0
-  const next = current + input.direction * frameDurationSeconds(input.fps)
-  const atOrAfterZero = Math.max(0, next)
+  const fps = playbackFps(input.fps)
+  const current = Number.isFinite(input.currentTimeS)
+    ? Math.max(0, input.currentTimeS)
+    : 0
+  const frameIndex = Math.round(current * fps)
+  const nextIndex = Math.max(0, frameIndex + input.direction)
+  const next = nextIndex / fps
   const duration = input.durationS
   if (duration == null || !Number.isFinite(duration) || duration <= 0) {
-    return atOrAfterZero
+    return next
   }
-  return Math.min(atOrAfterZero, duration)
+  return Math.min(next, duration)
 }
 
 export function formatPlaybackRate(rate: number): string {

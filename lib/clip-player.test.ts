@@ -59,11 +59,14 @@ test('shouldPreferLowMedia uses 720p on a narrow viewport, save-data, or a slow 
   )
 })
 
-test('frameDurationSeconds defaults to 30 fps', () => {
+test('frameDurationSeconds defaults to 30 fps and keeps fractional rates', () => {
   assert.equal(frameDurationSeconds(undefined), 1 / DEFAULT_CLIP_FPS)
   assert.equal(frameDurationSeconds(null), 1 / DEFAULT_CLIP_FPS)
   assert.equal(frameDurationSeconds(0), 1 / DEFAULT_CLIP_FPS)
   assert.equal(frameDurationSeconds(24), 1 / 24)
+  assert.equal(frameDurationSeconds(59.94), 1 / 59.94)
+  assert.notEqual(frameDurationSeconds(59.94), 1 / 60)
+  assert.notEqual(frameDurationSeconds(59.94), 1 / 59)
 })
 
 test('stepPausedFrameTime moves one frame and stays inside the file', () => {
@@ -103,4 +106,26 @@ test('stepPausedFrameTime moves one frame and stays inside the file', () => {
     }),
     2 - 1 / 30,
   )
+})
+
+test('stepPausedFrameTime stays on a 59.94 fps grid across repeated steps', () => {
+  let time = 0
+  for (let frame = 1; frame <= 120; frame += 1) {
+    time = stepPausedFrameTime({
+      currentTimeS: time,
+      direction: 1,
+      fps: 59.94,
+      durationS: 30,
+    })
+    assert.equal(time, frame / 59.94)
+  }
+
+  const back = stepPausedFrameTime({
+    currentTimeS: time,
+    direction: -1,
+    fps: 59.94,
+    durationS: 30,
+  })
+  assert.equal(back, 119 / 59.94)
+  assert.notEqual(back, 120 / 60)
 })

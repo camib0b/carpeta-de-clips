@@ -179,7 +179,7 @@ Match id is the storage slug from `storageSlugFromClip` / `matchKeyToStorageSlug
 - Key: `date|homeTeam|awayTeam|rivalTeam` (+ `|Others` when `libraryName` is Others)
 - Slug: spaces → `_`, joined with `--`
 
-Every clip in the match shares match-level fields (`played_on`, teams, score, `rival_label`, `division`, `place`). Clips store `youtube_id`, `title`, `game_concept`, `uploaded_at` (ISO, descending within the match for grid sort). Optional self-hosted fields on the same payload: `r2Key` (1080p object key), `r2KeyLow` (720p), `fps`, `durationS` (full file, not a play), and `visibility` (`public` or `restricted`). Omit them when the clip is YouTube-only.
+Every clip in the match shares match-level fields (`played_on`, teams, score, `rival_label`, `division`, `place`). Clips store `youtube_id`, `title`, `game_concept`, `uploaded_at` (ISO, descending within the match for grid sort). Optional self-hosted fields on the same payload: `r2Key` (the file that plays; a 720p source goes here and `r2KeyLow` stays null), `r2KeyLow` (optional smaller copy), `fps` (REAL, keep fractions such as 59.94), `durationS` (full file, not a play), and `visibility` (`public` or `restricted`). Omit them when the clip is YouTube-only.
 
 Write a payload JSON (see [examples.md](examples.md)) and apply:
 

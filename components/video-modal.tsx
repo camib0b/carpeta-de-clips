@@ -693,6 +693,7 @@ export function VideoModal({
   if (!video) return null
 
   const matchSummaryLine = formatClipMatchSummary(video)
+  // `preferLow` still returns `r2Key` when `r2KeyLow` is null.
   const hostedUrl =
     hasSelfHostedFile && qualityReady ? mediaUrl(video, { preferLow }) : null
 

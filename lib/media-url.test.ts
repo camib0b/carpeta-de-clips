@@ -43,6 +43,20 @@ describe('mediaUrl', () => {
       mediaUrl({ r2Key: 'full.mp4', visibility: 'public' }, { preferLow: true }),
       'https://media.carpeta.cl/full.mp4',
     )
+    assert.equal(
+      mediaUrl(
+        { r2Key: 'only-720.mp4', r2KeyLow: null, visibility: 'public' },
+        { preferLow: true },
+      ),
+      'https://media.carpeta.cl/only-720.mp4',
+    )
+    assert.equal(
+      mediaUrl(
+        { r2Key: 'only-720.mp4', r2KeyLow: '   ', visibility: 'public' },
+        { preferLow: true },
+      ),
+      'https://media.carpeta.cl/only-720.mp4',
+    )
   })
 
   it('returns null without an r2 key, even if a low key is present', () => {

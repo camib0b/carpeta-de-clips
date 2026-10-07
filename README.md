@@ -72,8 +72,8 @@ The clip modal plays a native `<video>` when `mediaUrl()` returns a URL, and oth
 
 | Column | Meaning |
 |---|---|
-| `r2_key` | 1080p MP4 object key, nullable |
-| `r2_key_low` | optional 720p object key |
+| `r2_key` | MP4 object key that plays, nullable. A 720p source lives here and leaves `r2_key_low` null. |
+| `r2_key_low` | optional smaller copy. When null, playback still uses `r2_key`. |
 | `fps` | frames per second, nullable |
 | `duration_s` | full-file duration in seconds, nullable |
 | `visibility` | `public` (default) or `restricted` |
@@ -82,7 +82,7 @@ Existing rows stay playable: the media columns are null and `visibility` is `pub
 
 `mediaUrl()` in `lib/media-url.ts` is the only builder of self-hosted video URLs. It reads `NEXT_PUBLIC_MEDIA_BASE_URL` and returns null when that variable is unset, when the clip has no `r2_key`, or when `visibility` is not `public`. The null restricted case is the hook for a later gated Worker or signed URL.
 
-The modal asks for the 720p object (`r2_key_low`) when the viewport is under 768px, when `navigator.connection.saveData` is set, or when `downlink` is under 3 Mbps. Otherwise it plays the 1080p key. While that video is paused, `,` and `.` step one frame (`fps`, or 30). Speed presets are 0.25×, 0.5×, 1×, and 2×.
+The modal asks for `r2_key_low` when the viewport is under 768px, when `navigator.connection.saveData` is set, or when `downlink` is under 3 Mbps. If that column is null, it plays `r2_key`. Otherwise it plays `r2_key` directly. While that video is paused, `,` and `.` step one frame using the stored `fps` (including fractional rates such as 59.94), or 30 when `fps` is missing. Speed presets are 0.25×, 0.5×, 1×, and 2×.
 
 Next inlines `NEXT_PUBLIC_*` at **build** time, into the browser bundle. This repo commits the public origin:
 

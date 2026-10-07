@@ -52,11 +52,15 @@ export interface VideoClip {
   /** R2 object key in the clipped-xml bucket when this match has XML. */
   r2XmlObjectKey?: string
   /**
-   * Object key of the 1080p MP4 in the public `carpeta-clips` bucket.
-   * Absent means playback stays on YouTube.
+   * Object key of the self-hosted MP4 in the public `carpeta-clips` bucket.
+   * This is the file the player uses. A 720p source is stored here and
+   * leaves `r2KeyLow` empty. Absent means playback stays on YouTube.
    */
   r2Key?: string
-  /** Optional 720p object key in the same bucket. */
+  /**
+   * Optional smaller copy in the same bucket. `mediaUrl(..., { preferLow })`
+   * uses this when it is set, and otherwise plays `r2Key`.
+   */
   r2KeyLow?: string
   /** Frames per second of the self-hosted file, when probed. */
   fps?: number
