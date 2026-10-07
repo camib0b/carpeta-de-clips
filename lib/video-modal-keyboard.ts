@@ -5,7 +5,7 @@
  * Comma and period are not handled here; the modal frame-steps self-hosted clips itself.
  */
 
-export const KEYBOARD_SEEK_STEP_SECONDS = 5
+export const KEYBOARD_SEEK_STEP_SECONDS = 3
 
 export type VideoModalKeyAction =
   | 'toggle-playback'

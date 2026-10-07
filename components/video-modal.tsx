@@ -282,18 +282,41 @@ function JugadasList({
               aria-current={isActive ? 'true' : undefined}
               className={cn(
                 'grid w-full grid-cols-[auto_auto_auto_minmax(0,1fr)] items-baseline gap-x-2 border-b border-border/40 px-3 py-2 text-left text-xs tabular-nums transition-colors',
-                'hover:bg-muted/40',
-                isActive && 'bg-muted/60',
+                isActive
+                  ? 'bg-foreground font-medium text-background hover:bg-foreground'
+                  : 'hover:bg-muted/40',
               )}
             >
-              <span className="whitespace-nowrap text-muted-foreground">
+              <span
+                className={cn(
+                  'whitespace-nowrap',
+                  isActive ? 'text-background' : 'text-muted-foreground',
+                )}
+              >
                 {instance.ord}/{total}
               </span>
-              <span className="whitespace-nowrap text-foreground">{timestamp}</span>
-              <span className="whitespace-nowrap text-muted-foreground">
+              <span
+                className={cn(
+                  'whitespace-nowrap',
+                  isActive ? 'text-background' : 'text-foreground',
+                )}
+              >
+                {timestamp}
+              </span>
+              <span
+                className={cn(
+                  'whitespace-nowrap',
+                  isActive ? 'text-background' : 'text-muted-foreground',
+                )}
+              >
                 {instance.quarter}
               </span>
-              <span className="min-w-0 truncate text-muted-foreground">
+              <span
+                className={cn(
+                  'min-w-0 truncate',
+                  isActive ? 'text-background' : 'text-muted-foreground',
+                )}
+              >
                 {instance.scoreLabel}
               </span>
             </button>
@@ -1090,7 +1113,7 @@ export function VideoModal({
               </DialogHeader>
 
               <p className="shrink-0 px-3 pb-2 text-[0.65rem] leading-snug text-muted-foreground">
-                <kbd>←</kbd> <kbd>→</kbd> avanzan 5 s.
+                <kbd>←</kbd> <kbd>→</kbd> avanzan 3 s.
                 {hasInstances ? (
                   <>
                     {' '}
