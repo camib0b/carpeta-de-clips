@@ -68,7 +68,7 @@ Playlist import:
 - [ ] 1. Fetch playlist videos (id + title)
 - [ ] 2. Diff against existing youtube_id rows in D1
 - [ ] 3. Map each title → game_concept (+ team aliases if needed)
-- [ ] 4. Upsert match + INSERT clips (ON CONFLICT youtube_id DO NOTHING)
+- [ ] 4. Upsert match + INSERT clips (conflict keeps title/concept; omitted r2_key is kept)
 - [ ] 5. Set matches.r2_xml_object_key (enables Descargar XML)
 - [ ] 6. Verify clips + XML key in D1
 - [ ] 7. Commit / push / deploy only if the user asks
@@ -109,7 +109,7 @@ pnpm exec wrangler d1 execute carpeta-de-clips --local --json --command \
 ```
 
 - **New match** → insert all non-deleted videos.
-- **Sync existing playlist** → insert **only** missing `youtube_id`s (user: “new videos added to playlist”). `ON CONFLICT (youtube_id) DO NOTHING` is the safety net.
+- **Sync existing playlist** → insert **only** missing `youtube_id`s (user: “new videos added to playlist”). Conflict does not rewrite title, concept, match, or upload time. If the payload omits `r2Key`, `r2KeyLow`, `fps`, `durationS`, or `visibility`, those stored values stay (`COALESCE`).
 
 Clip identity is **`youtube_id`**, not the integer `clips.id`.
 
@@ -179,7 +179,7 @@ Match id is the storage slug from `storageSlugFromClip` / `matchKeyToStorageSlug
 - Key: `date|homeTeam|awayTeam|rivalTeam` (+ `|Others` when `libraryName` is Others)
 - Slug: spaces → `_`, joined with `--`
 
-Every clip in the match shares match-level fields (`played_on`, teams, score, `rival_label`, `division`, `place`). Clips store `youtube_id`, `title`, `game_concept`, `uploaded_at` (ISO, descending within the match for grid sort).
+Every clip in the match shares match-level fields (`played_on`, teams, score, `rival_label`, `division`, `place`). Clips store `youtube_id`, `title`, `game_concept`, `uploaded_at` (ISO, descending within the match for grid sort). Optional self-hosted fields on the same payload: `r2Key` (the file that plays; a 720p source goes here and `r2KeyLow` stays null), `r2KeyLow` (optional smaller copy), `fps` (REAL, keep fractions such as 59.94), `durationS` (full file, not a play), and `visibility` (`public` or `restricted`). Omit them when the clip is YouTube-only.
 
 Write a payload JSON (see [examples.md](examples.md)) and apply:
 
@@ -189,9 +189,9 @@ pnpm exec tsx scripts/upsert-playlist.ts --local payload.json
 pnpm exec tsx scripts/upsert-playlist.ts --remote payload.json
 ```
 
-The script upserts the match (`ON CONFLICT (id)`) and inserts clips with `ON CONFLICT (youtube_id) DO NOTHING`. It will not overwrite an existing `r2_xml_object_key` with NULL (`COALESCE`).
+The script upserts the match (`ON CONFLICT (id)`) and inserts each clip with `renderClipUpsertSql` from `lib/catalog-upsert.ts`. Conflict does not overwrite title, concept, match, or `uploaded_at`. It will not overwrite an existing `r2_xml_object_key`, `r2_key`, or `r2_key_low` with NULL (`COALESCE`). A null `visibility` on import does not change a stored `restricted` row; new rows default to `public`.
 
-SQL lives in `lib/catalog-upsert.ts` if you need to bind statements from a Worker.
+The same statement is `INSERT_CLIP_SQL` / `bindInsertClip` when binding from a Worker.
 
 ### 5. Wire match XML from R2 (required for new matches)
 

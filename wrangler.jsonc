@@ -23,6 +23,12 @@
       "bucket_name": "clipped-xml",
       "remote": true
     }
+    // Public clip MP4s live in R2 bucket `carpeta-clips` and are addressed by
+    // URL, not by a Worker binding. `mediaUrl()` in lib/media-url.ts is the
+    // only builder. NEXT_PUBLIC_MEDIA_BASE_URL is inlined by `next build` from
+    // `.env.production` (https://media.carpeta.cl). A `vars` entry here would
+    // only exist on the Worker at runtime, after that inlining, so it does not
+    // set the player URL. Restricted clips return null until a gated URL exists.
   ],
   "d1_databases": [
     {

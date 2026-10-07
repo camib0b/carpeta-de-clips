@@ -11,6 +11,12 @@ export interface ClipInstance {
 }
 
 /**
+ * Who may receive a self-hosted media URL for a clip.
+ * Stored on `clips.visibility`. The default for existing and new rows is `public`.
+ */
+export type ClipVisibility = 'public' | 'restricted'
+
+/**
  * A YouTube clip filed in a team library, with match and filter metadata.
  */
 export interface VideoClip {
@@ -45,6 +51,30 @@ export interface VideoClip {
   uploadedAt: string
   /** R2 object key in the clipped-xml bucket when this match has XML. */
   r2XmlObjectKey?: string
+  /**
+   * Object key of the self-hosted MP4 in the public `carpeta-clips` bucket.
+   * This is the file the player uses. A 720p source is stored here and
+   * leaves `r2KeyLow` empty. Absent means playback stays on YouTube.
+   */
+  r2Key?: string
+  /**
+   * Optional smaller copy in the same bucket. `mediaUrl(..., { preferLow })`
+   * uses this when it is set, and otherwise plays `r2Key`.
+   */
+  r2KeyLow?: string
+  /** Frames per second of the self-hosted file, when probed. */
+  fps?: number
+  /**
+   * Duration of the whole self-hosted file, in seconds.
+   * Distinct from each play's `instances[].durationS`.
+   */
+  durationS?: number
+  /**
+   * `public` clips may be served from the media host. `restricted` is stored
+   * for a later gated URL; `mediaUrl` returns null for those rows today.
+   * Omitted on in-memory clips means the catalog default, `public`.
+   */
+  visibility?: ClipVisibility
   /** Per-play segments inside this compiled upload, when cataloged in D1. */
   instances?: ClipInstance[]
 }
