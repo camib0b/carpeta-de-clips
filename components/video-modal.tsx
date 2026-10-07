@@ -33,6 +33,11 @@ import {
   type PlaybackRate,
 } from '@/lib/clip-player'
 import { formatPlayTimestamp } from '@/lib/format-play-timestamp'
+import {
+  KEYBOARD_SEEK_STEP_SECONDS,
+  videoModalKeyAction,
+} from '@/lib/video-modal-keyboard'
+import { highestAvailablePlaybackQuality } from '@/lib/youtube-playback-quality'
 
 const MINIMUM_SWIPE_DISTANCE = 60
 const SWIPE_HINT_STORAGE_KEY = 'carpeta-de-clips-modal-swipe-hint-seen'
@@ -40,6 +45,8 @@ const MINIMUM_HORIZONTAL_TO_VERTICAL_RATIO = 1.25
 const INTERACTIVE_TOUCH_TARGET_SELECTOR =
   'button, a, input, textarea, select, video, [contenteditable="true"], [role="button"]'
 const PLAYBACK_POLL_INTERVAL_MS = 250
+const PLAYER_FRAME_FOCUS_POLL_MS = 100
+const KEYBOARD_SEEK_REPEAT_WINDOW_MS = 400
 
 const YOUTUBE_PLAYER_STATE = {
   PLAYING: 1,
@@ -52,6 +59,11 @@ const EDITABLE_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 interface YouTubePlayer {
   getPlayerState: () => number
   getCurrentTime: () => number
+  getIframe: () => HTMLIFrameElement
+  getDuration: () => number
+  getAvailableQualityLevels: () => string[]
+  setPlaybackQuality: (suggestedQuality: string) => void
+  setPlaybackQualityRange?: (quality: string) => void
   playVideo: () => void
   pauseVideo: () => void
   seekTo: (seconds: number, allowSeekAhead: boolean) => void
@@ -310,6 +322,10 @@ export function VideoModal({
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<ClipPlaybackHandle | null>(null)
+  const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
+  const playerFrameRef = useRef<HTMLIFrameElement | null>(null)
+  const appliedPlaybackQualityRef = useRef<string | null>(null)
+  const keyboardSeekTargetRef = useRef<{ timeS: number; atMs: number } | null>(null)
   const hostedVideoRef = useRef<HTMLVideoElement | null>(null)
   const seekHoldIndexRef = useRef<number | null>(null)
   const pendingInitialPlayOrdRef = useRef<number | undefined>(undefined)
@@ -343,6 +359,10 @@ export function VideoModal({
   useEffect(() => {
     if (!open) {
       playerRef.current = null
+      youtubePlayerRef.current = null
+      playerFrameRef.current = null
+      appliedPlaybackQualityRef.current = null
+      keyboardSeekTargetRef.current = null
       seekHoldIndexRef.current = null
       setIsPlaybackPolling(false)
       setPlaybackTimeS(0)
@@ -356,6 +376,10 @@ export function VideoModal({
 
   useEffect(() => {
     playerRef.current = null
+    youtubePlayerRef.current = null
+    playerFrameRef.current = null
+    appliedPlaybackQualityRef.current = null
+    keyboardSeekTargetRef.current = null
     seekHoldIndexRef.current = null
     setIsPlaybackPolling(false)
     setPlaybackTimeS(0)
@@ -388,6 +412,10 @@ export function VideoModal({
       const player = playerRef.current
       if (!player) {
         return
+      }
+      keyboardSeekTargetRef.current = {
+        timeS: instance.offsetS,
+        atMs: performance.now(),
       }
       seekHoldIndexRef.current = instanceIndex
       player.seekTo(instance.offsetS)
@@ -424,12 +452,52 @@ export function VideoModal({
     seekToPlay(instance, index)
   }, [instances, seekToPlay])
 
+  const applyHighestPlaybackQuality = useCallback((player: YouTubePlayer) => {
+    let qualityLevels: string[]
+    try {
+      qualityLevels = player.getAvailableQualityLevels()
+    } catch {
+      return
+    }
+    if (!Array.isArray(qualityLevels)) {
+      return
+    }
+
+    const highestQuality = highestAvailablePlaybackQuality(qualityLevels)
+    if (!highestQuality || appliedPlaybackQualityRef.current === highestQuality) {
+      return
+    }
+
+    try {
+      player.setPlaybackQualityRange?.(highestQuality)
+    } catch {
+      // Older players do not expose a quality range.
+    }
+
+    try {
+      player.setPlaybackQuality(highestQuality)
+      appliedPlaybackQualityRef.current = highestQuality
+    } catch {
+      // The player can reject quality changes before the video metadata arrives.
+    }
+  }, [])
+
   const handleYouTubeReady = useCallback(
     (event: { target: YouTubePlayer }) => {
-      playerRef.current = youtubePlaybackHandle(event.target)
+      const player = event.target
+      youtubePlayerRef.current = player
+      playerRef.current = youtubePlaybackHandle(player)
+      try {
+        const playerFrame = player.getIframe()
+        playerFrame.tabIndex = -1
+        playerFrameRef.current = playerFrame
+      } catch {
+        playerFrameRef.current = null
+      }
+      applyHighestPlaybackQuality(player)
       applyInitialPlayOrd()
     },
-    [applyInitialPlayOrd],
+    [applyHighestPlaybackQuality, applyInitialPlayOrd],
   )
 
   const handleHostedMetadata = useCallback(
@@ -469,8 +537,12 @@ export function VideoModal({
   }, [open, applyInitialPlayOrd])
 
   const handleYouTubeStateChange = useCallback(
-    (event: { data: number }) => {
+    (event: { data: number; target?: YouTubePlayer }) => {
       const state = event.data
+      const player = event.target ?? youtubePlayerRef.current
+      if (player) {
+        applyHighestPlaybackQuality(player)
+      }
       if (
         state === YOUTUBE_PLAYER_STATE.PLAYING ||
         state === YOUTUBE_PLAYER_STATE.BUFFERING
@@ -480,7 +552,7 @@ export function VideoModal({
         setIsPlaybackPolling(false)
       }
     },
-    [],
+    [applyHighestPlaybackQuality],
   )
 
   useEffect(() => {
@@ -495,6 +567,13 @@ export function VideoModal({
       }
       const currentTime = player.getCurrentTime()
       if (typeof currentTime !== 'number' || !Number.isFinite(currentTime)) {
+        return
+      }
+      const pendingKeyboardSeek = keyboardSeekTargetRef.current
+      if (
+        pendingKeyboardSeek != null &&
+        performance.now() - pendingKeyboardSeek.atMs < KEYBOARD_SEEK_REPEAT_WINDOW_MS
+      ) {
         return
       }
       const heldIndex = seekHoldIndexRef.current
@@ -566,6 +645,7 @@ export function VideoModal({
         fps: video?.fps,
         durationS,
       })
+      keyboardSeekTargetRef.current = { timeS: nextTime, atMs: performance.now() }
       player.seekTo(nextTime)
       seekHoldIndexRef.current = null
       setPlaybackTimeS(nextTime)
@@ -573,6 +653,97 @@ export function VideoModal({
       return true
     },
     [video?.durationS, video?.fps],
+  )
+
+  const readOpenClipDurationSeconds = useCallback((): number | null => {
+    const hostedElement = hostedVideoRef.current
+    if (hostedElement?.isConnected) {
+      const hostedDuration = hostedElement.duration
+      if (
+        typeof hostedDuration === 'number' &&
+        Number.isFinite(hostedDuration) &&
+        hostedDuration > 0
+      ) {
+        return hostedDuration
+      }
+    }
+
+    const youtubePlayer = youtubePlayerRef.current
+    if (youtubePlayer) {
+      try {
+        const reportedDuration = youtubePlayer.getDuration()
+        if (
+          typeof reportedDuration === 'number' &&
+          Number.isFinite(reportedDuration) &&
+          reportedDuration > 0
+        ) {
+          return reportedDuration
+        }
+      } catch {
+        // Player metadata is not ready yet.
+      }
+    }
+
+    const catalogDuration = video?.durationS
+    if (
+      typeof catalogDuration === 'number' &&
+      Number.isFinite(catalogDuration) &&
+      catalogDuration > 0
+    ) {
+      return catalogDuration
+    }
+
+    return null
+  }, [video?.durationS])
+
+  const seekByKeyboardStep = useCallback(
+    (direction: 'backward' | 'forward') => {
+      const player = playerRef.current
+      if (!player) {
+        return
+      }
+
+      let reportedTimeSeconds = 0
+      try {
+        const currentTimeSeconds = player.getCurrentTime()
+        if (
+          typeof currentTimeSeconds === 'number' &&
+          Number.isFinite(currentTimeSeconds)
+        ) {
+          reportedTimeSeconds = currentTimeSeconds
+        }
+      } catch {
+        return
+      }
+
+      const nowMs = performance.now()
+      const pendingSeek = keyboardSeekTargetRef.current
+      const repeatSeekIsInFlight =
+        pendingSeek != null && nowMs - pendingSeek.atMs < KEYBOARD_SEEK_REPEAT_WINDOW_MS
+      const baseTimeSeconds = repeatSeekIsInFlight ? pendingSeek.timeS : reportedTimeSeconds
+      const durationSeconds = readOpenClipDurationSeconds()
+      const stepSeconds =
+        direction === 'backward' ? -KEYBOARD_SEEK_STEP_SECONDS : KEYBOARD_SEEK_STEP_SECONDS
+      let nextTimeSeconds = baseTimeSeconds + stepSeconds
+      if (nextTimeSeconds < 0) {
+        nextTimeSeconds = 0
+      }
+      if (durationSeconds != null && nextTimeSeconds > durationSeconds) {
+        nextTimeSeconds = durationSeconds
+      }
+
+      seekHoldIndexRef.current = null
+      try {
+        player.seekTo(nextTimeSeconds)
+      } catch {
+        return
+      }
+      keyboardSeekTargetRef.current = { timeS: nextTimeSeconds, atMs: nowMs }
+      setPlaybackTimeS(nextTimeSeconds)
+      setManualActiveIndex(null)
+      setIsPlaybackPolling(true)
+    },
+    [readOpenClipDurationSeconds],
   )
 
   const handleOpenAutoFocus = useCallback((event: Event) => {
@@ -627,19 +798,102 @@ export function VideoModal({
   }, [open, navigatePlay, dismissSwipeHint])
 
   useEffect(() => {
+    if (!open || hasSelfHostedFile) {
+      return
+    }
+
+    // Scrubbing the YouTube timeline leaves focus in the iframe, so the next
+    // Space key hits the seek bar. Return focus once the pointer is released.
+    let pointerIsDownOnPlayerFrame = false
+    let releaseFocusTimerId: number | undefined
+
+    const playerFrameElement = () => {
+      const playerFrame = playerFrameRef.current
+      if (playerFrame?.isConnected) {
+        return playerFrame
+      }
+      const frame = contentRef.current?.querySelector('iframe')
+      return frame instanceof HTMLIFrameElement ? frame : null
+    }
+
+    const playerFrameIsFocused = () => {
+      const playerFrame = playerFrameElement()
+      return playerFrame != null && document.activeElement === playerFrame
+    }
+
+    const eventTargetsPlayerFrame = (target: EventTarget | null) => {
+      const playerFrame = playerFrameElement()
+      return playerFrame != null && target === playerFrame
+    }
+
+    const releasePlayerFrameFocus = () => {
+      if (!playerFrameIsFocused()) {
+        return
+      }
+      const activeElement = document.activeElement
+      if (activeElement instanceof HTMLIFrameElement) {
+        activeElement.blur()
+      }
+      contentRef.current?.focus({ preventScroll: true })
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) {
+        return
+      }
+      if (eventTargetsPlayerFrame(event.target)) {
+        pointerIsDownOnPlayerFrame = true
+      }
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if ((event.buttons & 1) === 0) {
+        return
+      }
+      if (eventTargetsPlayerFrame(event.target)) {
+        pointerIsDownOnPlayerFrame = true
+      }
+    }
+
+    const handlePointerEnd = () => {
+      if (!pointerIsDownOnPlayerFrame) {
+        return
+      }
+      pointerIsDownOnPlayerFrame = false
+      window.clearTimeout(releaseFocusTimerId)
+      releaseFocusTimerId = window.setTimeout(releasePlayerFrameFocus, 0)
+    }
+
+    const releasePlayerFrameFocusWhenPointerIsUp = () => {
+      if (pointerIsDownOnPlayerFrame) {
+        return
+      }
+      releasePlayerFrameFocus()
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown, true)
+    window.addEventListener('pointermove', handlePointerMove, true)
+    window.addEventListener('pointerup', handlePointerEnd, true)
+    window.addEventListener('pointercancel', handlePointerEnd, true)
+    const intervalId = window.setInterval(
+      releasePlayerFrameFocusWhenPointerIsUp,
+      PLAYER_FRAME_FOCUS_POLL_MS,
+    )
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown, true)
+      window.removeEventListener('pointermove', handlePointerMove, true)
+      window.removeEventListener('pointerup', handlePointerEnd, true)
+      window.removeEventListener('pointercancel', handlePointerEnd, true)
+      window.clearInterval(intervalId)
+      window.clearTimeout(releaseFocusTimerId)
+    }
+  }, [open, hasSelfHostedFile])
+
+  useEffect(() => {
     if (!open) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === ' ' || event.key === 'Spacebar') {
-        if (isEditableTarget(event.target)) {
-          return
-        }
-        event.preventDefault()
-        event.stopPropagation()
-        togglePlayback()
-        return
-      }
-
       if (
         (event.key === ',' || event.key === '.') &&
         !event.metaKey &&
@@ -659,23 +913,36 @@ export function VideoModal({
         return
       }
 
-      if (hasInstances && (event.key === '[' || event.key === ']')) {
-        if (isEditableTarget(event.target)) {
-          return
-        }
-        event.preventDefault()
-        event.stopPropagation()
-        navigatePlay(event.key === '[' ? 'previous' : 'next')
+      const decision = videoModalKeyAction({
+        key: event.key,
+        shiftKey: event.shiftKey,
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        repeat: event.repeat,
+        targetIsEditable: isEditableTarget(event.target),
+        hasMarkedPlays: hasInstances,
+      })
+
+      if (!decision.capture) {
         return
       }
 
-      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-        if (!hasInstances || isEditableTarget(event.target)) {
-          return
-        }
-        event.preventDefault()
-        event.stopPropagation()
-        navigatePlay(event.key === 'ArrowLeft' ? 'previous' : 'next')
+      event.preventDefault()
+      event.stopPropagation()
+
+      if (decision.action === 'toggle-playback') {
+        togglePlayback()
+        return
+      }
+
+      if (decision.action === 'seek-backward' || decision.action === 'seek-forward') {
+        seekByKeyboardStep(decision.action === 'seek-backward' ? 'backward' : 'forward')
+        return
+      }
+
+      if (decision.action === 'previous-play' || decision.action === 'next-play') {
+        navigatePlay(decision.action === 'previous-play' ? 'previous' : 'next')
       }
     }
 
@@ -688,6 +955,7 @@ export function VideoModal({
     navigatePlay,
     hasSelfHostedFile,
     stepPausedFrame,
+    seekByKeyboardStep,
   ])
 
   if (!video) return null
@@ -762,6 +1030,7 @@ export function VideoModal({
                       autoplay: 1,
                       modestbranding: 1,
                       rel: 0,
+                      vq: 'highres',
                     },
                   }}
                   onReady={handleYouTubeReady}
@@ -820,16 +1089,28 @@ export function VideoModal({
                 </DialogDescription>
               </DialogHeader>
 
-              {hostedUrl && (
-                <>
-                  <PlaybackRateControl
-                    rate={playbackRate}
-                    onChange={setPlaybackRate}
-                  />
-                  <p className="px-3 pb-2 text-[0.65rem] leading-snug text-muted-foreground">
+              <p className="shrink-0 px-3 pb-2 text-[0.65rem] leading-snug text-muted-foreground">
+                <kbd>←</kbd> <kbd>→</kbd> avanzan 5 s.
+                {hasInstances ? (
+                  <>
+                    {' '}
+                    <kbd>↑</kbd> <kbd>↓</kbd>, <kbd>[</kbd> <kbd>]</kbd> y Tab cambian de jugada.
+                  </>
+                ) : null}{' '}
+                <kbd>Espacio</kbd> pausa o reproduce.
+                {hostedUrl ? (
+                  <>
+                    {' '}
                     En pausa, <kbd>,</kbd> y <kbd>.</kbd> mueven un cuadro.
-                  </p>
-                </>
+                  </>
+                ) : null}
+              </p>
+
+              {hostedUrl && (
+                <PlaybackRateControl
+                  rate={playbackRate}
+                  onChange={setPlaybackRate}
+                />
               )}
 
               {hasInstances && (
