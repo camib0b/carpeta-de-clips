@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { remapGameConceptToTeamPerspective } from '@/lib/team-perspective'
 import { getCatalogDatabase } from '@/lib/d1'
-import type { ClipInstance, Team, VideoClip } from '@/lib/types'
+import type { ClipInstance, ClipVisibility, Team, VideoClip } from '@/lib/types'
 
 const LIBRARY_COUNTRY = 'CL'
 
@@ -43,6 +43,11 @@ type ClipJoinRow = {
   library_name: string
   rival_label: string
   r2_xml_object_key: string | null
+  r2_key: string | null
+  r2_key_low: string | null
+  fps: number | null
+  duration_s: number | null
+  visibility: string | null
 }
 
 export type TeamLibraryWithClipCount = Team & {
@@ -144,6 +149,14 @@ function attachClipInstances(
   })
 }
 
+function clipVisibilityFromDatabase(value: string | null): ClipVisibility {
+  if (value == null || value === '' || value === 'public') {
+    return 'public'
+  }
+  // Unknown values fail closed so a bad row is not handed a public media URL.
+  return 'restricted'
+}
+
 function clipJoinRowToVideoClip(row: ClipJoinRow): VideoClip {
   const libraryName = row.library_id === 'others' ? 'Others' : undefined
 
@@ -164,6 +177,11 @@ function clipJoinRowToVideoClip(row: ClipJoinRow): VideoClip {
     shootoutWinner: optionalString(row.shootout_winner),
     uploadedAt: row.uploaded_at,
     r2XmlObjectKey: optionalString(row.r2_xml_object_key),
+    r2Key: optionalString(row.r2_key),
+    r2KeyLow: optionalString(row.r2_key_low),
+    fps: optionalNumber(row.fps),
+    durationS: optionalNumber(row.duration_s),
+    visibility: clipVisibilityFromDatabase(row.visibility),
   }
 }
 
@@ -185,7 +203,12 @@ const CLIP_JOIN_SELECT = `
     matches.library_id,
     libraries.name AS library_name,
     matches.rival_label,
-    matches.r2_xml_object_key
+    matches.r2_xml_object_key,
+    clips.r2_key,
+    clips.r2_key_low,
+    clips.fps,
+    clips.duration_s,
+    clips.visibility
   FROM clips
   INNER JOIN matches ON matches.id = clips.match_id
   INNER JOIN libraries ON libraries.id = matches.library_id

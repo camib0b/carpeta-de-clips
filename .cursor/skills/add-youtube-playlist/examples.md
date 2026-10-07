@@ -82,7 +82,7 @@ Example: COGS vs UC B started with 7 clips; playlist later gained 3 more.
 
 1. Re-fetch playlist ids.
 2. `SELECT youtube_id FROM clips … WHERE matches.youtube_playlist_id = '…'`
-3. Insert **only** missing `youtube_id`s (`ON CONFLICT DO NOTHING`).
+3. Insert **only** missing `youtube_id`s (conflict does not overwrite an existing clip's title or clear `r2_key`).
 4. Confirm POV on the UC B page for the match date.
 
 Added in sync:

@@ -1,9 +1,12 @@
 import type { ClipInstanceInsert } from './clip-instances'
+import type { ClipVisibility } from './types'
 
 /**
  * SQL used to import a playlist into D1.
  * Match identity is the storage slug (`date--home--away--rival[--Others]`).
- * Clip identity is `youtube_id` (duplicates are ignored).
+ * Clip identity is `youtube_id`. Conflict does not rewrite title, match,
+ * concept, or upload time. Media columns use COALESCE so an import that omits
+ * them does not clear an existing `r2_key` or a stored `restricted` visibility.
  */
 export const UPSERT_MATCH_SQL = `
 INSERT INTO matches (
@@ -36,11 +39,92 @@ ON CONFLICT (id) DO UPDATE SET
   r2_xml_object_key = COALESCE(excluded.r2_xml_object_key, matches.r2_xml_object_key)
 `
 
-export const INSERT_CLIP_SQL = `
-INSERT INTO clips (youtube_id, match_id, title, game_concept, uploaded_at)
-VALUES (?, ?, ?, ?, ?)
-ON CONFLICT (youtube_id) DO NOTHING
+const RAW_VISIBILITY = '__RAW_VISIBILITY__'
+
+/**
+ * One statement for insert and conflict. `__RAW_VISIBILITY__` is the unbound
+ * visibility (`?` or a SQL literal). The INSERT value is coalesced to 'public'
+ * so NOT NULL is satisfied, but the conflict assignment reads the raw token:
+ * NULL keeps the stored visibility, including `restricted`.
+ * The WHERE skips the update when the import carries no media fields, so a
+ * YouTube playlist sync still changes nothing on an existing clip.
+ */
+const CLIP_UPSERT_SQL_TEMPLATE = `
+INSERT INTO clips (
+  youtube_id,
+  match_id,
+  title,
+  game_concept,
+  uploaded_at,
+  r2_key,
+  r2_key_low,
+  fps,
+  duration_s,
+  visibility
+) VALUES (
+  __YOUTUBE_ID__,
+  __MATCH_ID__,
+  __TITLE__,
+  __GAME_CONCEPT__,
+  __UPLOADED_AT__,
+  __R2_KEY__,
+  __R2_KEY_LOW__,
+  __FPS__,
+  __DURATION_S__,
+  COALESCE(${RAW_VISIBILITY}, 'public')
+)
+ON CONFLICT (youtube_id) DO UPDATE SET
+  r2_key = COALESCE(excluded.r2_key, clips.r2_key),
+  r2_key_low = COALESCE(excluded.r2_key_low, clips.r2_key_low),
+  fps = COALESCE(excluded.fps, clips.fps),
+  duration_s = COALESCE(excluded.duration_s, clips.duration_s),
+  visibility = CASE
+    WHEN ${RAW_VISIBILITY} IS NULL THEN clips.visibility
+    ELSE excluded.visibility
+  END
+WHERE ${RAW_VISIBILITY} IS NOT NULL
+   OR excluded.r2_key IS NOT NULL
+   OR excluded.r2_key_low IS NOT NULL
+   OR excluded.fps IS NOT NULL
+   OR excluded.duration_s IS NOT NULL
 `
+
+function clipUpsertSql(tokens: {
+  youtubeId: string
+  matchId: string
+  title: string
+  gameConcept: string
+  uploadedAt: string
+  r2Key: string
+  r2KeyLow: string
+  fps: string
+  durationS: string
+  rawVisibility: string
+}): string {
+  return CLIP_UPSERT_SQL_TEMPLATE.replaceAll('__YOUTUBE_ID__', tokens.youtubeId)
+    .replaceAll('__MATCH_ID__', tokens.matchId)
+    .replaceAll('__TITLE__', tokens.title)
+    .replaceAll('__GAME_CONCEPT__', tokens.gameConcept)
+    .replaceAll('__UPLOADED_AT__', tokens.uploadedAt)
+    .replaceAll('__R2_KEY__', tokens.r2Key)
+    .replaceAll('__R2_KEY_LOW__', tokens.r2KeyLow)
+    .replaceAll('__FPS__', tokens.fps)
+    .replaceAll('__DURATION_S__', tokens.durationS)
+    .replaceAll(RAW_VISIBILITY, tokens.rawVisibility)
+}
+
+export const INSERT_CLIP_SQL = clipUpsertSql({
+  youtubeId: '?',
+  matchId: '?',
+  title: '?',
+  gameConcept: '?',
+  uploadedAt: '?',
+  r2Key: '?',
+  r2KeyLow: '?',
+  fps: '?',
+  durationS: '?',
+  rawVisibility: '?',
+})
 
 export type CatalogMatchUpsert = {
   id: string
@@ -70,6 +154,18 @@ export type CatalogClipInsert = {
    */
   sourceVideo?: string | null
   instances?: ClipInstanceInsert[]
+  /** 1080p object key. Null or omitted does not clear a stored key on conflict. */
+  r2Key?: string | null
+  /** Optional 720p object key. Null or omitted does not clear a stored key. */
+  r2KeyLow?: string | null
+  fps?: number | null
+  /** Full-file duration in seconds. Distinct from `instances[].durationS`. */
+  durationS?: number | null
+  /**
+   * Null or omitted keeps the stored visibility (new rows still default to
+   * `public`). `restricted` is accepted and stored, but not served yet.
+   */
+  visibility?: ClipVisibility | null
 }
 
 export function bindUpsertMatch(match: CatalogMatchUpsert): unknown[] {
@@ -90,13 +186,89 @@ export function bindUpsertMatch(match: CatalogMatchUpsert): unknown[] {
   ]
 }
 
-export function bindInsertClip(clip: CatalogClipInsert): unknown[] {
+function nullableMediaText(value: string | null | undefined): string | null {
+  if (value == null) {
+    return null
+  }
+  const trimmed = value.trim()
+  return trimmed.length === 0 ? null : trimmed
+}
+
+function nullableReal(value: number | null | undefined): number | null {
+  if (value == null || !Number.isFinite(value)) {
+    return null
+  }
+  return value
+}
+
+function nullableVisibility(
+  value: ClipVisibility | null | undefined,
+): ClipVisibility | null {
+  if (value == null) {
+    return null
+  }
+  return value
+}
+
+function sqlQuoted(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`
+}
+
+function sqlTextLiteral(value: string | null | undefined): string {
+  const normalized = nullableMediaText(value)
+  return normalized == null ? 'NULL' : sqlQuoted(normalized)
+}
+
+function sqlRequiredTextLiteral(value: string): string {
+  return sqlQuoted(value)
+}
+
+function sqlRealLiteral(value: number | null | undefined): string {
+  const normalized = nullableReal(value)
+  return normalized == null ? 'NULL' : String(normalized)
+}
+
+/**
+ * Clip upsert used by `scripts/upsert-playlist.ts`.
+ * Same conflict rules as `INSERT_CLIP_SQL`.
+ */
+export function renderClipUpsertSql(
+  matchId: string,
+  clip: Omit<CatalogClipInsert, 'matchId'>,
+): string {
+  const visibilitySql =
+    clip.visibility == null ? 'NULL' : sqlQuoted(clip.visibility)
+  return clipUpsertSql({
+    youtubeId: sqlRequiredTextLiteral(clip.youtubeId),
+    matchId: sqlRequiredTextLiteral(matchId),
+    title: sqlRequiredTextLiteral(clip.title),
+    gameConcept: sqlRequiredTextLiteral(clip.gameConcept),
+    uploadedAt: sqlRequiredTextLiteral(clip.uploadedAt),
+    r2Key: sqlTextLiteral(clip.r2Key),
+    r2KeyLow: sqlTextLiteral(clip.r2KeyLow),
+    fps: sqlRealLiteral(clip.fps),
+    durationS: sqlRealLiteral(clip.durationS),
+    rawVisibility: visibilitySql,
+  })
+}
+
+export function bindInsertClip(
+  clip: CatalogClipInsert,
+): Array<string | number | null> {
+  const visibility = nullableVisibility(clip.visibility)
   return [
     clip.youtubeId,
     clip.matchId,
     clip.title,
     clip.gameConcept,
     clip.uploadedAt,
+    nullableMediaText(clip.r2Key),
+    nullableMediaText(clip.r2KeyLow),
+    nullableReal(clip.fps),
+    nullableReal(clip.durationS),
+    visibility,
+    visibility,
+    visibility,
   ]
 }
 

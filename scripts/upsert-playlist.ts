@@ -1,5 +1,7 @@
 /**
- * Upsert one match and insert clips into D1 (ON CONFLICT youtube_id DO NOTHING).
+ * Upsert one match and insert clips into D1.
+ * Existing clips keep their title, concept, and upload time. Omitted media
+ * fields do not clear a stored r2_key or a restricted visibility (COALESCE).
  *
  *   pnpm exec tsx scripts/upsert-playlist.ts --local path/to/payload.json
  *   pnpm exec tsx scripts/upsert-playlist.ts --remote path/to/payload.json
@@ -12,7 +14,11 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import type { ClipInstanceInsert } from '../lib/clip-instances'
-import type { CatalogClipInsert, CatalogMatchUpsert } from '../lib/catalog-upsert'
+import {
+  renderClipUpsertSql,
+  type CatalogClipInsert,
+  type CatalogMatchUpsert,
+} from '../lib/catalog-upsert'
 
 const REPOSITORY_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -67,19 +73,12 @@ ${insertSql}`
 
 function renderSql(payload: UpsertPayload): string {
   const match = payload.match
-  const clipRows = payload.clips
-    .map(
-      (clip) =>
-        `  (${sqlString(clip.youtubeId)}, ${sqlString(match.id)}, ${sqlString(clip.title)}, ${sqlString(clip.gameConcept)}, ${sqlString(clip.uploadedAt)})`,
-    )
-    .join(',\n')
-
   const clipInsert =
     payload.clips.length === 0
       ? '-- no clips'
-      : `INSERT INTO clips (youtube_id, match_id, title, game_concept, uploaded_at) VALUES
-${clipRows}
-ON CONFLICT (youtube_id) DO NOTHING;`
+      : payload.clips
+          .map((clip) => renderClipUpsertSql(match.id, clip))
+          .join('\n\n')
 
   const instanceBlocks = payload.clips
     .filter((clip) => Array.isArray(clip.instances) && clip.instances.length > 0)
