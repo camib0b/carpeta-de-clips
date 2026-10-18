@@ -1,6 +1,16 @@
 import Link from 'next/link'
+import { HockeyPitch } from '@/components/hockey-pitch'
+import {
+  LatestUploadedMatchSection,
+  latestUploadedMatchLastEntranceStepIndex,
+} from '@/components/latest-uploaded-match-section'
+import { PlayedMatchesCalendarSection } from '@/components/played-matches-calendar-section'
 import { TeamIcon } from '@/components/team-icon'
-import { listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
+import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
+import {
+  LANDING_ENTRANCE_STEP_MS,
+  landingEntranceDelay,
+} from '@/lib/landing-entrance'
 import { siteDescription, siteName } from '@/lib/site-metadata'
 
 export const dynamic = 'force-dynamic'
@@ -13,22 +23,42 @@ function landingTeamRowLabel(team: { id: string; name: string }): string {
   return team.name
 }
 
+const TEAM_ROW_START_STEP_INDEX = 2
+
 /**
  * Home page - Team selection
  * Minimalist list of teams with video counts
  */
 export default async function HomePage() {
-  const teamsWithClipCounts = await listTeamLibrariesWithClipCounts()
+  const [teamsWithClipCounts, latestUploadedMatch] = await Promise.all([
+    listTeamLibrariesWithClipCounts(),
+    getLatestUploadedMatch(),
+  ])
+
+  const afterTeamsEntranceStepIndex =
+    TEAM_ROW_START_STEP_INDEX + teamsWithClipCounts.length
+  const latestUploadEntranceStepStart = afterTeamsEntranceStepIndex
+  const playedMatchesCalendarEntranceStepStart = latestUploadedMatch
+    ? latestUploadEntranceStepStart +
+      latestUploadedMatchLastEntranceStepIndex(latestUploadedMatch.previews.length) +
+      1
+    : afterTeamsEntranceStepIndex
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border">
-        <div className="mx-auto max-w-2xl px-6 py-16 md:py-24">
+      <header className="relative overflow-hidden border-b border-border">
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <HockeyPitch />
+        </div>
+        <div
+          className="landing-enter relative z-10 mx-auto max-w-2xl px-6 py-16 md:py-24"
+          style={{ animationDelay: landingEntranceDelay(0, LANDING_ENTRANCE_STEP_MS) }}
+        >
           <h1 className="text-2xl font-medium tracking-tight text-foreground md:text-3xl">
             {siteName}
           </h1>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+          <p className="mt-4 text-base leading-relaxed text-foreground">
             {siteDescription}
           </p>
         </div>
@@ -36,13 +66,25 @@ export default async function HomePage() {
 
       {/* Team List */}
       <main className="mx-auto max-w-2xl px-6 py-12">
-        <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+        <p
+          className="landing-enter mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
+          style={{ animationDelay: landingEntranceDelay(1, LANDING_ENTRANCE_STEP_MS) }}
+        >
           Equipos
         </p>
-        <nav>
+        <nav className="mb-14">
           <ul className="divide-y divide-border">
-            {teamsWithClipCounts.map((team) => (
-              <li key={team.id}>
+            {teamsWithClipCounts.map((team, teamIndex) => (
+              <li
+                key={team.id}
+                className="landing-enter"
+                style={{
+                  animationDelay: landingEntranceDelay(
+                    TEAM_ROW_START_STEP_INDEX + teamIndex,
+                    LANDING_ENTRANCE_STEP_MS,
+                  ),
+                }}
+              >
                 <Link
                   href={`/${team.slug}`}
                   className="group flex items-center justify-between py-6 transition-colors duration-200 hover:bg-muted/30"
@@ -76,6 +118,15 @@ export default async function HomePage() {
             ))}
           </ul>
         </nav>
+        {latestUploadedMatch && (
+          <LatestUploadedMatchSection
+            match={latestUploadedMatch}
+            entranceStepStart={latestUploadEntranceStepStart}
+          />
+        )}
+        <PlayedMatchesCalendarSection
+          entranceStepStart={playedMatchesCalendarEntranceStepStart}
+        />
       </main>
 
       {/* Footer */}

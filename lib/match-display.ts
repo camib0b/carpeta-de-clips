@@ -90,6 +90,14 @@ export function formatMatchDate(date: string): string {
   return `${day}-${monthLabel}-${year}`
 }
 
+/**
+ * Upload day and match day, kept distinct on purpose.
+ * Example: `Subido el 2-sept-2026 · Jugado el 16-may-2026`.
+ */
+export function formatUploadedAndPlayedLine(uploadedAt: string, playedOn: string): string {
+  return `Subido el ${formatMatchDate(uploadedAt)} · Jugado el ${formatMatchDate(playedOn)}`
+}
+
 export function buildMatchXmlDownloadFilename(match: MatchSummary): string {
   const datePart = match.date
   const teamsPart = `${match.homeTeam} vs ${match.awayTeam}`
