@@ -32,17 +32,17 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group w-full overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm transition-colors hover:border-foreground/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
+      className="group w-full overflow-hidden rounded-md border border-border bg-card text-left transition-[color,background-color,border-color,opacity,scale] duration-200 motion-safe:animate-fade-up motion-safe:active:scale-[0.98] hover:border-foreground/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       {/* Thumbnail */}
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
         <img
           src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`}
           alt={video.title}
-          className="h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-80"
+          className="h-full w-full object-cover transition-opacity duration-200 group-hover:opacity-80"
         />
         {/* Play indicator on hover */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-foreground/90">
             <svg
               className="ml-1 h-5 w-5 text-background"
@@ -56,7 +56,7 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
       </div>
 
       {/* Caption sits inside the same card as the thumbnail above it. */}
-      <div className="space-y-1 border-t border-border/70 bg-muted/40 px-3 py-2.5">
+      <div className="space-y-1 border-t border-border bg-card px-3 py-2.5">
         <h3 className="text-sm font-medium leading-snug tracking-tight text-foreground">
           {video.title}
         </h3>
@@ -65,12 +65,14 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
           {scoreDisplay && (
             <>
               <span className="text-muted-foreground/50">·</span>
-              <span className="font-medium text-foreground">{scoreDisplay}</span>
+              <span className="font-mono font-medium tabular-nums text-foreground">
+                {scoreDisplay}
+              </span>
             </>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-          <span>{formattedDate}</span>
+          <span className="font-mono tabular-nums">{formattedDate}</span>
           {video.division && (
             <>
               <span className="text-muted-foreground/50">·</span>

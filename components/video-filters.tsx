@@ -58,8 +58,8 @@ function OptionCheck({ checked }: { checked: boolean }) {
   return (
     <span
       className={cn(
-        'flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input shadow-xs',
-        checked && 'border-primary bg-primary text-primary-foreground',
+        'flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input',
+        checked && 'border-state bg-state text-state-foreground',
       )}
       aria-hidden
     >
@@ -86,7 +86,7 @@ function MultiSelectFilter({
     <div className="flex items-center gap-3">
       <span
         id={labelId}
-        className="text-xs uppercase tracking-wide text-muted-foreground whitespace-nowrap"
+        className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground whitespace-nowrap"
       >
         {label}
       </span>
@@ -98,7 +98,8 @@ function MultiSelectFilter({
             variant="outline"
             aria-labelledby={`${labelId} ${id}-value`}
             className={cn(
-              'h-9 justify-between border-border font-normal',
+              'h-9 justify-between border-border font-normal transition-colors duration-200',
+              !isAllSelected && 'border-state text-state',
               triggerClassName,
             )}
           >
@@ -118,7 +119,7 @@ function MultiSelectFilter({
               aria-label={allLabel}
               aria-checked={isAllSelected}
               tabIndex={0}
-              className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors duration-200 hover:bg-accent"
               onClick={() => onChange([])}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -139,7 +140,7 @@ function MultiSelectFilter({
                   aria-label={option}
                   aria-checked={isSelected}
                   tabIndex={0}
-                  className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                  className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors duration-200 hover:bg-accent"
                   onClick={() => onChange(toggleSelectedValue(selected, option))}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {

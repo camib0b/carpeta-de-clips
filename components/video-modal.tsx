@@ -203,7 +203,7 @@ function PlaybackRateControl({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2">
-      <span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
+      <span className="text-[0.65rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
         Velocidad
       </span>
       {PLAYBACK_RATES.map((preset) => {
@@ -216,9 +216,9 @@ function PlaybackRateControl({
             aria-label={`Velocidad ${formatPlaybackRate(preset)}`}
             onClick={() => onChange(preset)}
             className={cn(
-              'rounded-full px-2 py-0.5 text-[0.7rem] tabular-nums',
+              'rounded-full px-2 py-0.5 font-mono text-[0.7rem] tabular-nums transition-colors duration-200 motion-safe:active:scale-[0.98]',
               selected
-                ? 'bg-foreground text-background'
+                ? 'bg-state text-state-foreground'
                 : 'bg-muted text-muted-foreground hover:text-foreground',
             )}
           >
@@ -251,13 +251,13 @@ function JugadasList({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <h3 className="px-3 pt-2 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
+      <h3 className="px-3 pt-2 text-[0.65rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
         Jugadas
       </h3>
       <div
         ref={listRef}
         className={cn(
-          'mt-1.5 min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-border/60',
+          'mt-1.5 min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-border',
           listClassName,
         )}
       >
@@ -281,16 +281,16 @@ function JugadasList({
               aria-label={ariaLabel}
               aria-current={isActive ? 'true' : undefined}
               className={cn(
-                'grid w-full grid-cols-[auto_auto_auto_minmax(0,1fr)] items-baseline gap-x-2 border-b border-border/40 px-3 py-2 text-left text-xs tabular-nums transition-colors',
+                'grid w-full grid-cols-[auto_auto_auto_minmax(0,1fr)] items-baseline gap-x-2 border-b border-border px-3 py-2 text-left font-mono text-xs tabular-nums transition-colors duration-200',
                 isActive
-                  ? 'bg-foreground font-medium text-background hover:bg-foreground'
-                  : 'hover:bg-muted/40',
+                  ? 'bg-state font-medium text-state-foreground hover:bg-state'
+                  : 'hover:bg-muted/60',
               )}
             >
               <span
                 className={cn(
                   'whitespace-nowrap',
-                  isActive ? 'text-background' : 'text-muted-foreground',
+                  isActive ? 'text-state-foreground' : 'text-muted-foreground',
                 )}
               >
                 {instance.ord}/{total}
@@ -298,7 +298,7 @@ function JugadasList({
               <span
                 className={cn(
                   'whitespace-nowrap',
-                  isActive ? 'text-background' : 'text-foreground',
+                  isActive ? 'text-state-foreground' : 'text-foreground',
                 )}
               >
                 {timestamp}
@@ -306,7 +306,7 @@ function JugadasList({
               <span
                 className={cn(
                   'whitespace-nowrap',
-                  isActive ? 'text-background' : 'text-muted-foreground',
+                  isActive ? 'text-state-foreground' : 'text-muted-foreground',
                 )}
               >
                 {instance.quarter}
@@ -314,7 +314,7 @@ function JugadasList({
               <span
                 className={cn(
                   'min-w-0 truncate',
-                  isActive ? 'text-background' : 'text-muted-foreground',
+                  isActive ? 'text-state-foreground' : 'text-muted-foreground',
                 )}
               >
                 {instance.scoreLabel}
@@ -1107,7 +1107,7 @@ export function VideoModal({
                     title={video.title}
                   />
                 </div>
-                <DialogDescription className="text-xs leading-snug text-muted-foreground">
+                <DialogDescription className="text-xs leading-snug tabular-nums text-muted-foreground">
                   {matchSummaryLine}
                 </DialogDescription>
               </DialogHeader>

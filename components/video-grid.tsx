@@ -9,6 +9,7 @@ import { useLibraryFilters } from '@/hooks/use-library-filters'
 import { MatchContextBanner } from './match-context-banner'
 import { VideoFilters } from './video-filters'
 import { listUniqueMatchSummaries } from '@/lib/match-display'
+import { cn } from '@/lib/utils'
 
 interface VideoGridProps {
   videos: VideoClip[]
@@ -76,7 +77,12 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
       )}
 
       {/* Results count */}
-      <p className="text-sm text-muted-foreground">
+      <p
+        className={cn(
+          'text-sm tabular-nums',
+          hasActiveFilters ? 'font-medium text-state' : 'text-muted-foreground',
+        )}
+      >
         {filteredVideos.length} {filteredVideos.length === 1 ? 'clip' : 'clips'}
       </p>
 
@@ -98,7 +104,7 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
           </p>
           <button
             onClick={clearFilters}
-            className="mt-4 text-sm text-foreground underline underline-offset-4 hover:no-underline"
+            className="mt-4 text-sm text-foreground underline underline-offset-4 transition-colors duration-200 hover:no-underline"
           >
             Limpiar filtros
           </button>

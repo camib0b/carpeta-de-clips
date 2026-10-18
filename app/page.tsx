@@ -28,13 +28,16 @@ export default async function HomePage() {
 
       {/* Team List */}
       <main className="mx-auto max-w-2xl px-6 py-12">
+        <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          Equipos
+        </p>
         <nav>
           <ul className="divide-y divide-border">
             {teamsWithClipCounts.map((team) => (
               <li key={team.id}>
                 <Link
                   href={`/${team.slug}`}
-                  className="group flex items-center justify-between py-6 transition-colors hover:bg-muted/30"
+                  className="group flex items-center justify-between py-6 transition-colors duration-200 hover:bg-muted/30"
                 >
                   <div className="flex items-center gap-4">
                     <TeamIcon slug={team.slug} name={team.name} size="sm" />
@@ -47,7 +50,7 @@ export default async function HomePage() {
                       {team.clipCount} {team.clipCount === 1 ? 'clip' : 'clips'}
                     </span>
                     <svg
-                      className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1"
+                      className="h-4 w-4 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-1"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"

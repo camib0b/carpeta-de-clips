@@ -33,7 +33,9 @@ function MatchContextBannerRow({
           <span aria-hidden className="text-muted-foreground/40">
             ·
           </span>
-          <span className="font-medium text-foreground/70">{scoreDisplay}</span>
+          <span className="font-mono font-medium tabular-nums text-foreground">
+            {scoreDisplay}
+          </span>
         </>
       )}
       {match.division && (
@@ -47,7 +49,7 @@ function MatchContextBannerRow({
       <span aria-hidden className="text-muted-foreground/40">
         ·
       </span>
-      <span>{formattedDate}</span>
+      <span className="font-mono tabular-nums">{formattedDate}</span>
       </div>
       <MatchXmlDownloadButton match={match} available={canDownloadMatchXml} />
     </div>
@@ -70,11 +72,11 @@ export function MatchContextBanner({
 
   return (
     <div
-      className="rounded-md border border-border/60 bg-muted/30 px-3 py-2"
+      className="rounded-md border border-border bg-card px-3 py-2"
       aria-label="Contexto del partido"
     >
       {hasAnyMatchXmlDownload && (
-        <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
           Codificación de eventos (XML)
         </p>
       )}

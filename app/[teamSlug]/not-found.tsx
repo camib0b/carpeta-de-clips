@@ -24,7 +24,7 @@ export default function TeamNotFound() {
         </h1>
         <Link
           href="/"
-          className="mt-8 inline-block text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="mt-8 inline-block text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
         >
           Todos los Equipos
         </Link>
