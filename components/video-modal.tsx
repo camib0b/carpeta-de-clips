@@ -1112,7 +1112,9 @@ export function VideoModal({
                 </DialogDescription>
               </DialogHeader>
 
-              <p className="shrink-0 px-3 pb-2 text-[0.65rem] leading-snug text-muted-foreground">
+              <p
+                className="hidden shrink-0 px-3 pb-2 text-[0.65rem] leading-snug text-muted-foreground [@media(hover:hover)_and_(pointer:fine)]:block"
+              >
                 <kbd>←</kbd> <kbd>→</kbd> avanzan 3 s.
                 {hasInstances ? (
                   <>
