@@ -21,14 +21,6 @@ const MONTH_NAMES = [
   'dic',
 ] as const
 
-const TEAM_HUE_BY_SLUG: Record<string, number> = {
-  'uc-primera-b': 172,
-  'uc-sub-16-a': 210,
-  others: 28,
-}
-
-const FALLBACK_TEAM_HUES = [262, 340, 152, 190, 12] as const
-
 export const NEW_UPLOAD_WINDOW_MILLISECONDS = 7 * MILLISECONDS_PER_DAY
 export const PLAYED_MATCH_CELL_FADE_DURATION_MILLISECONDS = 160
 const PLAYED_MATCH_CELL_FADE_TOTAL_MILLISECONDS = 380
@@ -72,7 +64,6 @@ export interface PlayedMatchCalendarCell {
 export interface PlayedMatchCalendarRow {
   teamSlug: string
   teamName: string
-  teamHue: number
   cells: PlayedMatchCalendarCell[]
 }
 
@@ -182,18 +173,11 @@ export function formatPlayedMatchTooltip(match: {
   homeGoals: number | null
   awayGoals: number | null
   playedOn: string
-  firstUploaded: string | null
-  clipCount: number
 }): string {
   const parts = [formatOpponentLabel(match.rivalLabel)]
   const score = formatMatchGoals(match.homeGoals, match.awayGoals)
   if (score) parts.push(score)
-  parts.push(`jugado ${formatCalendarDay(match.playedOn)}`)
-  const uploadedDay = match.firstUploaded
-    ? formatCalendarDay(match.firstUploaded)
-    : '—'
-  parts.push(`subido ${uploadedDay}`)
-  parts.push(formatClipCount(match.clipCount))
+  parts.push(formatCalendarDay(match.playedOn))
   return parts.join(' · ')
 }
 
@@ -377,14 +361,8 @@ function buildRows(
   now: Date,
 ): PlayedMatchCalendarRow[] {
   const rowTeams = rowTeamsInOrder(teams, seasonMatches)
-  let fallbackHueIndex = 0
 
   return rowTeams.map((team) => {
-    const knownHue = TEAM_HUE_BY_SLUG[team.slug]
-    const teamHue =
-      knownHue ?? FALLBACK_TEAM_HUES[fallbackHueIndex % FALLBACK_TEAM_HUES.length] ?? 172
-    if (knownHue === undefined) fallbackHueIndex += 1
-
     const cells = weekStarts.map((weekStartDate) => {
       const weekStart = formatCalendarDate(weekStartDate)
       const cellMatches = sortMatchesNewestFirst(matchesByCell.get(cellKey(team.slug, weekStart)) ?? [])
@@ -394,7 +372,6 @@ function buildRows(
     return {
       teamSlug: team.slug,
       teamName: team.name,
-      teamHue,
       cells,
     }
   })
@@ -485,11 +462,6 @@ function formatMatchGoals(homeGoals: number | null, awayGoals: number | null): s
   if (homeGoals == null || awayGoals == null) return null
   if (!Number.isFinite(homeGoals) || !Number.isFinite(awayGoals)) return null
   return `${homeGoals}–${awayGoals}`
-}
-
-function formatClipCount(clipCount: number): string {
-  const count = Math.max(0, Math.trunc(clipCount))
-  return count === 1 ? '1 clip' : `${count} clips`
 }
 
 function parseUploadedAt(value: string | null): number | null {

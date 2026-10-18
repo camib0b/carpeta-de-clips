@@ -146,7 +146,7 @@ export function PlayedMatchesCalendar({ calendar }: PlayedMatchesCalendarProps) 
         Partidos por fecha jugada
       </h2>
       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-        Cada cuadro es una semana de la temporada. Más intenso = más clips.
+        Cada cuadro es una semana de la temporada.
       </p>
 
       {showGrid ? (
@@ -290,7 +290,7 @@ function WeekCell({
   ) => void
 }) {
   const cellStyle = {
-    ['--team-hue' as string]: row.teamHue,
+    ['--team-hue' as string]: LEGEND_HUE,
     ['--played-match-fade-delay' as string]: `${delayMilliseconds}ms`,
   }
 
