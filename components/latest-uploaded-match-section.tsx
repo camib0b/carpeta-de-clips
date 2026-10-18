@@ -1,5 +1,8 @@
 import Link from 'next/link'
-import { landingEntranceDelay } from '@/lib/landing-entrance'
+import {
+  LANDING_ENTRANCE_STEP_MS,
+  landingEntranceDelay,
+} from '@/lib/landing-entrance'
 import { toLibraryHref } from '@/lib/library-filters/clip-params'
 import { serializeLibraryFilters } from '@/lib/library-filters/params'
 import {
@@ -8,7 +11,14 @@ import {
 } from '@/lib/match-display'
 import type { LatestUploadedMatch } from '@/lib/latest-uploaded-match'
 
-const LATEST_UPLOAD_STEP_MS = 40
+const LATEST_UPLOAD_POSTER_ENTRANCE_STEP_START = 3
+
+/** Last relative entrance step index inside this section (heading through posters). */
+export function latestUploadedMatchLastEntranceStepIndex(previewCount: number): number {
+  return previewCount > 0
+    ? LATEST_UPLOAD_POSTER_ENTRANCE_STEP_START + previewCount - 1
+    : 2
+}
 
 /**
  * React's video typings omit `loading`. Where a browser honors it on video,
@@ -21,11 +31,25 @@ declare module 'react' {
   }
 }
 
-function entranceStyle(stepIndex: number): { animationDelay: string } {
-  return { animationDelay: landingEntranceDelay(stepIndex, LATEST_UPLOAD_STEP_MS) }
+function entranceStyle(
+  stepIndex: number,
+  entranceStepStart: number,
+): { animationDelay: string } {
+  return {
+    animationDelay: landingEntranceDelay(
+      entranceStepStart + stepIndex,
+      LANDING_ENTRANCE_STEP_MS,
+    ),
+  }
 }
 
-export function LatestUploadedMatchSection({ match }: { match: LatestUploadedMatch }) {
+export function LatestUploadedMatchSection({
+  match,
+  entranceStepStart = 0,
+}: {
+  match: LatestUploadedMatch
+  entranceStepStart?: number
+}) {
   const matchHref = toLibraryHref(
     `/${match.librarySlug}`,
     serializeLibraryFilters({
@@ -47,14 +71,12 @@ export function LatestUploadedMatchSection({ match }: { match: LatestUploadedMat
     match.uploadedAt,
     match.playedOn,
   )
-  const posterStepStart = 3
-
   return (
     <section aria-labelledby="latest-uploaded-match-heading" className="mb-14">
       <p
         id="latest-uploaded-match-heading"
         className="landing-enter mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
-        style={entranceStyle(0)}
+        style={entranceStyle(0, entranceStepStart)}
       >
         Último partido subido
       </p>
@@ -64,7 +86,7 @@ export function LatestUploadedMatchSection({ match }: { match: LatestUploadedMat
       >
         <span
           className="landing-enter flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
-          style={entranceStyle(1)}
+          style={entranceStyle(1, entranceStepStart)}
         >
           <span className="min-w-0 text-base font-medium text-foreground">
             {match.homeTeam} vs {match.awayTeam}
@@ -90,7 +112,7 @@ export function LatestUploadedMatchSection({ match }: { match: LatestUploadedMat
         </span>
         <span
           className="landing-enter mt-1 block text-xs text-muted-foreground"
-          style={entranceStyle(2)}
+          style={entranceStyle(2, entranceStepStart)}
         >
           {uploadedAndPlayedLabel}
         </span>
@@ -100,7 +122,10 @@ export function LatestUploadedMatchSection({ match }: { match: LatestUploadedMat
               <span
                 key={preview.clipId}
                 className="landing-enter block overflow-hidden rounded-sm border border-border bg-muted"
-                style={entranceStyle(posterStepStart + previewIndex)}
+                style={entranceStyle(
+                  LATEST_UPLOAD_POSTER_ENTRANCE_STEP_START + previewIndex,
+                  entranceStepStart,
+                )}
               >
                 <video
                   className="landing-match-poster pointer-events-none aspect-video w-full object-cover"

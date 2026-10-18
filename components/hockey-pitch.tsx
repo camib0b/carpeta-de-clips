@@ -2,8 +2,8 @@
  * Field-hockey pitch copied from HockeyPitch on the /ava page
  * (camib0b/camila-s-digital-space, src/components/ava/AvaStage.tsx).
  * Lengths, stroke weights, and the dotted 5m pattern match that drawing.
- * Colour uses the page border token at low opacity so the pitch reads as
- * background texture behind the header copy (not muted-foreground).
+ * Colour uses carpeta's muted foreground: AVA paints #eceae4 on a fixed
+ * #070708 surface, which would vanish on this light page and glare on the dark one.
  */
 
 const METRE = 10

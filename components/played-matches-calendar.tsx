@@ -8,6 +8,10 @@ import type {
   PlayedMatchCalendarModel,
   PlayedMatchCalendarRow,
 } from '@/lib/played-match-calendar'
+import {
+  LANDING_ENTRANCE_STEP_MS,
+  landingEntranceDelay,
+} from '@/lib/landing-entrance'
 import { cn } from '@/lib/utils'
 
 const CELL_SIZE_PIXELS = 14
@@ -29,9 +33,13 @@ interface CalendarTooltip {
 
 interface PlayedMatchesCalendarProps {
   calendar: PlayedMatchCalendarModel
+  entranceStepStart?: number
 }
 
-export function PlayedMatchesCalendar({ calendar }: PlayedMatchesCalendarProps) {
+export function PlayedMatchesCalendar({
+  calendar,
+  entranceStepStart = 0,
+}: PlayedMatchesCalendarProps) {
   const [tooltip, setTooltip] = useState<CalendarTooltip | null>(null)
   const [animateCells, setAnimateCells] = useState(false)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -142,10 +150,27 @@ export function PlayedMatchesCalendar({ calendar }: PlayedMatchesCalendarProps) 
 
   return (
     <section className="mt-14" aria-labelledby="partidos-por-fecha-jugada">
-      <h2 id="partidos-por-fecha-jugada" className="text-base font-medium text-foreground">
+      <h2
+        id="partidos-por-fecha-jugada"
+        className="landing-enter text-base font-medium text-foreground"
+        style={{
+          animationDelay: landingEntranceDelay(
+            entranceStepStart,
+            LANDING_ENTRANCE_STEP_MS,
+          ),
+        }}
+      >
         Partidos por fecha jugada
       </h2>
-      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+      <p
+        className="landing-enter mt-1 text-sm leading-relaxed text-muted-foreground"
+        style={{
+          animationDelay: landingEntranceDelay(
+            entranceStepStart + 1,
+            LANDING_ENTRANCE_STEP_MS,
+          ),
+        }}
+      >
         Cada cuadro es una semana de la temporada.
       </p>
 
