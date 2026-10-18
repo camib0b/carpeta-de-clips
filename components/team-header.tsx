@@ -1,4 +1,5 @@
 import { TeamIcon } from '@/components/team-icon'
+import { landingTeamRowLabel } from '@/lib/landing-team-row-label'
 import { Team } from '@/lib/types'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -28,7 +29,7 @@ export function TeamHeader({ team }: TeamHeaderProps) {
         <div className="flex items-center gap-4">
           <TeamIcon slug={team.slug} name={team.name} size="lg" />
           <h1 className="text-2xl font-medium tracking-tight text-foreground">
-            {team.name}
+            {landingTeamRowLabel(team)}
           </h1>
         </div>
       </div>
