@@ -116,6 +116,100 @@
   }
 }
 
+@keyframes swipe-navigation-hint-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* 80ms fade in, 500ms hold, 200ms fade out. Linear timeline so each segment keeps its duration. */
+@keyframes keyboard-seek-badge {
+  0% {
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  10.256410256% {
+    opacity: 1;
+    animation-timing-function: linear;
+  }
+  74.358974359% {
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes keyboard-seek-badge-reduced {
+  0%,
+  99% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.swipe-navigation-hint {
+  animation: swipe-navigation-hint-fade 400ms cubic-bezier(0.23, 1, 0.32, 1) 3s forwards;
+}
+
+.swipe-navigation-hint-icon {
+  animation: swipe-navigation-hint-pulse 1.5s cubic-bezier(0.23, 1, 0.32, 1) 2;
+}
+
+@keyframes swipe-navigation-hint-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.keyboard-seek-badge {
+  animation: keyboard-seek-badge 780ms linear both;
+}
+
+/* This modal only: opacity, no zoom. Open 150ms, close 100ms. */
+.video-modal-motion {
+  --tw-enter-scale: 1;
+  --tw-exit-scale: 1;
+  --tw-ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.video-modal-motion[data-state='open'] {
+  --tw-duration: 150ms;
+  --tw-animation-duration: 150ms;
+}
+
+.video-modal-motion[data-state='closed'] {
+  --tw-duration: 100ms;
+  --tw-animation-duration: 100ms;
+}
+
+/* Filter popover: zoom from 0.97, open 150ms, close 100ms. */
+[data-slot='popover-content'] {
+  --tw-ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-slot='popover-content'][data-state='open'] {
+  --tw-enter-scale: 0.97;
+  --tw-duration: 150ms;
+  --tw-animation-duration: 150ms;
+}
+
+[data-slot='popover-content'][data-state='closed'] {
+  --tw-exit-scale: 0.97;
+  --tw-duration: 100ms;
+  --tw-animation-duration: 100ms;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -148,5 +242,15 @@
 
   .animate-fade-up {
     animation: none !important;
+  }
+
+  .swipe-navigation-hint,
+  .swipe-navigation-hint-icon {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .keyboard-seek-badge {
+    animation: keyboard-seek-badge-reduced 500ms linear both !important;
   }
 }
