@@ -11,17 +11,10 @@ import {
   LANDING_ENTRANCE_STEP_MS,
   landingEntranceDelay,
 } from '@/lib/landing-entrance'
+import { landingTeamRowLabel } from '@/lib/landing-team-row-label'
 import { siteDescription, siteName } from '@/lib/site-metadata'
 
 export const dynamic = 'force-dynamic'
-
-/** Landing-only labels; catalog/DB names stay unchanged elsewhere. */
-function landingTeamRowLabel(team: { id: string; name: string }): string {
-  if (team.id === 'others') {
-    return 'Otros - Torneo Primera A'
-  }
-  return team.name
-}
 
 const TEAM_ROW_START_STEP_INDEX = 2
 
