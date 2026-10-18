@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { VideoClip } from '@/lib/types'
 import { VideoCard } from './video-card'
 import { VideoModal } from './video-modal'
@@ -22,6 +22,12 @@ interface VideoGridProps {
  * Displays videos in a responsive grid with client-side filtering
  */
 export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: VideoGridProps) {
+  const skipCardEntranceAnimationRef = useRef(false)
+  useEffect(() => {
+    skipCardEntranceAnimationRef.current = true
+  }, [])
+  const playCardEntranceAnimation = !skipCardEntranceAnimationRef.current
+
   const {
     selectedClip,
     isOpen: isClipModalOpen,
@@ -93,6 +99,7 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
             <VideoCard
               key={video.id}
               video={video}
+              playEntranceAnimation={playCardEntranceAnimation}
               onClick={() => openClip(video)}
             />
           ))}
