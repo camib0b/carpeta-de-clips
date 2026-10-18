@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { HockeyPitch } from '@/components/hockey-pitch'
 import { LatestUploadedMatchSection } from '@/components/latest-uploaded-match-section'
+import { PlayedMatchesCalendarSection } from '@/components/played-matches-calendar-section'
 import { TeamIcon } from '@/components/team-icon'
 import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
 import { landingEntranceDelay } from '@/lib/landing-entrance'
@@ -96,6 +97,7 @@ export default async function HomePage() {
             ))}
           </ul>
         </nav>
+        <PlayedMatchesCalendarSection />
       </main>
 
       {/* Footer */}
