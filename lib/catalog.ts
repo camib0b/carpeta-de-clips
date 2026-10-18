@@ -1,6 +1,16 @@
 import { cache } from 'react'
 import { remapGameConceptToTeamPerspective } from '@/lib/team-perspective'
 import { getCatalogDatabase } from '@/lib/d1'
+import { mediaUrl } from '@/lib/media-url'
+import {
+  LATEST_UPLOADED_MATCH_PREVIEW_SQL,
+  LATEST_UPLOADED_MATCH_SQL,
+  selectLatestUploadedMatchPreviews,
+  toLatestUploadedMatch,
+  type LatestUploadedMatch,
+  type LatestUploadedMatchPreviewRow,
+  type LatestUploadedMatchRow,
+} from '@/lib/latest-uploaded-match'
 import type { ClipInstance, ClipVisibility, Team, VideoClip } from '@/lib/types'
 
 const LIBRARY_COUNTRY = 'CL'
@@ -325,4 +335,48 @@ export async function hasMatchXmlR2ObjectOverride(
 ): Promise<boolean> {
   const objectKey = await getMatchXmlObjectKey(storageSlug)
   return objectKey != null
+}
+
+/**
+ * Match with the newest `clips.uploaded_at`. That is the upload time.
+ * It is not the match with the latest `played_on`.
+ * Posters are omitted when the self-hosted columns are unavailable or no public file exists.
+ */
+export async function getLatestUploadedMatch(): Promise<LatestUploadedMatch | null> {
+  const database = await getCatalogDatabase()
+  const row = await database
+    .prepare(LATEST_UPLOADED_MATCH_SQL)
+    .first<LatestUploadedMatchRow>()
+
+  if (!row) {
+    return null
+  }
+
+  let previewRows: LatestUploadedMatchPreviewRow[] = []
+  try {
+    const result = await database
+      .prepare(LATEST_UPLOADED_MATCH_PREVIEW_SQL)
+      .bind(row.match_id)
+      .all<LatestUploadedMatchPreviewRow>()
+    previewRows = result.results ?? []
+  } catch (error) {
+    console.error(
+      'latest uploaded match poster query failed; showing the match without posters',
+      error,
+    )
+  }
+
+  const previews = selectLatestUploadedMatchPreviews(previewRows, (clip) =>
+    mediaUrl(clip, { preferLow: true }),
+  )
+
+  return toLatestUploadedMatch(
+    row,
+    libraryDisplayName({
+      id: row.library_id,
+      name: row.library_name,
+      sort_order: 0,
+    }),
+    previews,
+  )
 }
