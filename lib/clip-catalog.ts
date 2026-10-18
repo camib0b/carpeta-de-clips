@@ -5,6 +5,7 @@
  * the request-time readers used by home and team pages.
  */
 export {
+  getLatestUploadedMatch,
   getMatchXmlObjectKey,
   getTeamBySlug,
   getTeamLibraryClips,
@@ -14,5 +15,7 @@ export {
   listTeamLibrariesWithClipCounts,
   listTeamLibraryRivals,
 } from './catalog'
+
+export type { LatestUploadedMatch } from './latest-uploaded-match'
 
 export type { TeamLibraryWithClipCount } from './catalog'
