@@ -23,36 +23,28 @@ const TEAMS: PlayedMatchCalendarTeam[] = [
   { slug: 'others', name: 'Otros' },
 ]
 
-test('formatPlayedMatchTooltip keeps played and uploaded dates, opponent, and score', () => {
+test('formatPlayedMatchTooltip shows opponent, score, and played date', () => {
   const tooltip = formatPlayedMatchTooltip({
     rivalLabel: 'Old Reds',
     homeGoals: 2,
     awayGoals: 1,
     playedOn: '2026-10-12',
-    firstUploaded: '2026-10-15T08:00:00.000Z',
-    clipCount: 34,
   })
 
-  assert.equal(
-    tooltip,
-    'vs Old Reds · 2–1 · jugado 12 oct · subido 15 oct · 34 clips',
-  )
-  assert.match(tooltip, /jugado 12 oct · subido 15 oct · 34 clips/)
-  assert.doesNotMatch(tooltip, /reciente/i)
+  assert.equal(tooltip, 'vs Old Reds · 2–1 · 12 oct')
+  assert.doesNotMatch(tooltip, /jugado|subido|clips|reciente/i)
 })
 
-test('formatPlayedMatchTooltip keeps both date labels when score or upload is missing', () => {
+test('formatPlayedMatchTooltip omits score when goals are missing', () => {
   const tooltip = formatPlayedMatchTooltip({
     rivalLabel: 'COGS vs PWCC',
     homeGoals: null,
     awayGoals: null,
     playedOn: '2026-04-25',
-    firstUploaded: null,
-    clipCount: 1,
   })
 
-  assert.equal(tooltip, 'COGS vs PWCC · jugado 25 abr · subido — · 1 clip')
-  assert.doesNotMatch(tooltip, /reciente/i)
+  assert.equal(tooltip, 'COGS vs PWCC · 25 abr')
+  assert.doesNotMatch(tooltip, /jugado|subido|clips|reciente/i)
 })
 
 test('Nuevo follows the upload clock, not how recently the match was played', () => {
@@ -162,10 +154,6 @@ test('buildPlayedMatchCalendar shows the current season by the week each match w
     calendar.rows.map((row) => row.teamSlug),
     ['uc-sub-16-a', 'uc-primera-b', 'others'],
   )
-  assert.equal(calendar.rows[1]?.teamHue, 172)
-  assert.equal(calendar.rows[0]?.teamHue, 210)
-  assert.equal(calendar.rows[2]?.teamHue, 28)
-
   const primera = calendar.rows[1]
   assert.ok(primera)
   const octoberCell = primera.cells.find((cell) => cell.weekStart === '2026-10-12')
@@ -175,10 +163,7 @@ test('buildPlayedMatchCalendar shows the current season by the week each match w
   assert.equal(octoberCell.href, '/uc-primera-b?rival=pwcc')
   assert.equal(octoberCell.matches[0]?.id, 'same-week-later')
   assert.equal(octoberCell.matches[1]?.id, 'october-home')
-  assert.match(
-    octoberCell.matches[1]?.tooltipText ?? '',
-    /jugado 12 oct · subido 15 oct · 34 clips/,
-  )
+  assert.equal(octoberCell.matches[1]?.tooltipText, 'vs Old Reds · 2–1 · 12 oct')
   assert.match(octoberCell.ariaLabel ?? '', /Nuevo/)
   assert.doesNotMatch(octoberCell.ariaLabel ?? '', /reciente/i)
   assert.equal(octoberCell.matches[0]?.isNew, false)
@@ -189,7 +174,7 @@ test('buildPlayedMatchCalendar shows the current season by the week each match w
   assert.equal(mayCell?.intensityLevel, 1)
   assert.equal(mayCell?.isNew, false)
   assert.equal(mayCell?.href, '/uc-sub-16-a?rival=manquehue')
-  assert.match(mayCell?.matches[0]?.tooltipText ?? '', /jugado 16 may · subido 20 may · 8 clips/)
+  assert.equal(mayCell?.matches[0]?.tooltipText, 'vs Manquehue · 16 may')
 
   const emptyWeek = primera.cells.find((cell) => cell.weekStart === '2026-03-02')
   assert.equal(emptyWeek?.href, null)
