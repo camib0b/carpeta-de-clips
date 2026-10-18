@@ -15,6 +15,14 @@ import { siteDescription, siteName } from '@/lib/site-metadata'
 
 export const dynamic = 'force-dynamic'
 
+/** Landing-only labels; catalog/DB names stay unchanged elsewhere. */
+function landingTeamRowLabel(team: { id: string; name: string }): string {
+  if (team.id === 'others') {
+    return 'Otros - Torneo Primera A'
+  }
+  return team.name
+}
+
 const TEAM_ROW_START_STEP_INDEX = 2
 
 /**
@@ -84,7 +92,7 @@ export default async function HomePage() {
                   <div className="flex items-center gap-4">
                     <TeamIcon slug={team.slug} name={team.name} size="sm" />
                     <span className="text-base font-medium text-foreground">
-                      {team.name}
+                      {landingTeamRowLabel(team)}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
