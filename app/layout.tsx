@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Roboto, Roboto_Mono } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import {
   siteAuthor,
@@ -12,8 +12,19 @@ import {
 import { siteOrigin } from '@/lib/site-url'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const roboto = Roboto({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-roboto',
+  display: 'swap',
+})
+
+const robotoMono = Roboto_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-roboto-mono',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: {
@@ -54,7 +65,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className="bg-background">
+    <html
+      lang="es"
+      className={`${roboto.variable} ${robotoMono.variable} bg-background`}
+    >
       <body className="font-sans antialiased min-h-screen">
         {children}
         <Toaster />

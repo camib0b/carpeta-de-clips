@@ -18,7 +18,7 @@ export function TeamHeader({ team }: TeamHeaderProps) {
         {/* Back link */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 mb-8"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Todos los Equipos</span>

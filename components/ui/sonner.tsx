@@ -5,8 +5,14 @@ import { Toaster as Sonner, type ToasterProps } from 'sonner'
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
-      theme="light"
+      theme="system"
       className="toaster group"
+      toastOptions={{
+        classNames: {
+          toast:
+            'rounded-md border border-border bg-popover text-popover-foreground shadow-none',
+        },
+      }}
       style={
         {
           '--normal-bg': 'var(--popover)',
