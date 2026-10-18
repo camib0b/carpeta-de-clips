@@ -36,7 +36,7 @@ export default async function HomePage() {
           <h1 className="text-2xl font-medium tracking-tight text-foreground md:text-3xl">
             {siteName}
           </h1>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+          <p className="mt-4 text-base leading-relaxed text-foreground">
             {siteDescription}
           </p>
         </div>
