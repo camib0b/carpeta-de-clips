@@ -1,15 +1,20 @@
 import Link from 'next/link'
 import { HockeyPitch } from '@/components/hockey-pitch'
-import { LatestUploadedMatchSection } from '@/components/latest-uploaded-match-section'
+import {
+  LatestUploadedMatchSection,
+  latestUploadedMatchLastEntranceStepIndex,
+} from '@/components/latest-uploaded-match-section'
 import { PlayedMatchesCalendarSection } from '@/components/played-matches-calendar-section'
 import { TeamIcon } from '@/components/team-icon'
 import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
-import { landingEntranceDelay } from '@/lib/landing-entrance'
+import {
+  LANDING_ENTRANCE_STEP_MS,
+  landingEntranceDelay,
+} from '@/lib/landing-entrance'
 import { siteDescription, siteName } from '@/lib/site-metadata'
 
 export const dynamic = 'force-dynamic'
 
-const HEADER_AND_TEAM_LIST_STEP_MS = 50
 const TEAM_ROW_START_STEP_INDEX = 2
 
 /**
@@ -22,6 +27,15 @@ export default async function HomePage() {
     getLatestUploadedMatch(),
   ])
 
+  const afterTeamsEntranceStepIndex =
+    TEAM_ROW_START_STEP_INDEX + teamsWithClipCounts.length
+  const latestUploadEntranceStepStart = afterTeamsEntranceStepIndex
+  const playedMatchesCalendarEntranceStepStart = latestUploadedMatch
+    ? latestUploadEntranceStepStart +
+      latestUploadedMatchLastEntranceStepIndex(latestUploadedMatch.previews.length) +
+      1
+    : afterTeamsEntranceStepIndex
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -31,7 +45,7 @@ export default async function HomePage() {
         </div>
         <div
           className="landing-enter relative z-10 mx-auto max-w-2xl px-6 py-16 md:py-24"
-          style={{ animationDelay: landingEntranceDelay(0, HEADER_AND_TEAM_LIST_STEP_MS) }}
+          style={{ animationDelay: landingEntranceDelay(0, LANDING_ENTRANCE_STEP_MS) }}
         >
           <h1 className="text-2xl font-medium tracking-tight text-foreground md:text-3xl">
             {siteName}
@@ -44,14 +58,13 @@ export default async function HomePage() {
 
       {/* Team List */}
       <main className="mx-auto max-w-2xl px-6 py-12">
-        {latestUploadedMatch && <LatestUploadedMatchSection match={latestUploadedMatch} />}
         <p
           className="landing-enter mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
-          style={{ animationDelay: landingEntranceDelay(1, HEADER_AND_TEAM_LIST_STEP_MS) }}
+          style={{ animationDelay: landingEntranceDelay(1, LANDING_ENTRANCE_STEP_MS) }}
         >
           Equipos
         </p>
-        <nav>
+        <nav className="mb-14">
           <ul className="divide-y divide-border">
             {teamsWithClipCounts.map((team, teamIndex) => (
               <li
@@ -60,7 +73,7 @@ export default async function HomePage() {
                 style={{
                   animationDelay: landingEntranceDelay(
                     TEAM_ROW_START_STEP_INDEX + teamIndex,
-                    HEADER_AND_TEAM_LIST_STEP_MS,
+                    LANDING_ENTRANCE_STEP_MS,
                   ),
                 }}
               >
@@ -97,7 +110,15 @@ export default async function HomePage() {
             ))}
           </ul>
         </nav>
-        <PlayedMatchesCalendarSection />
+        {latestUploadedMatch && (
+          <LatestUploadedMatchSection
+            match={latestUploadedMatch}
+            entranceStepStart={latestUploadEntranceStepStart}
+          />
+        )}
+        <PlayedMatchesCalendarSection
+          entranceStepStart={playedMatchesCalendarEntranceStepStart}
+        />
       </main>
 
       {/* Footer */}

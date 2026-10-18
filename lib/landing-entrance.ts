@@ -4,6 +4,7 @@
  * a stylesheet rule per index.
  */
 export const LANDING_ENTRANCE_DELAY_CAP_MS = 300
+export const LANDING_ENTRANCE_STEP_MS = 50
 
 export function landingEntranceDelay(
   stepIndex: number,
