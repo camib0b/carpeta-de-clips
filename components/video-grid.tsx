@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { VideoClip } from '@/lib/types'
 import { VideoCard } from './video-card'
 import { VideoModal } from './video-modal'
@@ -49,6 +49,14 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
     })
   }, [videos, selectedConcepts, selectedRivals])
 
+  // Stays false for the first paint, then cards that mount after a filter change skip the entrance.
+  const clipGridHasMountedRef = useRef(false)
+  const playEnterAnimation = !clipGridHasMountedRef.current
+
+  useEffect(() => {
+    clipGridHasMountedRef.current = true
+  }, [])
+
   const shouldShowMatchBanner = selectedRivals.length > 0
 
   const visibleMatchSummaries = useMemo(() => {
@@ -93,6 +101,7 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
             <VideoCard
               key={video.id}
               video={video}
+              playEnterAnimation={playEnterAnimation}
               onClick={() => openClip(video)}
             />
           ))}

@@ -102,7 +102,54 @@
   --text-2xl--line-height: 1.2;
   --text-3xl: 1.875rem;
   --text-3xl--line-height: 1.15;
-  --animate-fade-up: fade-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-fade-up: fade-up 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  --animate-swipe-hint-icon: swipe-hint-pulse 1.5s cubic-bezier(0.23, 1, 0.32, 1) 2;
+  --animate-swipe-hint-fade: swipe-hint-fade 280ms cubic-bezier(0.23, 1, 0.32, 1) 3s forwards;
+}
+
+@keyframes swipe-hint-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes swipe-hint-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+/* 80ms fade in, ~500ms hold, 200ms fade out. 80 / 780 and 580 / 780. */
+@keyframes seek-step-badge {
+  0% {
+    opacity: 0;
+  }
+  10.2564% {
+    opacity: 1;
+  }
+  74.359% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes seek-step-badge-reduced {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.seek-step-badge {
+  animation: seek-step-badge 780ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 @keyframes fade-up {
@@ -148,5 +195,14 @@
 
   .animate-fade-up {
     animation: none !important;
+  }
+
+  /* The universal rule above collapses every animation. This badge should
+     still show at once and stay for the hold, then disappear without a fade. */
+  .seek-step-badge {
+    animation-name: seek-step-badge-reduced !important;
+    animation-duration: 500ms !important;
+    animation-timing-function: step-end !important;
+    animation-fill-mode: both !important;
   }
 }

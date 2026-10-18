@@ -1,12 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import { formatMatchDate, formatScoreWithShootout } from '@/lib/match-display'
 import { formatHomeAwayMatchup, getTeamAbbreviation } from '@/lib/team-abbreviations'
 import { VideoClip } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
 interface VideoCardProps {
   video: VideoClip
   onClick: () => void
+  playEnterAnimation?: boolean
 }
 
 /**
@@ -14,7 +17,13 @@ interface VideoCardProps {
  * belongs to the image above it.
  * Metadata hierarchy: clip title → home vs away (and score) → date (and optional division).
  */
-export function VideoCard({ video, onClick }: VideoCardProps) {
+export function VideoCard({
+  video,
+  onClick,
+  playEnterAnimation = false,
+}: VideoCardProps) {
+  // Captured at mount. A later filter render must not remove the class mid-animation.
+  const [showEnterAnimation] = useState(playEnterAnimation)
   const formattedDate = formatMatchDate(video.date)
   const scoreDisplay =
     video.homeGoals !== undefined && video.awayGoals !== undefined
@@ -32,7 +41,10 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group w-full overflow-hidden rounded-md border border-border bg-card text-left transition-[color,background-color,border-color,opacity,scale] duration-200 motion-safe:animate-fade-up motion-safe:active:scale-[0.98] hover:border-foreground/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className={cn(
+        'group w-full overflow-hidden rounded-md border border-border bg-card text-left transition-[color,background-color,border-color,opacity,scale] duration-200 motion-safe:active:scale-[0.98] hover:border-foreground/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        showEnterAnimation && 'motion-safe:animate-fade-up',
+      )}
     >
       {/* Thumbnail */}
       <div className="relative aspect-video w-full overflow-hidden bg-muted">

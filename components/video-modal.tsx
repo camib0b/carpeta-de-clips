@@ -175,12 +175,15 @@ function ClipNavButton({
 function SwipeNavigationHint() {
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center bg-gradient-to-t from-black/80 via-black/50 to-transparent px-4 pb-4 pt-10 md:hidden"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center bg-gradient-to-t from-black/80 via-black/50 to-transparent px-4 pb-4 pt-10 motion-safe:animate-swipe-hint-fade md:hidden"
       role="status"
       aria-live="polite"
     >
       <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-xs font-medium text-white/95 backdrop-blur-sm">
-        <MoveHorizontal className="size-4 shrink-0 animate-pulse" aria-hidden />
+        <MoveHorizontal
+          className="size-4 shrink-0 motion-safe:animate-swipe-hint-icon"
+          aria-hidden
+        />
         <span>Desliza para cambiar de jugada</span>
       </div>
     </div>
@@ -246,7 +249,7 @@ function JugadasList({
       return
     }
     const row = rowRefs.current.get(activeInstance.ord)
-    row?.scrollIntoView({ block: 'nearest' })
+    row?.scrollIntoView({ block: 'nearest', behavior: 'auto' })
   }, [activeIndex, instances])
 
   return (
@@ -281,7 +284,7 @@ function JugadasList({
               aria-label={ariaLabel}
               aria-current={isActive ? 'true' : undefined}
               className={cn(
-                'grid w-full grid-cols-[auto_auto_auto_minmax(0,1fr)] items-baseline gap-x-2 border-b border-border px-3 py-2 text-left font-mono text-xs tabular-nums transition-colors duration-200',
+                'grid w-full grid-cols-[auto_auto_auto_minmax(0,1fr)] items-baseline gap-x-2 border-b border-border px-3 py-2 text-left font-mono text-xs tabular-nums transition-[background-color] duration-[120ms] ease-[cubic-bezier(0.23,1,0.32,1)]',
                 isActive
                   ? 'bg-state font-medium text-state-foreground hover:bg-state'
                   : 'hover:bg-muted/60',
@@ -363,6 +366,10 @@ export function VideoModal({
   const [qualityReady, setQualityReady] = useState(false)
   const [preferLow, setPreferLow] = useState(false)
   const [playbackRate, setPlaybackRate] = useState<PlaybackRate>(1)
+  const [keyboardSeekBadge, setKeyboardSeekBadge] = useState<{
+    label: string
+    sequence: number
+  } | null>(null)
   playbackRateRef.current = playbackRate
 
   const instances = video?.instances ?? []
@@ -391,6 +398,7 @@ export function VideoModal({
       setPlaybackTimeS(0)
       setManualActiveIndex(null)
       setQualityReady(false)
+      setKeyboardSeekBadge(null)
       return
     }
     setPreferLow(shouldPreferLowMedia(readMediaConnectionSnapshot()))
@@ -408,6 +416,7 @@ export function VideoModal({
     setPlaybackTimeS(0)
     setManualActiveIndex(null)
     setPlaybackRate(1)
+    setKeyboardSeekBadge(null)
     pendingInitialPlayOrdRef.current = initialPlayOrdRef.current
     setShareJugadaOrd(initialPlayOrdRef.current)
   }, [video?.id])
@@ -765,6 +774,14 @@ export function VideoModal({
       setPlaybackTimeS(nextTimeSeconds)
       setManualActiveIndex(null)
       setIsPlaybackPolling(true)
+      const seekLabel =
+        direction === 'backward'
+          ? `−${KEYBOARD_SEEK_STEP_SECONDS}s`
+          : `+${KEYBOARD_SEEK_STEP_SECONDS}s`
+      setKeyboardSeekBadge((currentBadge) => ({
+        label: seekLabel,
+        sequence: (currentBadge?.sequence ?? 0) + 1,
+      }))
     },
     [readOpenClipDurationSeconds],
   )
@@ -994,6 +1011,9 @@ export function VideoModal({
         className={cn(
           'flex w-[calc(100%-0.5rem)] max-w-none flex-col gap-0 overflow-hidden p-0',
           'max-h-[calc(100dvh-0.5rem)] sm:max-w-none',
+          'data-[state=open]:zoom-in-100! data-[state=closed]:zoom-out-100!',
+          'data-[state=open]:duration-150 data-[state=closed]:duration-100',
+          'ease-[cubic-bezier(0.23,1,0.32,1)]',
         )}
         onOpenAutoFocus={handleOpenAutoFocus}
         onPointerDownOutside={preventCloseOnClipNav}
@@ -1079,6 +1099,17 @@ export function VideoModal({
               )}
 
               {showSwipeHint && <SwipeNavigationHint />}
+              {keyboardSeekBadge ? (
+                <div
+                  key={keyboardSeekBadge.sequence}
+                  className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center"
+                  aria-hidden
+                >
+                  <span className="seek-step-badge rounded-full bg-black/75 px-2.5 py-1 font-mono text-sm font-medium tabular-nums text-white">
+                    {keyboardSeekBadge.label}
+                  </span>
+                </div>
+              ) : null}
             </div>
           </div>
 
