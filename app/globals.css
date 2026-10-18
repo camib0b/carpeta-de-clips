@@ -148,19 +148,18 @@
 /*
   Pitch behind the home header. Stroke weights match AVA HockeyPitch:
   1.25, strong lines 1.5, dotted 5m lines 3.5 5, non-scaling stroke.
-  Colour is muted-foreground rather than AVA's #eceae4-on-#070708.
+  Lines use --border (not muted-foreground) so they sit behind the title copy.
   Solid lines draw once over 800ms. Dotted lines and spots fade in with them.
 */
 .landing-pitch {
-  color: var(--muted-foreground);
-  opacity: 0.55;
+  color: var(--border);
   pointer-events: none;
 }
 
 .landing-pitch-fill {
   fill: currentColor;
   stroke: none;
-  opacity: 0.045;
+  opacity: 0.35;
 }
 
 .landing-pitch-line {
@@ -168,21 +167,22 @@
   stroke: currentColor;
   stroke-width: 1.25;
   vector-effect: non-scaling-stroke;
-  opacity: 0.58;
+  opacity: 0.35;
 }
 
 .landing-pitch-line.is-strong {
-  opacity: 0.88;
+  opacity: 0.42;
   stroke-width: 1.5;
 }
 
 .landing-pitch-line.is-dotted {
   stroke-dasharray: 3.5 5;
-  opacity: 0.5;
+  opacity: 0.2;
 }
 
 .landing-pitch-mark {
   fill: currentColor;
+  opacity: 0.28;
 }
 
 .landing-pitch-line.landing-pitch-draw {
