@@ -65,7 +65,7 @@ export default async function HomePage() {
         >
           Equipos
         </p>
-        <nav className="mb-14">
+        <nav className="mb-28">
           <ul className="divide-y divide-border">
             {teamsWithClipCounts.map((team, teamIndex) => (
               <li
