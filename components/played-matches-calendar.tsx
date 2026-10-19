@@ -149,7 +149,7 @@ export function PlayedMatchesCalendar({
   const showGrid = calendar.rows.length > 0 && weekCount > 0
 
   return (
-    <section className="mt-14" aria-labelledby="partidos-por-fecha-jugada">
+    <section className="mt-28" aria-labelledby="partidos-por-fecha-jugada">
       <h2
         id="partidos-por-fecha-jugada"
         className="landing-enter text-base font-medium text-foreground"

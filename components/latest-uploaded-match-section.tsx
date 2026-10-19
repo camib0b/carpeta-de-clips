@@ -72,7 +72,7 @@ export function LatestUploadedMatchSection({
     match.playedOn,
   )
   return (
-    <section aria-labelledby="latest-uploaded-match-heading" className="mb-14">
+    <section aria-labelledby="latest-uploaded-match-heading" className="mb-28">
       <p
         id="latest-uploaded-match-heading"
         className="landing-enter mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
