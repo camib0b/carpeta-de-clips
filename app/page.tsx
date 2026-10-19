@@ -63,7 +63,7 @@ export default async function HomePage() {
           className="landing-enter mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
           style={{ animationDelay: landingEntranceDelay(1, LANDING_ENTRANCE_STEP_MS) }}
         >
-          Equipos
+          Equipos públicos
         </p>
         <nav className="mb-28">
           <ul className="divide-y divide-border">
