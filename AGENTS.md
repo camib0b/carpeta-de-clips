@@ -1,5 +1,12 @@
 # Agent instructions
 
+## Scope and approach
+
+1. **Think before coding.** State your assumptions; ask questions or flag ambiguity before you edit.
+2. **Keep it simple.** Deliver the smallest change that satisfies the request—no speculative abstractions, options, or extra features.
+3. **Surgical changes.** Touch only the files and lines the task requires; skip unrelated refactors, renames, restyling, or formatting churn.
+4. **Checkable success criteria.** Before you start, note concrete conditions that mean the work is done; confirm them to the extent the task allows.
+
 ## Verification policy
 
 Scale verification to the change.
