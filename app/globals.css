@@ -320,6 +320,16 @@
     font-weight: 500;
     letter-spacing: -0.025em;
   }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  li {
+    text-wrap: pretty;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
