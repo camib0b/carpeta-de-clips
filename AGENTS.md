@@ -14,3 +14,7 @@ Scale verification to the change.
 Do **not** record demo videos, walkthrough artifacts, or run browser walkthroughs or screenshot tours unless **Camila** explicitly asks for one in the request. This rule overrides any built-in walkthrough-artifacts skill.
 
 When opening work for review, use a single pull request unless the user asks otherwise.
+
+### UI changes
+
+For any UI change, run the break-ui skill (`.cursor/skills/break-ui/SKILL.md`) against the affected screens before opening a PR. Use local fixtures, not production D1 writes.

@@ -189,11 +189,13 @@ export function PlayedMatchesCalendar({
                 {calendar.rows.map((row) => (
                   <div
                     key={row.teamSlug}
-                    className="flex items-end truncate text-xs text-muted-foreground"
+                    className="flex w-full items-end"
                     style={{ height: ROW_HEIGHT_PIXELS }}
                     title={row.teamName}
                   >
-                    {row.teamName}
+                    <span className="min-w-0 flex-1 truncate text-xs leading-normal text-muted-foreground">
+                      {row.teamName}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -280,11 +282,11 @@ export function PlayedMatchesCalendar({
       {tooltip ? (
         <div
           role="tooltip"
-          className="played-match-tooltip pointer-events-none fixed z-50 max-w-[min(18rem,calc(100vw-1rem))] -translate-x-1/2 -translate-y-full rounded-md border bg-popover px-2 py-1 text-xs text-popover-foreground"
+          className="played-match-tooltip pointer-events-none fixed z-50 max-w-[min(18rem,calc(100vw-1rem))] -translate-x-1/2 -translate-y-full wrap-anywhere rounded-md border bg-popover px-2 py-1 text-xs text-popover-foreground"
           style={{ left: tooltip.x, top: tooltip.y - 6 }}
         >
           {tooltip.lines.map((line) => (
-            <p key={line.id} className="leading-snug">
+            <p key={line.id} className="wrap-anywhere leading-snug">
               {line.text}
               {line.isNew ? <span className="ml-1 font-medium text-state">Nuevo</span> : null}
             </p>

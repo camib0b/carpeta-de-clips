@@ -281,7 +281,7 @@ function JugadasList({
               aria-label={ariaLabel}
               aria-current={isActive ? 'true' : undefined}
               className={cn(
-                'grid w-full grid-cols-[auto_auto_auto_minmax(0,1fr)] items-baseline gap-x-2 border-b border-border px-3 py-2 text-left font-mono text-xs tabular-nums transition-[background-color] duration-[120ms] ease-[cubic-bezier(0.23,1,0.32,1)]',
+                'grid w-full min-w-0 grid-cols-[auto_auto_minmax(0,max-content)_minmax(0,1fr)] items-baseline gap-x-2 border-b border-border px-3 py-2 text-left font-mono text-xs tabular-nums transition-[background-color] duration-[120ms] ease-[cubic-bezier(0.23,1,0.32,1)]',
                 isActive
                   ? 'bg-state font-medium text-state-foreground hover:bg-state'
                   : 'hover:bg-muted/60',
@@ -305,9 +305,10 @@ function JugadasList({
               </span>
               <span
                 className={cn(
-                  'whitespace-nowrap',
+                  'min-w-0 truncate',
                   isActive ? 'text-state-foreground' : 'text-muted-foreground',
                 )}
+                title={instance.quarter}
               >
                 {instance.quarter}
               </span>
@@ -316,6 +317,7 @@ function JugadasList({
                   'min-w-0 truncate',
                   isActive ? 'text-state-foreground' : 'text-muted-foreground',
                 )}
+                title={instance.scoreLabel}
               >
                 {instance.scoreLabel}
               </span>
@@ -1133,7 +1135,7 @@ export function VideoModal({
             >
               <DialogHeader className="shrink-0 space-y-1 px-3 pt-3 pr-12 pb-2 text-left">
                 <div className="flex items-start gap-2">
-                  <DialogTitle className="min-w-0 flex-1 text-sm font-medium leading-snug tracking-tight">
+                  <DialogTitle className="min-w-0 flex-1 wrap-anywhere text-sm font-medium leading-snug tracking-tight">
                     {video.title}
                   </DialogTitle>
                   <ShareClipButton
@@ -1142,7 +1144,7 @@ export function VideoModal({
                     title={video.title}
                   />
                 </div>
-                <DialogDescription className="text-xs leading-snug tabular-nums text-muted-foreground">
+                <DialogDescription className="min-w-0 wrap-anywhere text-xs leading-snug tabular-nums text-muted-foreground">
                   {matchSummaryLine}
                 </DialogDescription>
               </DialogHeader>

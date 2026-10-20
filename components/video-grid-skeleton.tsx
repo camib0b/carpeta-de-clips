@@ -5,8 +5,8 @@ export function VideoGridSkeleton() {
   return (
     <div className="space-y-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="h-9 w-[200px] animate-pulse rounded-md bg-muted" />
-        <div className="h-9 w-[180px] animate-pulse rounded-md bg-muted" />
+        <div className="h-9 w-full max-w-[200px] animate-pulse rounded-md bg-muted sm:w-[200px]" />
+        <div className="h-9 w-full max-w-[180px] animate-pulse rounded-md bg-muted sm:w-[180px]" />
       </div>
       <div className="h-5 w-16 animate-pulse rounded bg-muted" />
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

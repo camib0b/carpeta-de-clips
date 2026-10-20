@@ -82,24 +82,26 @@ export function LatestUploadedMatchSection({
       </p>
       <Link
         href={matchHref}
-        className="group block rounded-md py-4 transition-colors duration-200 hover:bg-muted/30"
+        className="group block min-w-0 rounded-md py-4 transition-colors duration-200 hover:bg-muted/30"
       >
         <span
-          className="landing-enter flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+          className="landing-enter flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
           style={entranceStyle(1, entranceStepStart)}
         >
-          <span className="min-w-0 text-base font-medium text-foreground">
+          <span className="min-w-0 wrap-anywhere text-base font-medium text-foreground">
             {match.homeTeam} vs {match.awayTeam}
           </span>
-          <span className="flex items-center gap-3">
+          <span className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1">
             {scoreLabel && (
-              <span className="font-mono text-sm font-medium tabular-nums text-foreground">
+              <span className="min-w-0 wrap-anywhere font-mono text-sm font-medium tabular-nums text-foreground">
                 {scoreLabel}
               </span>
             )}
-            <span className="text-sm text-muted-foreground">{match.libraryName}</span>
+            <span className="min-w-0 wrap-anywhere text-sm text-muted-foreground">
+              {match.libraryName}
+            </span>
             <svg
-              className="h-4 w-4 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-1"
+              className="h-4 w-4 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-1"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -117,18 +119,18 @@ export function LatestUploadedMatchSection({
           {uploadedAndPlayedLabel}
         </span>
         {match.previews.length > 0 && (
-          <span className="mt-4 grid grid-cols-4 gap-2">
+          <span className="mt-4 grid min-w-0 grid-cols-4 gap-2">
             {match.previews.map((preview, previewIndex) => (
               <span
                 key={preview.clipId}
-                className="landing-enter block overflow-hidden rounded-sm border border-border bg-muted"
+                className="landing-enter block min-w-0 overflow-hidden rounded-sm border border-border bg-muted"
                 style={entranceStyle(
                   LATEST_UPLOAD_POSTER_ENTRANCE_STEP_START + previewIndex,
                   entranceStepStart,
                 )}
               >
                 <video
-                  className="landing-match-poster pointer-events-none aspect-video w-full object-cover"
+                  className="landing-match-poster pointer-events-none aspect-video w-full min-w-0 object-cover"
                   src={`${preview.mediaUrl}#t=0.1`}
                   muted
                   playsInline

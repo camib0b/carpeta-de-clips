@@ -26,9 +26,9 @@ export function TeamHeader({ team }: TeamHeaderProps) {
         </Link>
 
         {/* Team name and icon */}
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <TeamIcon slug={team.slug} name={team.name} size="lg" />
-          <h1 className="text-2xl font-medium tracking-tight text-foreground">
+          <h1 className="min-w-0 wrap-anywhere text-2xl font-medium tracking-tight text-foreground">
             {landingTeamRowLabel(team)}
           </h1>
         </div>

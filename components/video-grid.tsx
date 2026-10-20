@@ -8,8 +8,33 @@ import { useLibraryClipSelection } from '@/hooks/use-library-clip'
 import { useLibraryFilters } from '@/hooks/use-library-filters'
 import { MatchContextBanner } from './match-context-banner'
 import { VideoFilters } from './video-filters'
+import { clipLibraryEmptyState } from '@/lib/break-ui/clip-library-empty-state'
 import { listUniqueMatchSummaries } from '@/lib/match-display'
 import { cn } from '@/lib/utils'
+
+function LibraryEmptyState({
+  hasActiveFilters,
+  onClearFilters,
+}: {
+  hasActiveFilters: boolean
+  onClearFilters: () => void
+}) {
+  const emptyState = clipLibraryEmptyState(hasActiveFilters)
+
+  return (
+    <div className="py-16 text-center">
+      <p className="text-muted-foreground">{emptyState.message}</p>
+      {emptyState.offerClearFilters ? (
+        <button
+          onClick={onClearFilters}
+          className="mt-4 text-sm text-foreground underline underline-offset-4 transition-colors duration-200 hover:no-underline"
+        >
+          Limpiar filtros
+        </button>
+      ) : null}
+    </div>
+  )
+}
 
 interface VideoGridProps {
   videos: VideoClip[]
@@ -94,7 +119,7 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
 
       {/* Video Grid */}
       {filteredVideos.length > 0 ? (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filteredVideos.map((video) => (
             <VideoCard
               key={video.id}
@@ -105,17 +130,10 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
           ))}
         </div>
       ) : (
-        <div className="py-16 text-center">
-          <p className="text-muted-foreground">
-            No hay clips que coincidan con tus filtros.
-          </p>
-          <button
-            onClick={clearFilters}
-            className="mt-4 text-sm text-foreground underline underline-offset-4 transition-colors duration-200 hover:no-underline"
-          >
-            Limpiar filtros
-          </button>
-        </div>
+        <LibraryEmptyState
+          hasActiveFilters={hasActiveFilters}
+          onClearFilters={clearFilters}
+        />
       )}
 
       {/* Video Modal */}
