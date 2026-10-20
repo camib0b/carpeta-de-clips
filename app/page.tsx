@@ -66,50 +66,56 @@ export default async function HomePage() {
           Equipos públicos
         </p>
         <nav className="mb-28">
-          <ul className="divide-y divide-border">
-            {teamsWithClipCounts.map((team, teamIndex) => (
-              <li
-                key={team.id}
-                className="landing-enter"
-                style={{
-                  animationDelay: landingEntranceDelay(
-                    TEAM_ROW_START_STEP_INDEX + teamIndex,
-                    LANDING_ENTRANCE_STEP_MS,
-                  ),
-                }}
-              >
-                <Link
-                  href={`/${team.slug}`}
-                  className="group flex items-center justify-between py-6 transition-colors duration-200 hover:bg-muted/30"
+          {teamsWithClipCounts.length === 0 ? (
+            <p className="py-6 text-sm text-muted-foreground">
+              Todavía no hay equipos públicos.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {teamsWithClipCounts.map((team, teamIndex) => (
+                <li
+                  key={team.id}
+                  className="landing-enter"
+                  style={{
+                    animationDelay: landingEntranceDelay(
+                      TEAM_ROW_START_STEP_INDEX + teamIndex,
+                      LANDING_ENTRANCE_STEP_MS,
+                    ),
+                  }}
                 >
-                  <div className="flex items-center gap-4">
-                    <TeamIcon slug={team.slug} name={team.name} size="sm" />
-                    <span className="text-base font-medium text-foreground">
-                      {landingTeamRowLabel(team)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground">
-                      {team.clipCount} {team.clipCount === 1 ? 'clip' : 'clips'}
-                    </span>
-                    <svg
-                      className="h-4 w-4 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-1"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                  <Link
+                    href={`/${team.slug}`}
+                    className="group flex min-w-0 items-center justify-between gap-3 py-6 transition-colors duration-200 hover:bg-muted/30"
+                  >
+                    <div className="flex min-w-0 items-center gap-4">
+                      <TeamIcon slug={team.slug} name={team.name} size="sm" />
+                      <span className="min-w-0 wrap-anywhere text-base font-medium text-foreground">
+                        {landingTeamRowLabel(team)}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
+                        {team.clipCount} {team.clipCount === 1 ? 'clip' : 'clips'}
+                      </span>
+                      <svg
+                        className="h-4 w-4 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </nav>
         {latestUploadedMatch && (
           <LatestUploadedMatchSection

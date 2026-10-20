@@ -31,7 +31,7 @@ export function TeamIcon({ slug, name, size = 'md', className }: TeamIconProps) 
       alt={`Icono de ${name}`}
       width={pixelSize}
       height={pixelSize}
-      className={cn('rounded-md object-cover', sizeClasses[size], className)}
+      className={cn('shrink-0 rounded-md object-cover', sizeClasses[size], className)}
     />
   )
 }

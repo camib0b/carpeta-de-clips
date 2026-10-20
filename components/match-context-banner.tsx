@@ -23,33 +23,33 @@ function MatchContextBannerRow({
   const scoreDisplay = formatMatchScore(match)
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-      <span className="text-foreground/80">
-        {match.homeTeam} vs {match.awayTeam}
-      </span>
-      {scoreDisplay && (
-        <>
-          <span aria-hidden className="text-muted-foreground/40">
-            ·
-          </span>
-          <span className="font-mono font-medium tabular-nums text-foreground">
-            {scoreDisplay}
-          </span>
-        </>
-      )}
-      {match.division && (
-        <>
-          <span aria-hidden className="text-muted-foreground/40">
-            ·
-          </span>
-          <span>{match.division}</span>
-        </>
-      )}
-      <span aria-hidden className="text-muted-foreground/40">
-        ·
-      </span>
-      <span className="font-mono tabular-nums">{formattedDate}</span>
+    <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+        <span className="min-w-0 wrap-anywhere text-foreground/80">
+          {match.homeTeam} vs {match.awayTeam}
+        </span>
+        {scoreDisplay && (
+          <>
+            <span aria-hidden className="text-muted-foreground/40">
+              ·
+            </span>
+            <span className="min-w-0 wrap-anywhere font-mono font-medium tabular-nums text-foreground">
+              {scoreDisplay}
+            </span>
+          </>
+        )}
+        {match.division && (
+          <>
+            <span aria-hidden className="text-muted-foreground/40">
+              ·
+            </span>
+            <span className="min-w-0 wrap-anywhere">{match.division}</span>
+          </>
+        )}
+        <span aria-hidden className="text-muted-foreground/40">
+          ·
+        </span>
+        <span className="font-mono tabular-nums">{formattedDate}</span>
       </div>
       <MatchXmlDownloadButton match={match} available={canDownloadMatchXml} />
     </div>
@@ -72,7 +72,7 @@ export function MatchContextBanner({
 
   return (
     <div
-      className="rounded-md border border-border bg-card px-3 py-2"
+      className="min-w-0 rounded-md border border-border bg-card px-3 py-2"
       aria-label="Contexto del partido"
     >
       {hasAnyMatchXmlDownload && (

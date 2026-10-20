@@ -39,7 +39,7 @@ export function VideoCard({ video, onClick, playEntranceAnimation }: VideoCardPr
     <button
       onClick={onClick}
       className={cn(
-        'group w-full overflow-hidden rounded-md border border-border bg-card text-left transition-[color,background-color,border-color,opacity,scale] duration-200 motion-safe:active:scale-[0.98] hover:border-foreground/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'group w-full min-w-0 overflow-hidden rounded-md border border-border bg-card text-left transition-[color,background-color,border-color,opacity,scale] duration-200 motion-safe:active:scale-[0.98] hover:border-foreground/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         playEntranceAnimationRef.current && 'motion-safe:animate-fade-up',
       )}
     >
@@ -66,26 +66,29 @@ export function VideoCard({ video, onClick, playEntranceAnimation }: VideoCardPr
 
       {/* Caption sits inside the same card as the thumbnail above it. */}
       <div className="space-y-1 border-t border-border bg-card px-3 py-2.5">
-        <h3 className="text-sm font-medium leading-snug tracking-tight text-foreground">
+        <h3
+          className="line-clamp-2 wrap-anywhere text-sm font-medium leading-snug tracking-tight text-foreground"
+          title={video.title}
+        >
           {video.title}
         </h3>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-foreground/80">
-          <span>{matchupDisplay}</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-foreground/80">
+          <span className="min-w-0 wrap-anywhere">{matchupDisplay}</span>
           {scoreDisplay && (
             <>
               <span className="text-muted-foreground/50">·</span>
-              <span className="font-mono font-medium tabular-nums text-foreground">
+              <span className="min-w-0 wrap-anywhere font-mono font-medium tabular-nums text-foreground">
                 {scoreDisplay}
               </span>
             </>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
           <span className="font-mono tabular-nums">{formattedDate}</span>
           {video.division && (
             <>
               <span className="text-muted-foreground/50">·</span>
-              <span>{video.division}</span>
+              <span className="min-w-0 wrap-anywhere">{video.division}</span>
             </>
           )}
         </div>

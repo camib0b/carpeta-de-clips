@@ -83,10 +83,10 @@ function MultiSelectFilter({
   const labelId = `${id}-label`
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:flex sm:w-auto">
       <span
         id={labelId}
-        className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground whitespace-nowrap"
+        className="shrink-0 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground whitespace-nowrap"
       >
         {label}
       </span>
@@ -98,12 +98,12 @@ function MultiSelectFilter({
             variant="outline"
             aria-labelledby={`${labelId} ${id}-value`}
             className={cn(
-              'h-9 justify-between border-border font-normal transition-colors duration-200',
+              'h-9 w-full min-w-0 justify-between border-border font-normal transition-colors duration-200',
               !isAllSelected && 'border-state text-state',
               triggerClassName,
             )}
           >
-            <span id={`${id}-value`} className="truncate">
+            <span id={`${id}-value`} className="min-w-0 truncate" title={triggerLabel}>
               {triggerLabel}
             </span>
             <ChevronDownIcon className="size-4 shrink-0 opacity-50" />
@@ -111,15 +111,19 @@ function MultiSelectFilter({
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="w-[var(--radix-popover-trigger-width)] p-1"
+          className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-1.5rem)] p-1"
         >
-          <div role="menu" aria-labelledby={labelId} className="flex flex-col">
+          <div
+            role="menu"
+            aria-labelledby={labelId}
+            className="flex max-h-[min(24rem,70dvh)] flex-col overflow-y-auto"
+          >
             <div
               role="menuitemcheckbox"
               aria-label={allLabel}
               aria-checked={isAllSelected}
               tabIndex={0}
-              className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors duration-200 hover:bg-accent"
+              className="flex min-w-0 cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors duration-200 hover:bg-accent"
               onClick={() => onChange([])}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -129,7 +133,7 @@ function MultiSelectFilter({
               }}
             >
               <OptionCheck checked={isAllSelected} />
-              <span>{allLabel}</span>
+              <span className="min-w-0 wrap-anywhere">{allLabel}</span>
             </div>
             {options.map((option) => {
               const isSelected = selected.includes(option)
@@ -140,7 +144,7 @@ function MultiSelectFilter({
                   aria-label={option}
                   aria-checked={isSelected}
                   tabIndex={0}
-                  className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors duration-200 hover:bg-accent"
+                  className="flex min-w-0 cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors duration-200 hover:bg-accent"
                   onClick={() => onChange(toggleSelectedValue(selected, option))}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
@@ -150,7 +154,7 @@ function MultiSelectFilter({
                   }}
                 >
                   <OptionCheck checked={isSelected} />
-                  <span>{option}</span>
+                  <span className="min-w-0 wrap-anywhere">{option}</span>
                 </div>
               )
             })}
@@ -224,7 +228,7 @@ export function VideoFilters({
   }, [selectedRivals, selectableRivals, onRivalsChange])
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+    <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
       <MultiSelectFilter
         id="concept-filter"
         label="Concepto"
@@ -232,7 +236,7 @@ export function VideoFilters({
         options={selectableConcepts}
         selected={selectedConcepts}
         onChange={onConceptsChange}
-        triggerClassName="w-[200px]"
+        triggerClassName="w-full min-w-0 sm:w-[200px]"
         multipleCountLabel={(count) => `${count} conceptos`}
       />
 
@@ -243,7 +247,7 @@ export function VideoFilters({
         options={selectableRivals}
         selected={selectedRivals}
         onChange={onRivalsChange}
-        triggerClassName="w-[180px]"
+        triggerClassName="w-full min-w-0 sm:w-[180px]"
         multipleCountLabel={(count) => `${count} rivales`}
       />
 
