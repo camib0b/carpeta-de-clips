@@ -145,66 +145,6 @@
   }
 }
 
-/*
-  Pitch behind the home header. Stroke weights match AVA HockeyPitch:
-  1.25, strong lines 1.5, dotted 5m lines 3.5 5, non-scaling stroke.
-  Colour is muted-foreground rather than AVA's #eceae4-on-#070708.
-  Solid lines draw once over 800ms. Dotted lines and spots fade in with them.
-*/
-.landing-pitch {
-  color: var(--muted-foreground);
-  opacity: 0.55;
-  pointer-events: none;
-}
-
-.landing-pitch-fill {
-  fill: currentColor;
-  stroke: none;
-  opacity: 0.045;
-}
-
-.landing-pitch-line {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.25;
-  vector-effect: non-scaling-stroke;
-  opacity: 0.58;
-}
-
-.landing-pitch-line.is-strong {
-  opacity: 0.88;
-  stroke-width: 1.5;
-}
-
-.landing-pitch-line.is-dotted {
-  stroke-dasharray: 3.5 5;
-  opacity: 0.5;
-}
-
-.landing-pitch-mark {
-  fill: currentColor;
-}
-
-.landing-pitch-line.landing-pitch-draw {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 0;
-  animation: landing-pitch-draw 800ms cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
-@keyframes landing-pitch-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-.landing-pitch-detail {
-  opacity: 1;
-  animation: landing-enter-opacity 800ms cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
 /* Posters are frames, not players. Hide the native play glyph. */
 .landing-match-poster::-webkit-media-controls,
 .landing-match-poster::-webkit-media-controls-start-playback-button {
@@ -363,23 +303,12 @@
   /*
     The universal duration reset would skip the home fade entirely.
     Keep a 250ms opacity change and drop the 8px rise.
-    The pitch is already drawn: no dashoffset animation.
   */
   .landing-enter {
     animation-name: landing-enter-opacity !important;
     animation-duration: 250ms !important;
     animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1) !important;
     animation-fill-mode: both !important;
-  }
-
-  .landing-pitch-line.landing-pitch-draw {
-    animation: none !important;
-    stroke-dashoffset: 0 !important;
-  }
-
-  .landing-pitch-detail {
-    animation: none !important;
-    opacity: 1 !important;
   }
 }
 
