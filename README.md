@@ -4,6 +4,29 @@ Hockey video library for working with the team. Source of truth for **code** is 
 
 Live site: [carpeta.cl](https://carpeta.cl)
 
+## Architecture
+
+[AVA](https://github.com/camib0b/asiatica-va) exports each match as XML and compiled clips. Match XML is stored in the R2 bucket `clipped-xml`; scripts in `scripts/` write YouTube links and clip media keys into the D1 catalog `carpeta-de-clips` with Wrangler. Next.js on Cloudflare Workers (OpenNext) serves [carpeta.cl](https://carpeta.cl), reading that catalog and clip video from `https://media.carpeta.cl`.
+
+```mermaid
+flowchart LR
+  ava["AVA\ncamib0b/asiatica-va"]
+  r2xml["R2 clipped-xml"]
+  scripts["scripts/ via Wrangler"]
+  d1["D1 carpeta-de-clips"]
+  app["Next.js on Workers\nOpenNext"]
+  site["carpeta.cl"]
+  media["media.carpeta.cl"]
+
+  ava -->|"match XML"| r2xml
+  ava -->|"YouTube links and media keys"| scripts
+  scripts --> d1
+  r2xml --> app
+  d1 --> app
+  app --> site
+  media --> site
+```
+
 ## Getting started
 
 Package manager is **pnpm** (`pnpm-lock.yaml`).
@@ -24,7 +47,6 @@ Open [http://localhost:3000](http://localhost:3000). Edit `app/page.tsx` (home) 
 |---|---|
 | Database name | `carpeta-de-clips` |
 | Binding | `DB` (`wrangler.jsonc`) |
-| Database id | `6ac20d29-8e80-42d2-8330-ed7a7901d103` |
 | Migrations | `migrations/` |
 
 ```bash
