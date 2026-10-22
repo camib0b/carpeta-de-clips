@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { HockeyPitch } from '@/components/hockey-pitch'
 import {
   LatestUploadedMatchSection,
   latestUploadedMatchLastEntranceStepIndex,
@@ -34,12 +33,9 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="relative overflow-hidden border-b border-border">
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <HockeyPitch />
-        </div>
+      <header className="border-b border-border">
         <div
-          className="landing-enter relative z-10 mx-auto max-w-2xl px-6 py-16 md:py-24"
+          className="landing-enter mx-auto max-w-2xl px-6 py-16 md:py-24"
           style={{ animationDelay: landingEntranceDelay(0, LANDING_ENTRANCE_STEP_MS) }}
         >
           <h1 className="text-2xl font-medium tracking-tight text-foreground md:text-3xl">
