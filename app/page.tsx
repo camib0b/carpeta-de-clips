@@ -4,7 +4,6 @@ import {
   LatestUploadedMatchSection,
   latestUploadedMatchLastEntranceStepIndex,
 } from '@/components/latest-uploaded-match-section'
-import { PlayedMatchesCalendarSection } from '@/components/played-matches-calendar-section'
 import { TeamIcon } from '@/components/team-icon'
 import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
 import {
@@ -31,11 +30,6 @@ export default async function HomePage() {
   const afterTeamsEntranceStepIndex =
     TEAM_ROW_START_STEP_INDEX + teamsWithClipCounts.length
   const latestUploadEntranceStepStart = afterTeamsEntranceStepIndex
-  const playedMatchesCalendarEntranceStepStart = latestUploadedMatch
-    ? latestUploadEntranceStepStart +
-      latestUploadedMatchLastEntranceStepIndex(latestUploadedMatch.previews.length) +
-      1
-    : afterTeamsEntranceStepIndex
 
   return (
     <div className="min-h-screen bg-background">
@@ -123,9 +117,6 @@ export default async function HomePage() {
             entranceStepStart={latestUploadEntranceStepStart}
           />
         )}
-        <PlayedMatchesCalendarSection
-          entranceStepStart={playedMatchesCalendarEntranceStepStart}
-        />
       </main>
 
       {/* Footer */}

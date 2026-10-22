@@ -127,14 +127,6 @@ test('filters shrink on a narrow page and long options wrap inside a scrolling m
   assert.equal(filters.includes('triggerClassName="w-[180px]"'), false)
 })
 
-test('calendar labels truncate with the full name available, and tooltips wrap', () => {
-  const calendar = source('components/played-matches-calendar.tsx')
-
-  assert.match(calendar, /title=\{row\.teamName\}/)
-  assert.match(calendar, /truncate/)
-  assert.match(calendar, /wrap-anywhere/)
-})
-
 test('the clip modal wraps titles and keeps truncated jugada text readable', () => {
   const modal = source('components/video-modal.tsx')
 
