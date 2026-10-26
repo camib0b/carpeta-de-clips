@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { VideoClip } from '@/lib/types'
 import { VideoCard } from './video-card'
 import { VideoModal } from './video-modal'
@@ -10,7 +10,15 @@ import { MatchContextBanner } from './match-context-banner'
 import { VideoFilters } from './video-filters'
 import { clipLibraryEmptyState } from '@/lib/break-ui/clip-library-empty-state'
 import { listUniqueMatchSummaries } from '@/lib/match-display'
+import { storageSlugFromClip } from '@/lib/match-keys'
 import { cn } from '@/lib/utils'
+
+function clipBelongsToHiddenMatch(
+  clip: VideoClip,
+  hiddenMatchSlugs: ReadonlySet<string>,
+): boolean {
+  return hiddenMatchSlugs.has(storageSlugFromClip(clip))
+}
 
 function LibraryEmptyState({
   hasActiveFilters,
@@ -54,14 +62,6 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
   const playCardEntranceAnimation = !skipCardEntranceAnimationRef.current
 
   const {
-    selectedClip,
-    isOpen: isClipModalOpen,
-    initialPlayOrd,
-    openClip,
-    setJugadaOrd,
-    closeClip,
-  } = useLibraryClipSelection(videos)
-  const {
     selectedConcepts,
     selectedRivals,
     setSelectedConcepts,
@@ -70,7 +70,28 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
     hasActiveFilters,
   } = useLibraryFilters(availableRivals)
 
-  const filteredVideos = useMemo(() => {
+  const [hiddenMatchSlugs, setHiddenMatchSlugs] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
+  const selectedRivalsKey = selectedRivals.join('\u0000')
+  useEffect(() => {
+    setHiddenMatchSlugs((current) => (current.size === 0 ? current : new Set()))
+  }, [selectedRivalsKey])
+
+  const videosForNavigation = useMemo(
+    () => videos.filter((video) => !clipBelongsToHiddenMatch(video, hiddenMatchSlugs)),
+    [videos, hiddenMatchSlugs],
+  )
+  const {
+    selectedClip,
+    isOpen: isClipModalOpen,
+    initialPlayOrd,
+    openClip,
+    setJugadaOrd,
+    closeClip,
+  } = useLibraryClipSelection(videosForNavigation)
+
+  const clipsMatchingFilters = useMemo(() => {
     return videos.filter((video) => {
       const matchesConcept =
         selectedConcepts.length === 0 || selectedConcepts.includes(video.gameConcept)
@@ -80,12 +101,40 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
     })
   }, [videos, selectedConcepts, selectedRivals])
 
+  const filteredVideos = useMemo(
+    () =>
+      clipsMatchingFilters.filter(
+        (video) => !clipBelongsToHiddenMatch(video, hiddenMatchSlugs),
+      ),
+    [clipsMatchingFilters, hiddenMatchSlugs],
+  )
+
   const shouldShowMatchBanner = selectedRivals.length > 0
 
   const visibleMatchSummaries = useMemo(() => {
     if (!shouldShowMatchBanner) return []
-    return listUniqueMatchSummaries(filteredVideos)
-  }, [filteredVideos, shouldShowMatchBanner])
+    return listUniqueMatchSummaries(clipsMatchingFilters)
+  }, [clipsMatchingFilters, shouldShowMatchBanner])
+
+  function toggleMatchVisibility(storageSlug: string) {
+    const openClipIsThisMatch =
+      selectedClip != null && storageSlugFromClip(selectedClip) === storageSlug
+    const willHide = !hiddenMatchSlugs.has(storageSlug)
+
+    setHiddenMatchSlugs((current) => {
+      const next = new Set(current)
+      if (next.has(storageSlug)) {
+        next.delete(storageSlug)
+      } else {
+        next.add(storageSlug)
+      }
+      return next
+    })
+
+    if (openClipIsThisMatch && willHide) {
+      closeClip()
+    }
+  }
 
   return (
     <div className="space-y-10">
@@ -104,6 +153,8 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
         <MatchContextBanner
           matches={visibleMatchSummaries}
           matchXmlAvailability={matchXmlAvailability}
+          hiddenMatchSlugs={hiddenMatchSlugs}
+          onToggleMatchVisibility={toggleMatchVisibility}
         />
       )}
 

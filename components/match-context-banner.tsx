@@ -1,24 +1,30 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 
 import { MatchXmlDownloadButton } from '@/components/match-xml-download-button'
+import { Button } from '@/components/ui/button'
 import {
   formatMatchDate,
   formatMatchScore,
   type MatchSummary,
 } from '@/lib/match-display'
+import { cn } from '@/lib/utils'
 
 interface MatchContextBannerProps {
   matches: MatchSummary[]
   matchXmlAvailability: Record<string, boolean>
+  hiddenMatchSlugs: ReadonlySet<string>
+  onToggleMatchVisibility: (storageSlug: string) => void
 }
 
 type BreakUiDataMode = 'demo' | 'worst'
 
 /**
- * Dev-only stress rows for this list: a long matchup, a missing score, and
- * a match with no XML download. Never written to D1.
+ * Dev-only stress rows for this list: a long matchup, a missing score, a
+ * match with no XML download, and a one-letter club with no date.
+ * Never written to D1.
  */
 const WORST_CASE_MATCHES: MatchSummary[] = [
   {
@@ -46,12 +52,19 @@ const WORST_CASE_MATCHES: MatchSummary[] = [
     awayGoals: 0,
     storageSlug: 'worst-no-xml',
   },
+  {
+    date: '',
+    homeTeam: 'J',
+    awayTeam: 'Ñublense',
+    storageSlug: 'worst-missing-date',
+  },
 ]
 
 const WORST_CASE_MATCH_XML_AVAILABILITY: Record<string, boolean> = {
   'worst-long-team-names': true,
   'worst-missing-score': true,
   'worst-no-xml': false,
+  'worst-missing-date': true,
 }
 
 const BREAK_UI_TOGGLE_ENABLED = process.env.NODE_ENV === 'development'
@@ -59,45 +72,72 @@ const BREAK_UI_TOGGLE_ENABLED = process.env.NODE_ENV === 'development'
 function MatchContextBannerRow({
   match,
   canDownloadMatchXml,
+  isHidden,
+  onToggleVisibility,
 }: {
   match: MatchSummary
   canDownloadMatchXml: boolean
+  isHidden: boolean
+  onToggleVisibility: (storageSlug: string) => void
 }) {
-  const formattedDate = formatMatchDate(match.date)
+  const formattedDate = match.date ? formatMatchDate(match.date).trim() : ''
+  const division = match.division?.trim() ?? ''
   const scoreDisplay = formatMatchScore(match)
+  const visibilityLabel = isHidden ? 'Mostrar partido' : 'Ocultar partido'
+  const VisibilityIcon = isHidden ? EyeOff : Eye
 
   return (
-    <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-2 rounded-md border border-border bg-card px-3 py-2">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-        <span className="min-w-0 wrap-anywhere text-foreground/80">
-          {match.homeTeam} vs {match.awayTeam}
-        </span>
-        {scoreDisplay && (
-          <span className="inline-flex min-w-0 items-baseline gap-x-2">
-            <span aria-hidden className="shrink-0 text-muted-foreground/40">
-              ·
-            </span>
-            <span className="min-w-0 wrap-anywhere font-mono font-medium tabular-nums text-foreground">
-              {scoreDisplay}
-            </span>
-          </span>
+    <div className="flex min-w-0 items-start gap-1.5">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="shrink-0 text-muted-foreground"
+        aria-pressed={isHidden}
+        aria-label={visibilityLabel}
+        onClick={() => onToggleVisibility(match.storageSlug)}
+      >
+        <VisibilityIcon className="size-3.5" aria-hidden />
+      </Button>
+      <div
+        className={cn(
+          'flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-3 gap-y-2 rounded-md border border-border bg-card px-3 py-2',
+          isHidden && 'opacity-50',
         )}
-        {match.division && (
-          <span className="inline-flex min-w-0 items-baseline gap-x-2">
-            <span aria-hidden className="shrink-0 text-muted-foreground/40">
-              ·
+      >
+        <div className="flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+          <span className="min-w-0 wrap-anywhere text-foreground/80">
+            {match.homeTeam} vs {match.awayTeam}
+          </span>
+          {scoreDisplay && (
+            <span className="inline-flex min-w-0 items-baseline gap-x-2">
+              <span aria-hidden className="shrink-0 text-muted-foreground/40">
+                ·
+              </span>
+              <span className="min-w-0 wrap-anywhere font-mono font-medium tabular-nums text-foreground">
+                {scoreDisplay}
+              </span>
             </span>
-            <span className="min-w-0 wrap-anywhere">{match.division}</span>
-          </span>
-        )}
-        <span className="inline-flex shrink-0 items-baseline gap-x-2">
-          <span aria-hidden className="shrink-0 text-muted-foreground/40">
-            ·
-          </span>
-          <span className="font-mono tabular-nums">{formattedDate}</span>
-        </span>
+          )}
+          {division && (
+            <span className="inline-flex min-w-0 items-baseline gap-x-2">
+              <span aria-hidden className="shrink-0 text-muted-foreground/40">
+                ·
+              </span>
+              <span className="min-w-0 wrap-anywhere">{division}</span>
+            </span>
+          )}
+          {formattedDate && (
+            <span className="inline-flex shrink-0 items-baseline gap-x-2">
+              <span aria-hidden className="shrink-0 text-muted-foreground/40">
+                ·
+              </span>
+              <span className="font-mono tabular-nums">{formattedDate}</span>
+            </span>
+          )}
+        </div>
+        <MatchXmlDownloadButton match={match} available={canDownloadMatchXml} />
       </div>
-      <MatchXmlDownloadButton match={match} available={canDownloadMatchXml} />
     </div>
   )
 }
@@ -198,6 +238,8 @@ function useBreakUiDataMode(): [BreakUiDataMode, (mode: BreakUiDataMode) => void
 export function MatchContextBanner({
   matches,
   matchXmlAvailability,
+  hiddenMatchSlugs,
+  onToggleMatchVisibility,
 }: MatchContextBannerProps) {
   const [breakUiDataMode, selectBreakUiDataMode] = useBreakUiDataMode()
   const showWorstCase = BREAK_UI_TOGGLE_ENABLED && breakUiDataMode === 'worst'
@@ -220,6 +262,8 @@ export function MatchContextBanner({
           key={match.storageSlug}
           match={match}
           canDownloadMatchXml={visibleXmlAvailability[match.storageSlug] === true}
+          isHidden={hiddenMatchSlugs.has(match.storageSlug)}
+          onToggleVisibility={onToggleMatchVisibility}
         />
       ))}
       {BREAK_UI_TOGGLE_ENABLED ? (
