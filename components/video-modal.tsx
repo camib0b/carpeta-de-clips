@@ -8,6 +8,7 @@ import {
   EyeOff,
   MoveHorizontal,
   Pen,
+  PenLine,
   Undo2,
 } from 'lucide-react'
 import type { ClipInstance, VideoClip } from '@/lib/types'
@@ -59,6 +60,7 @@ import {
   useCoarsePointer,
   VideoModalHostedControls,
 } from '@/components/video-modal-hosted-controls'
+import { fetchClipDrawingPlayOrds } from '@/lib/clip-drawings-client'
 import { usePlayDrawing } from '@/hooks/use-play-drawing'
 
 const MINIMUM_SWIPE_DISTANCE = 60
@@ -219,6 +221,7 @@ function SwipeNavigationHint() {
 interface JugadasListProps {
   instances: ClipInstance[]
   activeIndex: number
+  playOrdsWithDrawings: ReadonlySet<number>
   onSelectPlay: (instance: ClipInstance) => void
   listClassName?: string
 }
@@ -330,6 +333,7 @@ function DrawingControls({
 function JugadasList({
   instances,
   activeIndex,
+  playOrdsWithDrawings,
   onSelectPlay,
   listClassName,
 }: JugadasListProps) {
@@ -360,6 +364,7 @@ function JugadasList({
       >
         {instances.map((instance, index) => {
           const isActive = index === activeIndex
+          const hasDrawing = playOrdsWithDrawings.has(instance.ord)
           const timestamp = formatPlayTimestamp(instance.offsetS)
           const ariaLabel = `Jugada ${instance.ord} de ${total}, ${timestamp}`
 
@@ -378,7 +383,7 @@ function JugadasList({
               aria-label={ariaLabel}
               aria-current={isActive ? 'true' : undefined}
               className={cn(
-                'grid w-full min-w-0 grid-cols-[auto_auto_minmax(0,max-content)_minmax(0,1fr)] items-baseline gap-x-2 border-b border-border px-3 py-2 text-left font-mono text-xs tabular-nums transition-[background-color] duration-[120ms] ease-[cubic-bezier(0.23,1,0.32,1)]',
+                'grid w-full min-w-0 grid-cols-[auto_auto_minmax(0,max-content)_minmax(0,1fr)_auto] items-center gap-x-2 border-b border-border px-3 py-2 text-left font-mono text-xs tabular-nums transition-[background-color] duration-[120ms] ease-[cubic-bezier(0.23,1,0.32,1)]',
                 isActive
                   ? 'bg-state font-medium text-state-foreground hover:bg-state'
                   : 'hover:bg-muted/60',
@@ -419,6 +424,13 @@ function JugadasList({
                 title={instance.scoreLabel}
               >
                 {instance.scoreLabel}
+              </span>
+              <span className="flex shrink-0 justify-end">
+                {hasDrawing ? (
+                  <span role="img" aria-label="Tiene dibujos" title="Tiene dibujos">
+                    <PenLine className="size-3 text-muted-foreground" aria-hidden />
+                  </span>
+                ) : null}
               </span>
             </button>
           )
@@ -500,6 +512,24 @@ function manyModalInstances(): ClipInstance[] {
     scoreLabel:
       index % 7 === 0 ? undefined : index % 7 === 1 ? worstCaseScoreLabel() : `${index % 8}–${index % 5}`,
   }))
+}
+
+function breakUiDrawingPlayOrds(
+  instances: ClipInstance[],
+  mode: ModalBreakUiMode,
+): number[] {
+  if (mode === 'empty') return []
+  if (mode === 'one') {
+    const ord = instances[0]?.ord ?? 1
+    return [ord]
+  }
+  if (mode === 'worst') {
+    return instances.filter((_, index) => index % 2 === 0).map((row) => row.ord)
+  }
+  if (mode === 'many') {
+    return instances.filter((_, index) => index % 10 === 0).map((row) => row.ord)
+  }
+  return []
 }
 
 function modalBreakUiVideo(
@@ -675,6 +705,9 @@ export function VideoModal({
   } | null>(null)
   const [penEnabled, setPenEnabled] = useState(false)
   const [drawingsVisible, setDrawingsVisible] = useState(true)
+  const [playOrdsWithDrawings, setPlayOrdsWithDrawings] = useState<ReadonlySet<number>>(
+    () => new Set(),
+  )
   playbackRateRef.current = playbackRate
 
   const instances = video?.instances ?? []
@@ -954,12 +987,48 @@ export function VideoModal({
       : hasInstances
         ? null
         : WHOLE_CLIP_PLAY_ORD
+  const handleDrawingPresenceChange = useCallback((playOrdWithDrawing: number, hasDrawing: boolean) => {
+    setPlayOrdsWithDrawings((current) => {
+      const next = new Set(current)
+      if (hasDrawing) {
+        next.add(playOrdWithDrawing)
+      } else {
+        next.delete(playOrdWithDrawing)
+      }
+      return next
+    })
+  }, [])
+
   const {
     strokes: drawingStrokes,
     canEdit: canEditDrawing,
     addStroke: addDrawingStroke,
     undoLastStroke: undoDrawingStroke,
-  } = usePlayDrawing(video?.id ?? null, playOrd, open && video != null)
+  } = usePlayDrawing(video?.id ?? null, playOrd, open && video != null, {
+    onDrawingPresenceChange: handleDrawingPresenceChange,
+  })
+
+  useEffect(() => {
+    if (!open || video?.id == null) {
+      setPlayOrdsWithDrawings(new Set())
+      return
+    }
+
+    if (MODAL_BREAK_UI_ENABLED && breakUiMode !== 'demo') {
+      setPlayOrdsWithDrawings(new Set(breakUiDrawingPlayOrds(instances, breakUiMode)))
+      return
+    }
+
+    const controller = new AbortController()
+    void fetchClipDrawingPlayOrds(video.id, controller.signal).then((playOrds) => {
+      if (playOrds == null) return
+      setPlayOrdsWithDrawings(new Set(playOrds))
+    })
+
+    return () => {
+      controller.abort()
+    }
+  }, [open, video?.id, breakUiMode, instances])
 
   const togglePen = useCallback(() => {
     setPenEnabled((current) => {
@@ -1582,6 +1651,7 @@ export function VideoModal({
                 <JugadasList
                   instances={instances}
                   activeIndex={activeIndex}
+                  playOrdsWithDrawings={playOrdsWithDrawings}
                   onSelectPlay={(instance) => {
                     const index = instances.findIndex(
                       (row) => row.ord === instance.ord,
