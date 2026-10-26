@@ -35,7 +35,7 @@ export class DrawingPlayNotFoundError extends Error {
 
 export class DrawingStoreUnavailableError extends Error {
   constructor() {
-    super('clip_drawings is not available. Apply migration 0007_clip_drawings.sql.')
+    super('clip_drawings is not available. Apply migration 0008_clip_drawings.sql.')
     this.name = 'DrawingStoreUnavailableError'
   }
 }

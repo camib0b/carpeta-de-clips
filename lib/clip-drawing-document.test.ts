@@ -17,7 +17,7 @@ import {
 
 const MIGRATION_PATH = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../migrations/0007_clip_drawings.sql',
+  '../migrations/0008_clip_drawings.sql',
 )
 
 const versionOneStroke = {
