@@ -1561,16 +1561,6 @@ export function VideoModal({
                 </DialogDescription>
               </DialogHeader>
 
-              <p
-                className="hidden shrink-0 px-3 pb-2 text-[0.65rem] leading-snug text-muted-foreground [@media(hover:hover)_and_(pointer:fine)]:block"
-              >
-                <kbd>←</kbd> <kbd>→</kbd> avanzan 3 s.
-                <br />
-                <kbd>↑</kbd> <kbd>↓</kbd> cambian de jugada.
-                <br />
-                <kbd>.</kbd> y <kbd>,</kbd> avanzan cuadros en pausa
-              </p>
-
               <DrawingControls
                 penEnabled={penEnabled}
                 drawingsVisible={drawingsVisible || penEnabled}
@@ -1600,6 +1590,23 @@ export function VideoModal({
                   }}
                 />
               )}
+
+              <div
+                className="hidden shrink-0 [@media(hover:hover)_and_(pointer:fine)]:block"
+              >
+                <h3
+                  className="px-3 pt-2 text-[0.65rem] font-medium uppercase tracking-[0.16em] text-muted-foreground"
+                >
+                  Tips
+                </h3>
+                <p className="px-3 pb-2 text-[0.65rem] leading-snug text-muted-foreground">
+                  <kbd>←</kbd> <kbd>→</kbd> avanzan 3 s.
+                  <br />
+                  <kbd>↑</kbd> <kbd>↓</kbd> cambian de jugada.
+                  <br />
+                  <kbd>.</kbd> y <kbd>,</kbd> avanzan cuadros en pausa
+                </p>
+              </div>
             </div>
           </div>
         </div>
