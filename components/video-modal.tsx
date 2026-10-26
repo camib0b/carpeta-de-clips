@@ -428,7 +428,13 @@ function JugadasList({
               <span className="flex shrink-0 justify-end">
                 {hasDrawing ? (
                   <span role="img" aria-label="Tiene dibujos" title="Tiene dibujos">
-                    <PenLine className="size-3 text-muted-foreground" aria-hidden />
+                    <PenLine
+                      className={cn(
+                        'size-3',
+                        isActive ? 'text-state-foreground' : 'text-muted-foreground',
+                      )}
+                      aria-hidden
+                    />
                   </span>
                 ) : null}
               </span>
