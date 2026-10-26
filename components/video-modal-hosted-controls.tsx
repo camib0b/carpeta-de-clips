@@ -10,8 +10,8 @@ import { cn } from '@/lib/utils'
 const hostedControlButtonClassName = cn(
   'shrink-0 rounded-full border border-white/15 bg-black/40 text-white/80 shadow-md backdrop-blur-sm',
   'hover:bg-black/55 hover:text-white',
-  'focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black/50',
-  'size-10',
+  'focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-1 focus-visible:ring-offset-black/50',
+  'size-6',
 )
 
 export function useCoarsePointer() {
@@ -130,94 +130,70 @@ export function VideoModalHostedControls({
   }
 
   return (
-    <>
-      {!isPlaying ? (
-        <div
-          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
-          aria-hidden={isPlaying}
-        >
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            tabIndex={-1}
-            aria-label="Reproducir"
-            onClick={onTogglePlayback}
-            onPointerDown={handleControlPointerDown}
-            style={{ pointerEvents: 'auto' }}
-            className={cn(
-              hostedControlButtonClassName,
-              'size-9 bg-black/30 hover:bg-black/45',
-            )}
-          >
-            <Play className="size-4 fill-current" aria-hidden />
-          </Button>
-        </div>
-      ) : null}
-
+    <div
+      className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-0.5 px-2 pb-1.5 pt-2.5"
+      onPointerDown={handleControlPointerDown}
+      style={{ pointerEvents: 'auto' }}
+    >
       <div
-        className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-1 px-2 pb-2 pt-6"
-        onPointerDown={handleControlPointerDown}
-        style={{ pointerEvents: 'auto' }}
+        className="flex min-h-6 items-center gap-1.5 rounded-lg bg-black/[0.18] px-1.5 py-0.5 backdrop-blur-[2px]"
       >
-        <div className="flex min-h-10 items-center gap-2 rounded-lg bg-black/45 px-2 py-1.5 backdrop-blur-sm">
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            tabIndex={-1}
-            aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
-            onClick={onTogglePlayback}
-            className={hostedControlButtonClassName}
-          >
-            {isPlaying ? (
-              <Pause className="size-4" aria-hidden />
-            ) : (
-              <Play className="size-4 fill-current" aria-hidden />
-            )}
-          </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          tabIndex={-1}
+          aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
+          onClick={onTogglePlayback}
+          className={hostedControlButtonClassName}
+        >
+          {isPlaying ? (
+            <Pause className="size-3" aria-hidden />
+          ) : (
+            <Play className="size-3 fill-current" aria-hidden />
+          )}
+        </Button>
 
-          <span className="shrink-0 font-mono text-[0.65rem] tabular-nums text-white/90">
-            {formatPlayTimestamp(displayedTimeS)}
-            <span className="text-white/50"> / {formatPlayTimestamp(safeDurationS)}</span>
-          </span>
+        <span className="shrink-0 font-mono text-[0.6rem] leading-none tabular-nums text-white/90">
+          {formatPlayTimestamp(displayedTimeS)}
+          <span className="text-white/50"> / {formatPlayTimestamp(safeDurationS)}</span>
+        </span>
 
-          <label className="relative flex min-h-10 min-w-0 flex-1 items-center">
-            <span className="sr-only">Posición en el video</span>
-            <input
-              type="range"
-              min={0}
-              max={safeDurationS > 0 ? safeDurationS : 1}
-              step={0.1}
-              value={Math.min(displayedTimeS, safeDurationS > 0 ? safeDurationS : displayedTimeS)}
-              disabled={safeDurationS <= 0}
-              onChange={handleScrubInput}
-              onPointerDown={handleScrubPointerDown}
-              onPointerUp={handleScrubPointerUp}
-              onPointerCancel={handleScrubPointerUp}
-              className="h-1.5 w-full min-w-0 cursor-pointer appearance-none rounded-full bg-white/25 accent-white [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-            />
-          </label>
+        <label className="relative flex min-h-6 min-w-0 flex-1 items-center py-1">
+          <span className="sr-only">Posición en el video</span>
+          <input
+            type="range"
+            min={0}
+            max={safeDurationS > 0 ? safeDurationS : 1}
+            step={0.1}
+            value={Math.min(displayedTimeS, safeDurationS > 0 ? safeDurationS : displayedTimeS)}
+            disabled={safeDurationS <= 0}
+            onChange={handleScrubInput}
+            onPointerDown={handleScrubPointerDown}
+            onPointerUp={handleScrubPointerUp}
+            onPointerCancel={handleScrubPointerUp}
+            className="h-1 w-full min-w-0 cursor-pointer appearance-none rounded-full bg-white/25 accent-white [&::-webkit-slider-thumb]:size-2.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+          />
+        </label>
 
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            tabIndex={-1}
-            aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-            onClick={() => {
-              void toggleFullscreen()
-            }}
-            className={hostedControlButtonClassName}
-          >
-            {isFullscreen ? (
-              <Minimize className="size-4" aria-hidden />
-            ) : (
-              <Maximize className="size-4" aria-hidden />
-            )}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          tabIndex={-1}
+          aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+          onClick={() => {
+            void toggleFullscreen()
+          }}
+          className={hostedControlButtonClassName}
+        >
+          {isFullscreen ? (
+            <Minimize className="size-3" aria-hidden />
+          ) : (
+            <Maximize className="size-3" aria-hidden />
+          )}
+        </Button>
       </div>
-    </>
+    </div>
   )
 }
