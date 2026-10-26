@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react'
 import type { ClipInstance, VideoClip } from '@/lib/types'
 import {
@@ -14,6 +14,13 @@ import { Button } from '@/components/ui/button'
 import YouTube from 'react-youtube'
 import { ShareClipButton } from '@/components/share-clip-button'
 import { cn } from '@/lib/utils'
+import {
+  LONG_OPPONENT_NAME,
+  LONG_PLAYER_NAME,
+  LONG_TEAM_NAME,
+  UNBREAKABLE_LABEL,
+  worstCaseScoreLabel,
+} from '@/lib/break-ui/worst-case-fixtures'
 import { formatClipMatchSummary } from '@/lib/match-display'
 import { mediaUrl } from '@/lib/media-url'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -110,6 +117,13 @@ function isClipNavTarget(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest('[data-clip-nav]'))
 }
 
+function isBreakUiToggleTarget(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest('[data-break-ui-toggle]'))
+  )
+}
+
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false
@@ -202,30 +216,32 @@ function PlaybackRateControl({
   onChange: (rate: PlaybackRate) => void
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2">
-      <span className="text-[0.65rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+    <div className="px-3 pb-2">
+      <h3 className="text-[0.65rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
         Velocidad
-      </span>
-      {PLAYBACK_RATES.map((preset) => {
-        const selected = preset === rate
-        return (
-          <button
-            key={preset}
-            type="button"
-            aria-pressed={selected}
-            aria-label={`Velocidad ${formatPlaybackRate(preset)}`}
-            onClick={() => onChange(preset)}
-            className={cn(
-              'rounded-full px-2 py-0.5 font-mono text-[0.7rem] tabular-nums transition-colors duration-200 motion-safe:active:scale-[0.98]',
-              selected
-                ? 'bg-state text-state-foreground'
-                : 'bg-muted text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {formatPlaybackRate(preset)}
-          </button>
-        )
-      })}
+      </h3>
+      <div className="mt-1 flex w-full min-w-0 flex-nowrap items-center gap-1">
+        {PLAYBACK_RATES.map((preset) => {
+          const selected = preset === rate
+          return (
+            <button
+              key={preset}
+              type="button"
+              aria-pressed={selected}
+              aria-label={`Velocidad ${formatPlaybackRate(preset)}`}
+              onClick={() => onChange(preset)}
+              className={cn(
+                'whitespace-nowrap rounded-full px-1.5 py-0.5 font-mono text-[0.7rem] tabular-nums transition-colors duration-200 motion-safe:active:scale-[0.98]',
+                selected
+                  ? 'bg-state text-state-foreground'
+                  : 'bg-muted text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {formatPlaybackRate(preset)}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -257,7 +273,7 @@ function JugadasList({
       <div
         ref={listRef}
         className={cn(
-          'mt-1.5 min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-border',
+          'mt-1.5 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain border-t border-border',
           listClassName,
         )}
       >
@@ -292,6 +308,7 @@ function JugadasList({
                   'whitespace-nowrap',
                   isActive ? 'text-state-foreground' : 'text-muted-foreground',
                 )}
+                title={`${instance.ord}/${total}`}
               >
                 {instance.ord}/{total}
               </span>
@@ -300,6 +317,7 @@ function JugadasList({
                   'whitespace-nowrap',
                   isActive ? 'text-state-foreground' : 'text-foreground',
                 )}
+                title={timestamp}
               >
                 {timestamp}
               </span>
@@ -329,6 +347,202 @@ function JugadasList({
   )
 }
 
+/** Dev-only. Production builds inline NODE_ENV and drop the toggle. */
+const MODAL_BREAK_UI_ENABLED = process.env.NODE_ENV === 'development'
+
+type ModalBreakUiMode = 'demo' | 'worst' | 'empty' | 'one' | 'many'
+
+const MODAL_BREAK_UI_MANY_COUNT = 1000
+
+function readModalBreakUiMode(): ModalBreakUiMode {
+  const data = new URLSearchParams(window.location.search).get('modalData')
+  if (data === 'worst' || data === 'empty' || data === 'one' || data === 'many') {
+    return data
+  }
+  return 'demo'
+}
+
+function writeModalBreakUiMode(mode: ModalBreakUiMode) {
+  const url = new URL(window.location.href)
+  if (mode === 'demo') {
+    url.searchParams.delete('modalData')
+  } else {
+    url.searchParams.set('modalData', mode)
+  }
+  window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
+function useModalBreakUiMode(): [ModalBreakUiMode, (mode: ModalBreakUiMode) => void] {
+  const [mode, setMode] = useState<ModalBreakUiMode>('demo')
+
+  useEffect(() => {
+    if (!MODAL_BREAK_UI_ENABLED) return
+    setMode(readModalBreakUiMode())
+  }, [])
+
+  function selectMode(nextMode: ModalBreakUiMode) {
+    writeModalBreakUiMode(nextMode)
+    setMode(nextMode)
+  }
+
+  return [mode, selectMode]
+}
+
+function mixedWorstInstances(): ClipInstance[] {
+  const rows: Array<Pick<ClipInstance, 'quarter' | 'scoreLabel'> & { offsetS?: number }> = [
+    { quarter: LONG_PLAYER_NAME, scoreLabel: worstCaseScoreLabel() },
+    {},
+    { quarter: 'J', scoreLabel: '1–0' },
+    { quarter: UNBREAKABLE_LABEL, scoreLabel: '0–1' },
+    { quarter: 'Đặng Thị Ngọc Hân', scoreLabel: '2–2' },
+    { quarter: '<script>alert(1)</script>', scoreLabel: '&amp;' },
+    { quarter: 'نور الهدى عبد الرحمن', offsetS: 1284 * 60 },
+    { quarter: '🦊 Fox', scoreLabel: '  ' },
+  ]
+
+  return rows.map((row, index) => ({
+    ord: index + 1,
+    offsetS: row.offsetS ?? index * 45,
+    durationS: 8,
+    quarter: row.quarter,
+    scoreLabel: row.scoreLabel,
+  }))
+}
+
+function manyModalInstances(): ClipInstance[] {
+  return Array.from({ length: MODAL_BREAK_UI_MANY_COUNT }, (_, index) => ({
+    ord: index + 1,
+    offsetS: index * 12,
+    durationS: 6,
+    quarter:
+      index % 5 === 0 ? undefined : index % 5 === 1 ? LONG_PLAYER_NAME : `Q${(index % 4) + 1}`,
+    scoreLabel:
+      index % 7 === 0 ? undefined : index % 7 === 1 ? worstCaseScoreLabel() : `${index % 8}–${index % 5}`,
+  }))
+}
+
+function modalBreakUiVideo(
+  video: VideoClip | null,
+  mode: ModalBreakUiMode,
+): VideoClip | null {
+  if (!video || mode === 'demo') return video
+
+  const longTitle = `${LONG_PLAYER_NAME} ${UNBREAKABLE_LABEL} ingreso al área tras una salida de 22 metros`
+
+  if (mode === 'empty') {
+    return {
+      ...video,
+      title: longTitle,
+      homeTeam: LONG_TEAM_NAME,
+      awayTeam: LONG_OPPONENT_NAME,
+      homeGoals: undefined,
+      awayGoals: undefined,
+      shootoutWinner: undefined,
+      instances: [],
+    }
+  }
+
+  if (mode === 'one') {
+    return {
+      ...video,
+      title: 'Jo',
+      homeTeam: 'Jo',
+      awayTeam: 'J',
+      homeGoals: 1,
+      awayGoals: 0,
+      shootoutWinner: undefined,
+      instances: [{ ord: 1, offsetS: 12, durationS: 6 }],
+    }
+  }
+
+  if (mode === 'many') {
+    return {
+      ...video,
+      title: longTitle,
+      homeTeam: LONG_TEAM_NAME,
+      awayTeam: LONG_OPPONENT_NAME,
+      homeGoals: 1284,
+      awayGoals: 1_000_000,
+      instances: manyModalInstances(),
+    }
+  }
+
+  return {
+    ...video,
+    title: longTitle,
+    homeTeam: LONG_TEAM_NAME,
+    awayTeam: LONG_OPPONENT_NAME,
+    homeGoals: 1284,
+    awayGoals: 1_000_000,
+    shootoutWinner: LONG_OPPONENT_NAME,
+    instances: mixedWorstInstances(),
+  }
+}
+
+function ModalBreakUiToggle({
+  mode,
+  onModeChange,
+}: {
+  mode: ModalBreakUiMode
+  onModeChange: (mode: ModalBreakUiMode) => void
+}) {
+  const segments: { mode: ModalBreakUiMode; label: string }[] = [
+    { mode: 'demo', label: 'Demo data' },
+    { mode: 'worst', label: 'Worst case' },
+    { mode: 'empty', label: 'Empty' },
+    { mode: 'one', label: 'One' },
+    { mode: 'many', label: '1,000 rows' },
+  ]
+
+  return (
+    <div
+      data-break-ui-toggle=""
+      role="radiogroup"
+      aria-label="Break UI data"
+      style={{
+        position: 'fixed',
+        bottom: '1rem',
+        left: '50%',
+        zIndex: 80,
+        transform: 'translateX(-50%)',
+        display: 'flex',
+        maxWidth: 'calc(100% - 1rem)',
+        overflowX: 'auto',
+        padding: '0.25rem',
+        borderRadius: '9999px',
+        backgroundColor: '#d4d4d4',
+        fontFamily: 'system-ui, sans-serif',
+      }}
+    >
+      {segments.map((segment) => {
+        const selected = mode === segment.mode
+        return (
+          <button
+            key={segment.mode}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onModeChange(segment.mode)}
+            style={{
+              border: 'none',
+              borderRadius: '9999px',
+              padding: '0.25rem 0.75rem',
+              backgroundColor: selected ? '#ffffff' : 'transparent',
+              color: '#171717',
+              font: 'inherit',
+              fontSize: '0.75rem',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+            }}
+          >
+            {segment.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 /**
  * Modal player. A public self-hosted file uses a native video element.
  * Every other clip keeps the YouTube embed.
@@ -337,12 +551,17 @@ function JugadasList({
  * instead of stretching the dialog.
  */
 export function VideoModal({
-  video,
+  video: videoProp,
   open,
   onOpenChange,
   initialPlayOrd,
   onJugadaOrdChange,
 }: VideoModalProps) {
+  const [breakUiMode, selectBreakUiMode] = useModalBreakUiMode()
+  const video = useMemo(() => {
+    if (!MODAL_BREAK_UI_ENABLED || breakUiMode === 'demo') return videoProp
+    return modalBreakUiVideo(videoProp, breakUiMode)
+  }, [videoProp, breakUiMode])
   const isMobile = useIsMobile()
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -385,6 +604,10 @@ export function VideoModal({
       setSwipeHintDismissed(false)
     }
   }, [])
+
+  useEffect(() => {
+    setManualActiveIndex(null)
+  }, [breakUiMode])
 
   useEffect(() => {
     if (!open) {
@@ -434,7 +657,7 @@ export function VideoModal({
     isMobile && open && instances.length > 1 && !swipeHintDismissed
 
   const preventCloseOnClipNav = useCallback((event: Event) => {
-    if (isClipNavTarget(event.target)) {
+    if (isClipNavTarget(event.target) || isBreakUiToggleTarget(event.target)) {
       event.preventDefault()
     }
   }, [])
@@ -1006,6 +1229,7 @@ export function VideoModal({
     hasSelfHostedFile && qualityReady ? mediaUrl(video, { preferLow }) : null
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
@@ -1121,7 +1345,7 @@ export function VideoModal({
 
           <div
             className={cn(
-              'relative flex min-h-0 w-full flex-col overflow-hidden border-t border-border',
+              'relative flex min-h-0 min-w-0 w-full flex-col overflow-hidden border-t border-border',
               hasInstances
                 ? 'max-h-[38dvh] md:max-h-none md:w-56 md:shrink-0 md:self-stretch md:border-t-0 md:border-l'
                 : 'shrink-0',
@@ -1129,13 +1353,16 @@ export function VideoModal({
           >
             <div
               className={cn(
-                'flex min-h-0 flex-1 flex-col overflow-hidden',
+                'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
                 hasInstances && 'md:absolute md:inset-0',
               )}
             >
-              <DialogHeader className="shrink-0 space-y-1 px-3 pt-3 pr-12 pb-2 text-left">
-                <div className="flex items-start gap-2">
-                  <DialogTitle className="min-w-0 flex-1 wrap-anywhere text-sm font-medium leading-snug tracking-tight">
+              <DialogHeader className="min-w-0 shrink-0 space-y-1 px-3 pt-3 pr-12 pb-2 text-left">
+                <div className="flex min-w-0 items-start gap-2">
+                  <DialogTitle
+                    className="min-w-0 flex-1 wrap-anywhere text-sm font-medium leading-snug tracking-tight"
+                    title={video.title}
+                  >
                     {video.title}
                   </DialogTitle>
                   <ShareClipButton
@@ -1144,7 +1371,10 @@ export function VideoModal({
                     title={video.title}
                   />
                 </div>
-                <DialogDescription className="min-w-0 wrap-anywhere text-xs leading-snug tabular-nums text-muted-foreground">
+                <DialogDescription
+                  className="min-w-0 wrap-anywhere text-xs leading-snug tabular-nums text-muted-foreground"
+                  title={matchSummaryLine}
+                >
                   {matchSummaryLine}
                 </DialogDescription>
               </DialogHeader>
@@ -1183,5 +1413,9 @@ export function VideoModal({
         </div>
       </DialogContent>
     </Dialog>
+    {MODAL_BREAK_UI_ENABLED && open ? (
+      <ModalBreakUiToggle mode={breakUiMode} onModeChange={selectBreakUiMode} />
+    ) : null}
+    </>
   )
 }
