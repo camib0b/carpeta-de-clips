@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from 'react'
 import {
-  CLIP_VIDEO_POSTER_MEDIA_FRAGMENT,
-  clipVideoPosterUrl,
+  CLIP_CARD_THUMB_HEIGHT,
+  CLIP_CARD_THUMB_SIZES,
+  CLIP_CARD_THUMB_WIDTH,
   isRealYouTubeVideoId,
   resolveClipThumbnail,
+  selfHostedThumbnailImage,
   youtubeThumbnailUrl,
   type ClipThumbnailInput,
 } from '@/lib/clip-thumbnail'
@@ -14,6 +16,8 @@ import { cn } from '@/lib/utils'
 type ClipThumbnailVisualProps = ClipThumbnailInput & {
   alt: string
   className?: string
+  loading?: 'eager' | 'lazy'
+  fetchPriority?: 'high' | 'low' | 'auto'
 }
 
 function NeutralClipThumbnail({ className }: { className?: string }) {
@@ -39,119 +43,96 @@ function NeutralClipThumbnail({ className }: { className?: string }) {
   )
 }
 
-type ThumbnailStage = 'resolved' | 'video-retry' | 'youtube-retry' | 'neutral'
-
-const videoPosterClassName =
-  'landing-match-poster pointer-events-none h-full w-full object-cover'
+type ThumbnailStage = 'resolved' | 'youtube-retry' | 'neutral'
 
 /**
- * Library card poster: JPEG thumb → R2 video frame → YouTube → neutral.
- * Failed loads step down without changing layout (fixed aspect-video parent).
+ * Library card poster: thumb_key → YouTube mqdefault → neutral placeholder.
+ * Failed image loads step down without changing layout (fixed aspect-video parent).
  */
 export function ClipThumbnailVisual({
   alt,
   className,
   youtubeId,
   thumbKey,
-  r2Key,
-  r2KeyLow,
   visibility,
+  loading = 'lazy',
+  fetchPriority,
 }: ClipThumbnailVisualProps) {
   const clipInput = useMemo(
-    () => ({ youtubeId, thumbKey, r2Key, r2KeyLow, visibility }),
-    [r2Key, r2KeyLow, thumbKey, visibility, youtubeId],
+    () => ({ youtubeId, thumbKey, visibility }),
+    [thumbKey, visibility, youtubeId],
   )
   const resolved = useMemo(() => resolveClipThumbnail(clipInput), [clipInput])
-  const videoPosterUrl = useMemo(
-    () => clipVideoPosterUrl(clipInput),
-    [clipInput],
+  const selfHosted = useMemo(
+    () =>
+      clipInput.visibility === 'restricted'
+        ? null
+        : selfHostedThumbnailImage(thumbKey),
+    [clipInput.visibility, thumbKey],
   )
   const [stage, setStage] = useState<ThumbnailStage>('resolved')
 
-  const showVideoPoster =
-    (stage === 'resolved' && resolved.source === 'video-poster') ||
-    stage === 'video-retry'
+  const youtubeUrl =
+    isRealYouTubeVideoId(youtubeId) ? youtubeThumbnailUrl(youtubeId) : null
 
-  const displayImageUrl = useMemo(() => {
-    if (stage === 'neutral' || showVideoPoster) {
-      return null
-    }
-    if (stage === 'youtube-retry' && isRealYouTubeVideoId(youtubeId)) {
-      return youtubeThumbnailUrl(youtubeId)
-    }
-    if (
-      resolved.source === 'self-hosted' ||
-      resolved.source === 'youtube'
-    ) {
-      return resolved.url
-    }
-    return null
-  }, [resolved.source, resolved.url, showVideoPoster, stage, youtubeId])
+  const showSelfHosted =
+    stage === 'resolved' && resolved.source === 'self-hosted' && selfHosted != null
+
+  const showYoutube =
+    (stage === 'resolved' && resolved.source === 'youtube' && youtubeUrl != null) ||
+    (stage === 'youtube-retry' && youtubeUrl != null)
 
   const stepDownFromImageError = () => {
     setStage((current) => {
       if (current === 'resolved' && resolved.source === 'self-hosted') {
-        if (videoPosterUrl != null) {
-          return 'video-retry'
-        }
-        if (isRealYouTubeVideoId(youtubeId)) {
+        if (youtubeUrl != null) {
           return 'youtube-retry'
         }
         return 'neutral'
       }
-      if (current === 'youtube-retry' || current === 'resolved') {
-        return 'neutral'
-      }
       return 'neutral'
     })
   }
 
-  const stepDownFromVideoError = () => {
-    setStage((current) => {
-      if (
-        (current === 'resolved' || current === 'video-retry') &&
-        isRealYouTubeVideoId(youtubeId)
-      ) {
-        return 'youtube-retry'
-      }
-      return 'neutral'
-    })
-  }
-
-  if (showVideoPoster && videoPosterUrl != null) {
+  if (showSelfHosted && selfHosted != null) {
     return (
-      <video
-        className={cn(videoPosterClassName, className)}
-        src={`${videoPosterUrl}${CLIP_VIDEO_POSTER_MEDIA_FRAGMENT}`}
-        muted
-        playsInline
-        preload="metadata"
-        controls={false}
-        disablePictureInPicture
-        disableRemotePlayback
-        loading="lazy"
-        aria-hidden="true"
-        tabIndex={-1}
-        onError={stepDownFromVideoError}
+      <img
+        src={selfHosted.src}
+        srcSet={selfHosted.srcSet}
+        sizes={selfHosted.srcSet ? CLIP_CARD_THUMB_SIZES : undefined}
+        width={selfHosted.width}
+        height={selfHosted.height}
+        alt={alt}
+        className={cn(
+          'h-full w-full object-cover transition-opacity duration-200',
+          className,
+        )}
+        onError={stepDownFromImageError}
+        loading={loading}
+        decoding="async"
+        fetchPriority={fetchPriority}
       />
     )
   }
 
-  if (displayImageUrl == null) {
-    return <NeutralClipThumbnail className={className} />
+  if (showYoutube && youtubeUrl != null) {
+    return (
+      <img
+        src={youtubeUrl}
+        width={CLIP_CARD_THUMB_WIDTH}
+        height={CLIP_CARD_THUMB_HEIGHT}
+        alt={alt}
+        className={cn(
+          'h-full w-full object-cover transition-opacity duration-200',
+          className,
+        )}
+        onError={() => setStage('neutral')}
+        loading={loading}
+        decoding="async"
+        fetchPriority={fetchPriority}
+      />
+    )
   }
 
-  return (
-    <img
-      src={displayImageUrl}
-      alt={alt}
-      className={cn(
-        'h-full w-full object-cover transition-opacity duration-200',
-        className,
-      )}
-      onError={stepDownFromImageError}
-      loading="lazy"
-      decoding="async"
-    />
-  )
+  return <NeutralClipThumbnail className={className} />
 }

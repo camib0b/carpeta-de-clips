@@ -369,9 +369,7 @@ export async function getLatestUploadedMatch(): Promise<LatestUploadedMatch | nu
     )
   }
 
-  const previews = selectLatestUploadedMatchPreviews(previewRows, (clip) =>
-    mediaUrl(clip, { preferLow: true }),
-  )
+  const previews = selectLatestUploadedMatchPreviews(previewRows)
 
   return toLatestUploadedMatch(
     row,

@@ -94,7 +94,9 @@ Production XML is read from R2 (`CLIPPED_XML` → `clipped-xml`) using `matches.
 
 ## Self-hosted clip video
 
-When `mediaUrl()` in `lib/media-url.ts` returns a URL, the modal plays a native `<video>`; otherwise it uses the YouTube embed. Library cards use `clips.thumb_key` when set (`https://media.carpeta.cl/<thumb_key>`), then a lightweight metadata frame from the self-hosted MP4 (`<video preload="metadata" src="…#t=0.1">`, same trick as the home “último partido” row), then a real YouTube `mqdefault` poster, then a neutral in-card placeholder (placeholder `youtube_id` values such as `pending-…` skip YouTube). The home preview row prefers `thumb_key` the same way. Objects live in the public R2 bucket `carpeta-clips` at `https://media.carpeta.cl`. Set `NEXT_PUBLIC_MEDIA_BASE_URL` as documented in `.env.example`.
+When `mediaUrl()` in `lib/media-url.ts` returns a URL, the modal plays a native `<video>`; otherwise it uses the YouTube embed. Library cards and the home “último partido” row use `clips.thumb_key` when set (versioned `*.thumb.<hash>.480.webp` on `https://media.carpeta.cl`, with a matching `640.webp` sibling for `srcset`), then a real YouTube `mqdefault` poster, then a neutral placeholder (placeholder `youtube_id` values such as `pending-…` skip YouTube). Grids do not autoload MP4 metadata for posters. Objects live in the public R2 bucket `carpeta-clips`. Set `NEXT_PUBLIC_MEDIA_BASE_URL` as documented in `.env.example`.
+
+**Deploy order (when this ships):** apply D1 migration `0006`, run the thumbnail backfill, then deploy the Worker/site (catalog reads `thumb_key` in `CLIP_JOIN_SELECT`).
 
 | Column | Meaning |
 |---|---|
@@ -107,7 +109,7 @@ When `mediaUrl()` in `lib/media-url.ts` returns a URL, the modal plays a native 
 
 ### Clip card thumbnails
 
-Generate posters from the self-hosted MP4 (~1s in, 640px wide JPEG) and upload to R2:
+Generate versioned WebP posters from the self-hosted MP4 (~1s in, 480w + 640w, `immutable` cache headers) and upload to R2:
 
 ```bash
 # After applying migration 0006 on remote D1:

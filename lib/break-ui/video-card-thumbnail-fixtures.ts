@@ -25,7 +25,8 @@ export const pendingYoutubeWithThumbClip: VideoClip = {
   id: '184',
   youtubeId: 'pending-2026-10-25-uc-s16a-mq-01',
   title: 'MQA salida corta recuperada',
-  thumbKey: '2026-10-25--UC_Sub_16_A--Manquehue/184-mqa-salida.thumb.jpg',
+  thumbKey:
+    '2026-10-25--UC_Sub_16_A--Manquehue/184-mqa-salida.thumb.deadbeefcafe.480.webp',
   r2Key: '2026-10-25--UC_Sub_16_A--Manquehue/184-mqa-salida.720.mp4',
   ...shared,
 }
@@ -42,7 +43,7 @@ export const brokenThumbUrlClip: VideoClip = {
   id: '186',
   youtubeId: 'pending-2026-10-25-uc-s16a-mq-03',
   title: 'MQA pérdida en mediocampo',
-  thumbKey: 'missing-folder/does-not-exist.thumb.jpg',
+  thumbKey: 'missing-folder/does-not-exist.thumb.000000000000.480.webp',
   ...shared,
 }
 
@@ -50,7 +51,7 @@ export const restrictedThumbClip: VideoClip = {
   id: '187',
   youtubeId: 'pending-2026-10-25-uc-s16a-mq-04',
   title: 'Clip restringido (no debe mostrar thumb público)',
-  thumbKey: 'restricted/187.thumb.jpg',
+  thumbKey: 'restricted/187.thumb.000000000000.480.webp',
   visibility: 'restricted',
   ...shared,
 }

@@ -120,12 +120,14 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
       {/* Video Grid */}
       {filteredVideos.length > 0 ? (
         <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredVideos.map((video) => (
+          {filteredVideos.map((video, index) => (
             <VideoCard
               key={video.id}
               video={video}
               playEntranceAnimation={playCardEntranceAnimation}
               onClick={() => openClip(video)}
+              thumbnailLoading={index < 3 ? 'eager' : 'lazy'}
+              thumbnailFetchPriority={index === 0 ? 'high' : undefined}
             />
           ))}
         </div>

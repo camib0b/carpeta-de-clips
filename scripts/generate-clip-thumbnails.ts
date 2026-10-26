@@ -1,6 +1,6 @@
 /**
- * Extract a poster frame from each self-hosted clip MP4, upload to R2, and
- * emit UPDATE statements for `clips.thumb_key`.
+ * Extract a poster frame from each self-hosted clip MP4, upload versioned WebP
+ * assets to R2, and emit UPDATE statements for `clips.thumb_key`.
  *
  * Requires `ffmpeg` and `ffprobe` on PATH and Wrangler auth for `--remote`.
  *
@@ -10,13 +10,17 @@
  *
  * `--sql-only` prints UPDATE SQL without downloading, encoding, or uploading.
  */
+import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { thumbKeyFromR2Key } from '../lib/clip-thumbnail'
+import {
+  thumbKeyForWidth,
+  thumbKeyFromR2KeyAndHash,
+} from '../lib/clip-thumbnail'
 
 const REPOSITORY_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -25,7 +29,10 @@ const REPOSITORY_ROOT = path.resolve(
 
 const R2_BUCKET = 'carpeta-clips'
 const FRAME_OFFSET_SECONDS = 1
-const THUMB_WIDTH_PX = 640
+const THUMB_WIDTH_480 = 480
+const THUMB_WIDTH_640 = 640
+const WEBP_QUALITY = 70
+const R2_CACHE_CONTROL = 'public, max-age=31536000, immutable'
 
 type ClipRow = {
   id: number
@@ -147,6 +154,7 @@ function uploadR2Object(
   wranglerTarget: '--local' | '--remote',
   objectKey: string,
   filePath: string,
+  contentType: string,
 ): void {
   execFileSync(
     'pnpm',
@@ -160,14 +168,20 @@ function uploadR2Object(
       '--file',
       filePath,
       '--content-type',
-      'image/jpeg',
+      contentType,
+      '--cache-control',
+      R2_CACHE_CONTROL,
       wranglerTarget,
     ],
     { cwd: REPOSITORY_ROOT, stdio: 'inherit' },
   )
 }
 
-function extractThumbnailJpeg(sourceVideoPath: string, outputPath: string): void {
+function extractWebpThumbnail(
+  sourceVideoPath: string,
+  outputPath: string,
+  widthPx: number,
+): void {
   execFileSync(
     'ffmpeg',
     [
@@ -181,14 +195,21 @@ function extractThumbnailJpeg(sourceVideoPath: string, outputPath: string): void
       '-frames:v',
       '1',
       '-vf',
-      `scale=${THUMB_WIDTH_PX}:-2`,
-      '-q:v',
-      '4',
+      `scale=${widthPx}:-2`,
+      '-c:v',
+      'libwebp',
+      '-quality',
+      String(WEBP_QUALITY),
       '-y',
       outputPath,
     ],
     { stdio: 'inherit' },
   )
+}
+
+function sha256HexFile(filePath: string): string {
+  const bytes = fs.readFileSync(filePath)
+  return createHash('sha256').update(bytes).digest('hex')
 }
 
 function applySql(
@@ -232,27 +253,49 @@ function main() {
   const updateStatements: string[] = []
 
   for (const clip of clips) {
-    const thumbKey = thumbKeyFromR2Key(clip.r2_key)
-    const updateSql = renderUpdateSql(clip.id, thumbKey)
-    updateStatements.push(updateSql)
-
     if (options.sqlOnly) {
+      const placeholderKey = thumbKeyFromR2KeyAndHash(
+        clip.r2_key,
+        '0000000000000000000000000000000000000000000000000000000000000000',
+      )
+      const updateSql = renderUpdateSql(clip.id, placeholderKey)
       console.log(`-- clip ${clip.id} (${clip.match_id})`)
       console.log(updateSql)
+      updateStatements.push(updateSql)
       continue
     }
 
     const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'carpeta-thumb-'))
     const videoPath = path.join(workDir, 'source.mp4')
-    const thumbPath = path.join(workDir, 'thumb.jpg')
+    const thumb480Path = path.join(workDir, 'thumb-480.webp')
+    const thumb640Path = path.join(workDir, 'thumb-640.webp')
 
     try {
-      console.error(
-        `Processing clip ${clip.id}: ${clip.r2_key} → ${thumbKey}`,
-      )
       downloadR2Object(options.wranglerTarget, clip.r2_key, videoPath)
-      extractThumbnailJpeg(videoPath, thumbPath)
-      uploadR2Object(options.wranglerTarget, thumbKey, thumbPath)
+      extractWebpThumbnail(videoPath, thumb480Path, THUMB_WIDTH_480)
+      extractWebpThumbnail(videoPath, thumb640Path, THUMB_WIDTH_640)
+
+      const contentHash = sha256HexFile(thumb480Path)
+      const thumbKey480 = thumbKeyFromR2KeyAndHash(clip.r2_key, contentHash)
+      const thumbKey640 = thumbKeyForWidth(thumbKey480, 640)
+      const updateSql = renderUpdateSql(clip.id, thumbKey480)
+      updateStatements.push(updateSql)
+
+      console.error(
+        `Processing clip ${clip.id}: ${clip.r2_key} → ${thumbKey480} (+640)`,
+      )
+      uploadR2Object(
+        options.wranglerTarget,
+        thumbKey480,
+        thumb480Path,
+        'image/webp',
+      )
+      uploadR2Object(
+        options.wranglerTarget,
+        thumbKey640,
+        thumb640Path,
+        'image/webp',
+      )
       console.log(updateSql)
     } finally {
       fs.rmSync(workDir, { recursive: true, force: true })

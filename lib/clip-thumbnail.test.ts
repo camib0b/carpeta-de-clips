@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, it } from 'node:test'
 import {
   isRealYouTubeVideoId,
   resolveClipThumbnail,
-  thumbKeyFromR2Key,
+  selfHostedThumbnailImage,
+  thumbKeyFromR2KeyAndHash,
+  thumbKeyForWidth,
   youtubeThumbnailUrl,
 } from './clip-thumbnail'
 
@@ -43,29 +45,16 @@ describe('resolveClipThumbnail', () => {
     assert.deepEqual(
       resolveClipThumbnail({
         youtubeId: 'J9UmilJC89Q',
-        thumbKey: 'uc-s16a/184-salidas.thumb.jpg',
+        thumbKey: 'uc-s16a/184-salidas.thumb.abc123def456.480.webp',
       }),
       {
         source: 'self-hosted',
-        url: 'https://media.carpeta.cl/uc-s16a/184-salidas.thumb.jpg',
+        url: 'https://media.carpeta.cl/uc-s16a/184-salidas.thumb.abc123def456.480.webp',
       },
     )
   })
 
-  it('uses an R2 video poster before YouTube when thumb_key is missing', () => {
-    assert.deepEqual(
-      resolveClipThumbnail({
-        youtubeId: 'J9UmilJC89Q',
-        r2Key: 'match/clip.720.mp4',
-      }),
-      {
-        source: 'video-poster',
-        url: 'https://media.carpeta.cl/match/clip.720.mp4',
-      },
-    )
-  })
-
-  it('falls back to YouTube when there is no thumb or r2 key and the id is real', () => {
+  it('falls back to YouTube when there is no thumb and the id is real', () => {
     assert.deepEqual(
       resolveClipThumbnail({ youtubeId: 'J9UmilJC89Q' }),
       {
@@ -75,20 +64,7 @@ describe('resolveClipThumbnail', () => {
     )
   })
 
-  it('uses a video poster for pending youtube ids with r2_key', () => {
-    assert.deepEqual(
-      resolveClipThumbnail({
-        youtubeId: 'pending-2026-10-25-uc-s16a-mq-01',
-        r2Key: 'uc-s16a/184.720.mp4',
-      }),
-      {
-        source: 'video-poster',
-        url: 'https://media.carpeta.cl/uc-s16a/184.720.mp4',
-      },
-    )
-  })
-
-  it('uses fallback for pending youtube ids without media', () => {
+  it('uses fallback for pending ids without a thumb', () => {
     assert.deepEqual(
       resolveClipThumbnail({
         youtubeId: 'pending-2026-10-25-uc-s16a-mq-01',
@@ -109,11 +85,40 @@ describe('resolveClipThumbnail', () => {
   })
 })
 
-describe('thumbKeyFromR2Key', () => {
-  it('replaces the video extension with .thumb.jpg', () => {
+describe('selfHostedThumbnailImage', () => {
+  it('builds a 480w/640w srcset for versioned webp keys', () => {
+    const image = selfHostedThumbnailImage(
+      'match/184-salidas.thumb.deadbeefcafe.480.webp',
+    )
+    assert.ok(image)
+    assert.equal(image?.width, 480)
+    assert.equal(image?.height, 270)
+    assert.match(
+      image?.srcSet ?? '',
+      /184-salidas\.thumb\.deadbeefcafe\.480\.webp 480w/,
+    )
+    assert.match(
+      image?.srcSet ?? '',
+      /184-salidas\.thumb\.deadbeefcafe\.640\.webp 640w/,
+    )
+  })
+})
+
+describe('thumbKeyFromR2KeyAndHash', () => {
+  it('embeds a content hash and 480w suffix', () => {
     assert.equal(
-      thumbKeyFromR2Key('2026-10-25--UC_Sub_16_A--Manquehue/184-salidas.720.mp4'),
-      '2026-10-25--UC_Sub_16_A--Manquehue/184-salidas.thumb.jpg',
+      thumbKeyFromR2KeyAndHash(
+        '2026-10-25--UC_Sub_16_A--Manquehue/184-salidas.720.mp4',
+        'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+      ),
+      '2026-10-25--UC_Sub_16_A--Manquehue/184-salidas.thumb.abcdef012345.480.webp',
+    )
+    assert.equal(
+      thumbKeyForWidth(
+        '2026-10-25--UC_Sub_16_A--Manquehue/184-salidas.thumb.abcdef012345.480.webp',
+        640,
+      ),
+      '2026-10-25--UC_Sub_16_A--Manquehue/184-salidas.thumb.abcdef012345.640.webp',
     )
   })
 })

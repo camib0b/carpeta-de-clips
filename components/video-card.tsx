@@ -11,6 +11,8 @@ interface VideoCardProps {
   video: VideoClip
   onClick: () => void
   playEntranceAnimation: boolean
+  thumbnailLoading?: 'eager' | 'lazy'
+  thumbnailFetchPriority?: 'high' | 'low' | 'auto'
 }
 
 /**
@@ -18,7 +20,13 @@ interface VideoCardProps {
  * belongs to the image above it.
  * Metadata hierarchy: clip title → home vs away (and score) → date (and optional division).
  */
-export function VideoCard({ video, onClick, playEntranceAnimation }: VideoCardProps) {
+export function VideoCard({
+  video,
+  onClick,
+  playEntranceAnimation,
+  thumbnailLoading = 'lazy',
+  thumbnailFetchPriority,
+}: VideoCardProps) {
   // Keep the class that was chosen on this card's first mount. A later grid
   // render must not strip an entrance that is already running.
   const playEntranceAnimationRef = useRef(playEntranceAnimation)
@@ -49,11 +57,11 @@ export function VideoCard({ video, onClick, playEntranceAnimation }: VideoCardPr
         <ClipThumbnailVisual
           youtubeId={video.youtubeId}
           thumbKey={video.thumbKey}
-          r2Key={video.r2Key}
-          r2KeyLow={video.r2KeyLow}
           visibility={video.visibility}
           alt={video.title}
           className="group-hover:opacity-80"
+          loading={thumbnailLoading}
+          fetchPriority={thumbnailFetchPriority}
         />
         {/* Play indicator on hover */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">

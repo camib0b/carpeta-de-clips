@@ -1,8 +1,10 @@
-import { publicMediaObjectUrl, type MediaUrlClip } from '@/lib/media-url'
+import { isRealYouTubeVideoId } from '@/lib/clip-thumbnail'
+import { publicMediaObjectUrl } from '@/lib/media-url'
+import type { ClipVisibility } from '@/lib/types'
 
 /**
- * How many self-hosted posters the home section shows.
- * The query reads a few extra rows so a restricted or unreadable key can be skipped.
+ * How many posters the home section shows.
+ * The query reads a few extra rows so restricted or empty posters can be skipped.
  */
 export const LATEST_UPLOADED_MATCH_POSTER_COUNT = 4
 
@@ -40,15 +42,11 @@ export const LATEST_UPLOADED_MATCH_PREVIEW_SQL = `
   SELECT
     clips.id AS clip_id,
     clips.title,
-    clips.r2_key,
-    clips.r2_key_low,
+    clips.youtube_id,
     clips.thumb_key,
     clips.visibility
   FROM clips
   WHERE clips.match_id = ?
-    AND clips.r2_key IS NOT NULL
-    AND TRIM(clips.r2_key) != ''
-    AND (clips.visibility IS NULL OR clips.visibility = 'public')
   ORDER BY clips.uploaded_at DESC, clips.id DESC
   LIMIT ${LATEST_UPLOADED_MATCH_POSTER_CANDIDATE_COUNT}
 `
@@ -71,8 +69,7 @@ export type LatestUploadedMatchRow = {
 export type LatestUploadedMatchPreviewRow = {
   clip_id: number
   title: string
-  r2_key: string | null
-  r2_key_low: string | null
+  youtube_id: string
   thumb_key: string | null
   visibility: string | null
 }
@@ -80,10 +77,9 @@ export type LatestUploadedMatchPreviewRow = {
 export type LatestUploadedMatchPreview = {
   clipId: string
   title: string
-  /** JPEG poster from `thumb_key`, preferred over the video-frame trick. */
-  thumbUrl?: string
-  /** Self-hosted MP4 when no thumb is stored (metadata frame at `#t=0.1`). */
-  mediaUrl?: string
+  youtubeId: string
+  thumbKey?: string
+  visibility?: ClipVisibility
 }
 
 export type LatestUploadedMatch = {
@@ -109,6 +105,18 @@ function emptyToUndefined(value: string | null): string | undefined {
   return value
 }
 
+function clipVisibilityFromDatabase(
+  value: string | null,
+): ClipVisibility | undefined {
+  if (value == null || value === '' || value === 'public') {
+    return undefined
+  }
+  if (value === 'restricted') {
+    return 'restricted'
+  }
+  return 'restricted'
+}
+
 export function toLatestUploadedMatch(
   row: LatestUploadedMatchRow,
   libraryName: string,
@@ -132,12 +140,10 @@ export function toLatestUploadedMatch(
 }
 
 /**
- * Keep the first posters that resolve to a public media URL, at most four.
- * `resolveMediaUrl` is `mediaUrl` at the call site so this module does not read env.
+ * Keep the first posters that have a thumb or a real YouTube still, at most four.
  */
 export function selectLatestUploadedMatchPreviews(
   rows: LatestUploadedMatchPreviewRow[],
-  resolveMediaUrl: (clip: MediaUrlClip) => string | null,
 ): LatestUploadedMatchPreview[] {
   const previews: LatestUploadedMatchPreview[] = []
 
@@ -146,24 +152,29 @@ export function selectLatestUploadedMatchPreviews(
       break
     }
 
-    const thumbUrl =
-      row.visibility === 'restricted'
-        ? null
-        : publicMediaObjectUrl(row.thumb_key)
-    const resolvedMediaUrl = resolveMediaUrl({
-      r2Key: row.r2_key,
-      r2KeyLow: row.r2_key_low,
-      visibility: row.visibility,
-    })
-    if (thumbUrl == null && resolvedMediaUrl == null) {
+    const visibility = clipVisibilityFromDatabase(row.visibility)
+    if (visibility === 'restricted') {
+      continue
+    }
+
+    const thumbKey =
+      row.thumb_key == null ||
+      row.thumb_key.trim() === '' ||
+      publicMediaObjectUrl(row.thumb_key) == null
+        ? undefined
+        : row.thumb_key
+    const hasYoutube = isRealYouTubeVideoId(row.youtube_id)
+
+    if (thumbKey == null && !hasYoutube) {
       continue
     }
 
     previews.push({
       clipId: String(row.clip_id),
       title: row.title,
-      thumbUrl: thumbUrl ?? undefined,
-      mediaUrl: resolvedMediaUrl ?? undefined,
+      youtubeId: row.youtube_id,
+      thumbKey,
+      visibility,
     })
   }
 
