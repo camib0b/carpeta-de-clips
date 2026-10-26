@@ -54,6 +54,7 @@ export function VideoTelestrationOverlay({
     const root = rootRef.current
     const stage = root?.parentElement
     if (!stage) return
+    const drawingStage = stage
 
     let frameId = 0
     let observedMedia: HTMLElement | null = null
@@ -62,7 +63,7 @@ export function VideoTelestrationOverlay({
     })
 
     function measure() {
-      const media = mediaElementInStage(stage)
+      const media = mediaElementInStage(drawingStage)
       if (media !== observedMedia) {
         if (observedMedia) {
           resizeObserver.unobserve(observedMedia)
@@ -75,7 +76,7 @@ export function VideoTelestrationOverlay({
         }
       }
 
-      const nextFrame = media ? renderedMediaRect(media, stage) : stageBox(stage)
+      const nextFrame = media ? renderedMediaRect(media, drawingStage) : stageBox(drawingStage)
       setFrame((currentFrame) =>
         rectsEqual(currentFrame, nextFrame) ? currentFrame : nextFrame,
       )
@@ -86,10 +87,10 @@ export function VideoTelestrationOverlay({
       frameId = window.requestAnimationFrame(measure)
     }
 
-    resizeObserver.observe(stage)
+    resizeObserver.observe(drawingStage)
     measure()
     const mutationObserver = new MutationObserver(scheduleMeasure)
-    mutationObserver.observe(stage, { childList: true, subtree: true })
+    mutationObserver.observe(drawingStage, { childList: true, subtree: true })
     window.addEventListener('resize', scheduleMeasure)
 
     return () => {

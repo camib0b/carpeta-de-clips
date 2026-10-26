@@ -76,6 +76,8 @@ export function usePlayDrawing(
       saveTimerRef.current = null
     }
 
+    const readPendingSave = (): PendingDrawingSave | null => pendingSaveRef.current
+
     const run = saveChainRef.current.then(async () => {
       const pending = pendingSaveRef.current
       if (!pending) return
@@ -85,7 +87,7 @@ export function usePlayDrawing(
           version: DRAWING_DOCUMENT_VERSION,
           strokes: pending.strokes,
         })
-        const newerSave = pendingSaveRef.current
+        const newerSave = readPendingSave()
         const savedKey = `${pending.clipId}:${pending.playOrd}`
         if (
           newerSave &&
@@ -97,7 +99,7 @@ export function usePlayDrawing(
         cacheRef.current.set(savedKey, { strokes: pending.strokes })
       } catch (error) {
         if (error instanceof DrawingSaveRejectedError) return
-        if (pendingSaveRef.current == null) {
+        if (readPendingSave() == null) {
           pendingSaveRef.current = pending
         }
       }
