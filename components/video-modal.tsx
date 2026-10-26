@@ -1,7 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Eye, EyeOff, MoveHorizontal, Pen } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  MoveHorizontal,
+  Pen,
+  Undo2,
+} from 'lucide-react'
 import type { ClipInstance, VideoClip } from '@/lib/types'
 import {
   Dialog,
@@ -263,23 +271,17 @@ function DrawingControls({
   drawingsVisible,
   canEdit,
   hasStrokes,
-  confirmClear,
   onTogglePen,
   onToggleVisibility,
-  onAskClear,
-  onConfirmClear,
-  onCancelClear,
+  onUndo,
 }: {
   penEnabled: boolean
   drawingsVisible: boolean
   canEdit: boolean
   hasStrokes: boolean
-  confirmClear: boolean
   onTogglePen: () => void
   onToggleVisibility: () => void
-  onAskClear: () => void
-  onConfirmClear: () => void
-  onCancelClear: () => void
+  onUndo: () => void
 }) {
   const visibilityLabel = drawingsVisible ? 'Ocultar dibujos' : 'Mostrar dibujos'
   const VisibilityIcon = drawingsVisible ? Eye : EyeOff
@@ -311,33 +313,16 @@ function DrawingControls({
         <VisibilityIcon className="size-3" aria-hidden />
         {visibilityLabel}
       </button>
-      {hasStrokes && confirmClear ? (
-        <>
-          <span className="text-[0.7rem] text-muted-foreground">¿Borrar este dibujo?</span>
-          <button
-            type="button"
-            onClick={onConfirmClear}
-            className={cn(modalChipClassName, modalChipIdleClassName)}
-          >
-            Sí
-          </button>
-          <button
-            type="button"
-            onClick={onCancelClear}
-            className={cn(modalChipClassName, modalChipIdleClassName)}
-          >
-            No
-          </button>
-        </>
-      ) : hasStrokes ? (
-        <button
-          type="button"
-          onClick={onAskClear}
-          className={cn(modalChipClassName, modalChipIdleClassName)}
-        >
-          Borrar
-        </button>
-      ) : null}
+      <button
+        type="button"
+        disabled={!canEdit || !hasStrokes}
+        onClick={onUndo}
+        aria-label="Deshacer"
+        title="Deshacer"
+        className={cn(modalChipClassName, modalChipIdleClassName)}
+      >
+        <Undo2 className="size-3" aria-hidden />
+      </button>
     </div>
   )
 }
@@ -690,7 +675,6 @@ export function VideoModal({
   } | null>(null)
   const [penEnabled, setPenEnabled] = useState(false)
   const [drawingsVisible, setDrawingsVisible] = useState(true)
-  const [confirmClearDrawing, setConfirmClearDrawing] = useState(false)
   playbackRateRef.current = playbackRate
 
   const instances = video?.instances ?? []
@@ -726,7 +710,6 @@ export function VideoModal({
       setKeyboardSeekBadge(null)
       setPenEnabled(false)
       setDrawingsVisible(true)
-      setConfirmClearDrawing(false)
       setHostedDurationS(0)
       return
     }
@@ -750,7 +733,6 @@ export function VideoModal({
     setKeyboardSeekBadge(null)
     setPenEnabled(false)
     setDrawingsVisible(true)
-    setConfirmClearDrawing(false)
     setHostedDurationS(0)
   }, [video?.id])
 
@@ -976,12 +958,8 @@ export function VideoModal({
     strokes: drawingStrokes,
     canEdit: canEditDrawing,
     addStroke: addDrawingStroke,
-    clearStrokes: clearDrawingStrokes,
+    undoLastStroke: undoDrawingStroke,
   } = usePlayDrawing(video?.id ?? null, playOrd, open && video != null)
-
-  useEffect(() => {
-    setConfirmClearDrawing(false)
-  }, [video?.id, playOrd])
 
   const togglePen = useCallback(() => {
     setPenEnabled((current) => {
@@ -1319,6 +1297,22 @@ export function VideoModal({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
+        event.key === 'z' &&
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey &&
+        penEnabled &&
+        canEditDrawing &&
+        !isEditableTarget(event.target) &&
+        drawingStrokes.length > 0
+      ) {
+        event.preventDefault()
+        event.stopPropagation()
+        undoDrawingStroke()
+        return
+      }
+
+      if (
         (event.key === ',' || event.key === '.') &&
         !event.metaKey &&
         !event.ctrlKey &&
@@ -1380,6 +1374,10 @@ export function VideoModal({
     hasSelfHostedFile,
     stepPausedFrame,
     seekByKeyboardStep,
+    penEnabled,
+    canEditDrawing,
+    drawingStrokes.length,
+    undoDrawingStroke,
   ])
 
   if (!video) return null
@@ -1578,15 +1576,9 @@ export function VideoModal({
                 drawingsVisible={drawingsVisible || penEnabled}
                 canEdit={canEditDrawing}
                 hasStrokes={drawingStrokes.length > 0}
-                confirmClear={confirmClearDrawing}
                 onTogglePen={togglePen}
                 onToggleVisibility={toggleDrawingsVisible}
-                onAskClear={() => setConfirmClearDrawing(true)}
-                onConfirmClear={() => {
-                  clearDrawingStrokes()
-                  setConfirmClearDrawing(false)
-                }}
-                onCancelClear={() => setConfirmClearDrawing(false)}
+                onUndo={undoDrawingStroke}
               />
 
               {hostedUrl && (
