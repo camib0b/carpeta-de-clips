@@ -30,10 +30,15 @@ type CachedPlayDrawing = {
  * Nothing here talks to D1. Saves are debounced from the end of a stroke,
  * and flushed when the play or the modal changes.
  */
+export interface UsePlayDrawingOptions {
+  onDrawingPresenceChange?: (playOrd: number, hasDrawing: boolean) => void
+}
+
 export function usePlayDrawing(
   clipId: string | null,
   playOrd: number | null,
   active: boolean,
+  options?: UsePlayDrawingOptions,
 ): {
   strokes: DrawingStroke[]
   canEdit: boolean
@@ -62,6 +67,12 @@ export function usePlayDrawing(
   const saveChainRef = useRef<Promise<void>>(Promise.resolve())
   const loadGenerationRef = useRef(0)
   const localEditVersionRef = useRef(0)
+  const onDrawingPresenceChangeRef = useRef(options?.onDrawingPresenceChange)
+  onDrawingPresenceChangeRef.current = options?.onDrawingPresenceChange
+
+  const publishDrawingPresence = useCallback((playOrd: number, hasDrawing: boolean) => {
+    onDrawingPresenceChangeRef.current?.(playOrd, hasDrawing)
+  }, [])
 
   if (playKey !== trackedPlayKey) {
     const cached = playKey ? cacheRef.current.get(playKey) : undefined
@@ -176,6 +187,9 @@ export function usePlayDrawing(
         cacheRef.current.set(requestKey, { strokes: loaded.document.strokes })
         setCanEdit(true)
         setStrokes(loaded.document.strokes)
+        if (loaded.document.strokes.length > 0) {
+          publishDrawingPresence(requestPlayOrd, true)
+        }
         return
       }
 
@@ -194,7 +208,7 @@ export function usePlayDrawing(
       ignore = true
       controller.abort()
     }
-  }, [active, clipId, playOrd, flushPendingSave])
+  }, [active, clipId, playOrd, flushPendingSave, publishDrawingPresence])
 
   useEffect(() => {
     const flushOnHide = () => {
@@ -227,12 +241,16 @@ export function usePlayDrawing(
       if (stroke.points.length === 0) return
       if (strokesRef.current.length >= MAX_DRAWING_STROKES) return
 
+      const hadDrawing = strokesRef.current.length > 0
       const nextStrokes = [...strokesRef.current, stroke]
       strokesRef.current = nextStrokes
       setStrokes(nextStrokes)
       scheduleSave(currentClipId, currentPlayOrd, nextStrokes)
+      if (!hadDrawing) {
+        publishDrawingPresence(currentPlayOrd, true)
+      }
     },
-    [scheduleSave],
+    [scheduleSave, publishDrawingPresence],
   )
 
   const undoLastStroke = useCallback(() => {
@@ -253,7 +271,10 @@ export function usePlayDrawing(
     strokesRef.current = nextStrokes
     setStrokes(nextStrokes)
     scheduleSave(currentClipId, currentPlayOrd, nextStrokes)
-  }, [scheduleSave])
+    if (nextStrokes.length === 0) {
+      publishDrawingPresence(currentPlayOrd, false)
+    }
+  }, [scheduleSave, publishDrawingPresence])
 
   return { strokes, canEdit, addStroke, undoLastStroke }
 }

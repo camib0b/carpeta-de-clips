@@ -79,6 +79,68 @@ export async function resolveAuthor(_request: Request): Promise<string | null> {
  * Null viewer: the anonymous public row only.
  * An account id: that owner's rows. Shared rows are not selected yet.
  */
+/**
+ * Play ords on this clip that have a non-empty drawing for `viewer`.
+ * Does not return stroke payloads.
+ */
+export async function listPlayOrdsWithDrawings(
+  clipId: string,
+  viewer: string | null,
+): Promise<number[]> {
+  const parsedClipId = parseClipId(clipId)
+  if (!parsedClipId) {
+    throw new DrawingPlayNotFoundError()
+  }
+
+  const database = await getCatalogDatabase()
+  await assertViewableClip(database, parsedClipId)
+
+  const playIdPrefix = `clip:${parsedClipId}:play:`
+
+  try {
+    const statement =
+      viewer == null
+        ? database
+            .prepare(
+              `SELECT play_id
+               FROM clip_drawings
+               WHERE play_id LIKE ? || '%'
+                 AND owner_id IS NULL
+                 AND json_extract(strokes_json, '$.version') = ?
+                 AND json_array_length(json_extract(strokes_json, '$.strokes')) > 0`,
+            )
+            .bind(playIdPrefix, DRAWING_DOCUMENT_VERSION)
+        : database
+            .prepare(
+              `SELECT play_id
+               FROM clip_drawings
+               WHERE play_id LIKE ? || '%'
+                 AND owner_id = ?
+                 AND json_extract(strokes_json, '$.version') = ?
+                 AND json_array_length(json_extract(strokes_json, '$.strokes')) > 0`,
+            )
+            .bind(playIdPrefix, viewer, DRAWING_DOCUMENT_VERSION)
+
+    const result = await statement.all<{ play_id: string }>()
+    const playOrds: number[] = []
+    for (const row of result.results ?? []) {
+      const parsed = parsePlayId(row.play_id)
+      if (parsed && parsed.clipId === parsedClipId) {
+        playOrds.push(parsed.playOrd)
+      }
+    }
+    playOrds.sort((left, right) => left - right)
+    return playOrds
+  } catch (error) {
+    rethrowDrawingStoreError(error)
+  }
+}
+
+function parseClipId(raw: string): string | null {
+  if (!/^[1-9]\d*$/.test(raw)) return null
+  return raw
+}
+
 export async function getDrawings(
   playId: string,
   viewer: string | null,
@@ -217,12 +279,7 @@ export async function saveDrawing(
   }
 }
 
-async function assertViewablePlay(database: D1Database, playId: string): Promise<void> {
-  const parsed = parsePlayId(playId)
-  if (!parsed) {
-    throw new DrawingPlayNotFoundError()
-  }
-
+async function assertViewableClip(database: D1Database, clipId: string): Promise<number> {
   const clip = await database
     .prepare(
       `SELECT clips.id AS clip_id
@@ -232,12 +289,23 @@ async function assertViewablePlay(database: D1Database, playId: string): Promise
        WHERE clips.id = ?
        LIMIT 1`,
     )
-    .bind(Number(parsed.clipId))
+    .bind(Number(clipId))
     .first<{ clip_id: number }>()
 
   if (!clip) {
     throw new DrawingPlayNotFoundError()
   }
+
+  return clip.clip_id
+}
+
+async function assertViewablePlay(database: D1Database, playId: string): Promise<void> {
+  const parsed = parsePlayId(playId)
+  if (!parsed) {
+    throw new DrawingPlayNotFoundError()
+  }
+
+  const clipId = await assertViewableClip(database, parsed.clipId)
 
   let playOrds: number[] = []
   try {
@@ -247,7 +315,7 @@ async function assertViewablePlay(database: D1Database, playId: string): Promise
          FROM clip_instances
          WHERE clip_id = ?`,
       )
-      .bind(clip.clip_id)
+      .bind(clipId)
       .all<{ ord: number }>()
     playOrds = (result.results ?? []).map((row) => row.ord)
   } catch (error) {

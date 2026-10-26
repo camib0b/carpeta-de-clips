@@ -21,6 +21,44 @@ function drawingPath(clipId: string, playOrd: number): string {
   return `/api/clips/${encodeURIComponent(clipId)}/drawings/${encodeURIComponent(String(playOrd))}`
 }
 
+function clipDrawingsPath(clipId: string): string {
+  return `/api/clips/${encodeURIComponent(clipId)}/drawings`
+}
+
+export async function fetchClipDrawingPlayOrds(
+  clipId: string,
+  signal?: AbortSignal,
+): Promise<number[] | null> {
+  let response: Response
+  try {
+    response = await fetch(clipDrawingsPath(clipId), {
+      method: 'GET',
+      cache: 'no-store',
+      signal,
+    })
+  } catch (error) {
+    if (isAbortError(error)) throw error
+    return null
+  }
+
+  if (!response.ok) return null
+
+  try {
+    const body = (await response.json()) as { playOrds?: unknown }
+    if (!Array.isArray(body.playOrds)) return null
+    const playOrds: number[] = []
+    for (const value of body.playOrds) {
+      if (typeof value === 'number' && Number.isInteger(value) && value >= 0) {
+        playOrds.push(value)
+      }
+    }
+    return playOrds
+  } catch (error) {
+    if (isAbortError(error)) throw error
+    return null
+  }
+}
+
 export async function fetchPlayDrawing(
   clipId: string,
   playOrd: number,
