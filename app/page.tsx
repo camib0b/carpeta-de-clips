@@ -3,6 +3,7 @@ import {
   LatestUploadedMatchSection,
   latestUploadedMatchLastEntranceStepIndex,
 } from '@/components/latest-uploaded-match-section'
+import { PrivateTeamFolderSection } from '@/components/private-team-folder-section'
 import { TeamIcon } from '@/components/team-icon'
 import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
 import {
@@ -113,6 +114,17 @@ export default async function HomePage() {
             entranceStepStart={latestUploadEntranceStepStart}
           />
         )}
+        <PrivateTeamFolderSection
+          entranceStepStart={
+            latestUploadedMatch
+              ? latestUploadEntranceStepStart +
+                latestUploadedMatchLastEntranceStepIndex(
+                  latestUploadedMatch.previews.length,
+                ) +
+                1
+              : latestUploadEntranceStepStart
+          }
+        />
       </main>
 
       {/* Footer */}
