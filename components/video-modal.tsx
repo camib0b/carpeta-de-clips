@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, EyeOff, MoveHorizontal, Pen } from 'lucide-react'
 import type { ClipInstance, VideoClip } from '@/lib/types'
 import {
   Dialog,
@@ -45,6 +45,9 @@ import {
   videoModalKeyAction,
 } from '@/lib/video-modal-keyboard'
 import { highestAvailablePlaybackQuality } from '@/lib/youtube-playback-quality'
+import { WHOLE_CLIP_PLAY_ORD } from '@/lib/clip-drawing-document'
+import { VideoTelestrationOverlay } from '@/components/video-telestration-overlay'
+import { usePlayDrawing } from '@/hooks/use-play-drawing'
 
 const MINIMUM_SWIPE_DISTANCE = 60
 const SWIPE_HINT_STORAGE_KEY = 'carpeta-de-clips-modal-swipe-hint-seen'
@@ -208,6 +211,12 @@ interface JugadasListProps {
   listClassName?: string
 }
 
+const modalChipClassName =
+  'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[0.7rem] transition-colors duration-200 motion-safe:active:scale-[0.98] disabled:opacity-50'
+
+const modalChipSelectedClassName = 'bg-state text-state-foreground'
+const modalChipIdleClassName = 'bg-muted text-muted-foreground hover:text-foreground'
+
 function PlaybackRateControl({
   rate,
   onChange,
@@ -231,10 +240,9 @@ function PlaybackRateControl({
               aria-label={`Velocidad ${formatPlaybackRate(preset)}`}
               onClick={() => onChange(preset)}
               className={cn(
-                'whitespace-nowrap rounded-full px-1.5 py-0.5 font-mono text-[0.7rem] tabular-nums transition-colors duration-200 motion-safe:active:scale-[0.98]',
-                selected
-                  ? 'bg-state text-state-foreground'
-                  : 'bg-muted text-muted-foreground hover:text-foreground',
+                modalChipClassName,
+                'font-mono tabular-nums',
+                selected ? modalChipSelectedClassName : modalChipIdleClassName,
               )}
             >
               {formatPlaybackRate(preset)}
@@ -242,6 +250,90 @@ function PlaybackRateControl({
           )
         })}
       </div>
+    </div>
+  )
+}
+
+function DrawingControls({
+  penEnabled,
+  drawingsVisible,
+  canEdit,
+  hasStrokes,
+  confirmClear,
+  onTogglePen,
+  onToggleVisibility,
+  onAskClear,
+  onConfirmClear,
+  onCancelClear,
+}: {
+  penEnabled: boolean
+  drawingsVisible: boolean
+  canEdit: boolean
+  hasStrokes: boolean
+  confirmClear: boolean
+  onTogglePen: () => void
+  onToggleVisibility: () => void
+  onAskClear: () => void
+  onConfirmClear: () => void
+  onCancelClear: () => void
+}) {
+  const visibilityLabel = drawingsVisible ? 'Ocultar dibujos' : 'Mostrar dibujos'
+  const VisibilityIcon = drawingsVisible ? Eye : EyeOff
+
+  return (
+    <div className="flex flex-wrap items-center gap-1 px-3 pb-2">
+      <button
+        type="button"
+        aria-pressed={penEnabled}
+        disabled={!canEdit}
+        onClick={onTogglePen}
+        className={cn(
+          modalChipClassName,
+          penEnabled ? modalChipSelectedClassName : modalChipIdleClassName,
+        )}
+      >
+        <Pen className="size-3" aria-hidden />
+        Dibujar
+      </button>
+      <button
+        type="button"
+        aria-pressed={drawingsVisible}
+        onClick={onToggleVisibility}
+        className={cn(
+          modalChipClassName,
+          drawingsVisible ? modalChipSelectedClassName : modalChipIdleClassName,
+        )}
+      >
+        <VisibilityIcon className="size-3" aria-hidden />
+        {visibilityLabel}
+      </button>
+      {hasStrokes && confirmClear ? (
+        <>
+          <span className="text-[0.7rem] text-muted-foreground">¿Borrar este dibujo?</span>
+          <button
+            type="button"
+            onClick={onConfirmClear}
+            className={cn(modalChipClassName, modalChipIdleClassName)}
+          >
+            Sí
+          </button>
+          <button
+            type="button"
+            onClick={onCancelClear}
+            className={cn(modalChipClassName, modalChipIdleClassName)}
+          >
+            No
+          </button>
+        </>
+      ) : hasStrokes ? (
+        <button
+          type="button"
+          onClick={onAskClear}
+          className={cn(modalChipClassName, modalChipIdleClassName)}
+        >
+          Borrar
+        </button>
+      ) : null}
     </div>
   )
 }
@@ -589,6 +681,9 @@ export function VideoModal({
     id: number
     label: string
   } | null>(null)
+  const [penEnabled, setPenEnabled] = useState(false)
+  const [drawingsVisible, setDrawingsVisible] = useState(true)
+  const [confirmClearDrawing, setConfirmClearDrawing] = useState(false)
   playbackRateRef.current = playbackRate
 
   const instances = video?.instances ?? []
@@ -622,6 +717,9 @@ export function VideoModal({
       setManualActiveIndex(null)
       setQualityReady(false)
       setKeyboardSeekBadge(null)
+      setPenEnabled(false)
+      setDrawingsVisible(true)
+      setConfirmClearDrawing(false)
       return
     }
     setPreferLow(shouldPreferLowMedia(readMediaConnectionSnapshot()))
@@ -642,6 +740,9 @@ export function VideoModal({
     pendingInitialPlayOrdRef.current = initialPlayOrdRef.current
     setShareJugadaOrd(initialPlayOrdRef.current)
     setKeyboardSeekBadge(null)
+    setPenEnabled(false)
+    setDrawingsVisible(true)
+    setConfirmClearDrawing(false)
   }, [video?.id])
 
   const dismissSwipeHint = useCallback(() => {
@@ -849,6 +950,41 @@ export function VideoModal({
   const computedActiveIndex = findActiveInstanceIndex(instances, playbackTimeS)
   const activeIndex =
     manualActiveIndex != null ? manualActiveIndex : computedActiveIndex
+
+  const activePlay = hasInstances ? instances[activeIndex] : undefined
+  const playOrd = !video
+    ? null
+    : activePlay
+      ? activePlay.ord
+      : hasInstances
+        ? null
+        : WHOLE_CLIP_PLAY_ORD
+  const {
+    strokes: drawingStrokes,
+    canEdit: canEditDrawing,
+    addStroke: addDrawingStroke,
+    clearStrokes: clearDrawingStrokes,
+  } = usePlayDrawing(video?.id ?? null, playOrd, open && video != null)
+
+  useEffect(() => {
+    setConfirmClearDrawing(false)
+  }, [video?.id, playOrd])
+
+  const togglePen = useCallback(() => {
+    setPenEnabled((current) => {
+      const next = !current
+      if (next) setDrawingsVisible(true)
+      return next
+    })
+  }, [])
+
+  const toggleDrawingsVisible = useCallback(() => {
+    setDrawingsVisible((current) => {
+      const next = !current
+      if (!next) setPenEnabled(false)
+      return next
+    })
+  }, [])
 
   const canStepToPreviousPlay =
     stepPlayIndex(instances.length, activeIndex, 'previous') != null
@@ -1304,6 +1440,16 @@ export function VideoModal({
                 />
               )}
 
+              {playOrd != null ? (
+                <VideoTelestrationOverlay
+                  key={`${video.id}:${playOrd}`}
+                  drawingEnabled={penEnabled && canEditDrawing}
+                  drawingsVisible={drawingsVisible || penEnabled}
+                  strokes={drawingStrokes}
+                  onStrokeComplete={addDrawingStroke}
+                />
+              ) : null}
+
               {open && hasInstances && (
                 <ClipNavButton
                   direction="previous"
@@ -1388,6 +1534,22 @@ export function VideoModal({
                 <br />
                 <kbd>.</kbd> y <kbd>,</kbd> avanzan cuadros en pausa
               </p>
+
+              <DrawingControls
+                penEnabled={penEnabled}
+                drawingsVisible={drawingsVisible || penEnabled}
+                canEdit={canEditDrawing}
+                hasStrokes={drawingStrokes.length > 0}
+                confirmClear={confirmClearDrawing}
+                onTogglePen={togglePen}
+                onToggleVisibility={toggleDrawingsVisible}
+                onAskClear={() => setConfirmClearDrawing(true)}
+                onConfirmClear={() => {
+                  clearDrawingStrokes()
+                  setConfirmClearDrawing(false)
+                }}
+                onCancelClear={() => setConfirmClearDrawing(false)}
+              />
 
               {hostedUrl && (
                 <PlaybackRateControl
