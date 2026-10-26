@@ -47,6 +47,10 @@ import {
 import { highestAvailablePlaybackQuality } from '@/lib/youtube-playback-quality'
 import { WHOLE_CLIP_PLAY_ORD } from '@/lib/clip-drawing-document'
 import { VideoTelestrationOverlay } from '@/components/video-telestration-overlay'
+import {
+  useCoarsePointer,
+  VideoModalHostedControls,
+} from '@/components/video-modal-hosted-controls'
 import { usePlayDrawing } from '@/hooks/use-play-drawing'
 
 const MINIMUM_SWIPE_DISTANCE = 60
@@ -301,7 +305,7 @@ function DrawingControls({
         onClick={onToggleVisibility}
         className={cn(
           modalChipClassName,
-          drawingsVisible ? modalChipSelectedClassName : modalChipIdleClassName,
+          drawingsVisible ? modalChipIdleClassName : modalChipSelectedClassName,
         )}
       >
         <VisibilityIcon className="size-3" aria-hidden />
@@ -655,6 +659,7 @@ export function VideoModal({
     return modalBreakUiVideo(videoProp, breakUiMode)
   }, [videoProp, breakUiMode])
   const isMobile = useIsMobile()
+  const useHostedTouchControls = useCoarsePointer()
   const touchStartPoint = useRef<{ x: number; y: number } | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<ClipPlaybackHandle | null>(null)
@@ -663,6 +668,8 @@ export function VideoModal({
   const appliedPlaybackQualityRef = useRef<string | null>(null)
   const keyboardSeekTargetRef = useRef<{ timeS: number; atMs: number } | null>(null)
   const hostedVideoRef = useRef<HTMLVideoElement | null>(null)
+  const hostedStageRef = useRef<HTMLDivElement | null>(null)
+  const [hostedDurationS, setHostedDurationS] = useState(0)
   const seekHoldIndexRef = useRef<number | null>(null)
   const pendingInitialPlayOrdRef = useRef<number | undefined>(undefined)
   const initialPlayOrdRef = useRef(initialPlayOrd)
@@ -720,6 +727,7 @@ export function VideoModal({
       setPenEnabled(false)
       setDrawingsVisible(true)
       setConfirmClearDrawing(false)
+      setHostedDurationS(0)
       return
     }
     setPreferLow(shouldPreferLowMedia(readMediaConnectionSnapshot()))
@@ -743,6 +751,7 @@ export function VideoModal({
     setPenEnabled(false)
     setDrawingsVisible(true)
     setConfirmClearDrawing(false)
+    setHostedDurationS(0)
   }, [video?.id])
 
   const dismissSwipeHint = useCallback(() => {
@@ -861,6 +870,10 @@ export function VideoModal({
       const element = event.currentTarget
       element.playbackRate = playbackRateRef.current
       playerRef.current = htmlVideoPlaybackHandle(element)
+      const duration = element.duration
+      if (typeof duration === 'number' && Number.isFinite(duration) && duration > 0) {
+        setHostedDurationS(duration)
+      }
       applyInitialPlayOrd()
     },
     [applyInitialPlayOrd],
@@ -1018,6 +1031,18 @@ export function VideoModal({
     } else {
       player.play()
     }
+  }, [])
+
+  const seekHostedPlayback = useCallback((timeS: number) => {
+    const player = playerRef.current
+    if (!player) {
+      return
+    }
+    keyboardSeekTargetRef.current = { timeS, atMs: performance.now() }
+    player.seekTo(timeS)
+    seekHoldIndexRef.current = null
+    setPlaybackTimeS(timeS)
+    setManualActiveIndex(null)
   }, [])
 
   const stepPausedFrame = useCallback(
@@ -1398,6 +1423,7 @@ export function VideoModal({
             )}
           >
             <div
+              ref={hostedStageRef}
               className="relative aspect-video"
               style={{ width: 'min(100%, calc((100dvh - 0.5rem) * 16 / 9))' }}
             >
@@ -1408,7 +1434,7 @@ export function VideoModal({
                   src={hostedUrl}
                   className="absolute inset-0 h-full w-full bg-black"
                   playsInline
-                  controls
+                  controls={!useHostedTouchControls}
                   autoPlay
                   crossOrigin="anonymous"
                   preload="auto"
@@ -1466,6 +1492,18 @@ export function VideoModal({
                   className="absolute top-1/2 right-2 z-20 hidden -translate-y-1/2 md:flex"
                 />
               )}
+
+              {hostedUrl && useHostedTouchControls ? (
+                <VideoModalHostedControls
+                  videoRef={hostedVideoRef}
+                  stageRef={hostedStageRef}
+                  currentTimeS={playbackTimeS}
+                  durationS={hostedDurationS || video.durationS || 0}
+                  isPlaying={isPlaybackPolling}
+                  onTogglePlayback={togglePlayback}
+                  onSeek={seekHostedPlayback}
+                />
+              ) : null}
 
               {showSwipeHint && <SwipeNavigationHint />}
               {keyboardSeekBadge ? (
