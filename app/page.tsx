@@ -3,6 +3,7 @@ import {
   LatestUploadedMatchSection,
   latestUploadedMatchLastEntranceStepIndex,
 } from '@/components/latest-uploaded-match-section'
+import { PrivateTeamFolderSection } from '@/components/private-team-folder-section'
 import { TeamIcon } from '@/components/team-icon'
 import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
 import {
@@ -10,6 +11,7 @@ import {
   landingEntranceDelay,
 } from '@/lib/landing-entrance'
 import { landingTeamRowLabel } from '@/lib/landing-team-row-label'
+import { isPrivateTeamOfferReady } from '@/lib/private-team-offer'
 import { siteDescription, siteName } from '@/lib/site-metadata'
 
 export const dynamic = 'force-dynamic'
@@ -111,6 +113,19 @@ export default async function HomePage() {
           <LatestUploadedMatchSection
             match={latestUploadedMatch}
             entranceStepStart={latestUploadEntranceStepStart}
+          />
+        )}
+        {(process.env.NODE_ENV !== 'production' || isPrivateTeamOfferReady()) && (
+          <PrivateTeamFolderSection
+            entranceStepStart={
+              latestUploadedMatch
+                ? latestUploadEntranceStepStart +
+                  latestUploadedMatchLastEntranceStepIndex(
+                    latestUploadedMatch.previews.length,
+                  ) +
+                  1
+                : latestUploadEntranceStepStart
+            }
           />
         )}
       </main>

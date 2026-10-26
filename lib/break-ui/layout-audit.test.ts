@@ -129,6 +129,25 @@ test('filters shrink on a narrow page and long options wrap inside a scrolling m
   assert.equal(filters.includes('triggerClassName="w-[180px]"'), false)
 })
 
+test('the private team inbox form wraps names, emails, links, and file rows', () => {
+  const section = source('components/private-team-folder-section.tsx')
+  const landing = source('app/page.tsx')
+
+  assert.match(landing, /PrivateTeamFolderSection/)
+  assert.match(section, /id="equipos"/)
+  assert.match(section, /min-w-0 wrap-anywhere/)
+  assert.match(section, /items-start/)
+  assert.match(section, /shrink-0/)
+  assert.match(section, /whitespace-nowrap tabular-nums/)
+  assert.match(section, /dir="auto"/)
+  assert.match(section, /title=\{file\.name\}/)
+  assert.match(section, /maxLength=\{TEAM_NAME_MAX_LENGTH\}/)
+  assert.match(section, /Ningún archivo elegido/)
+  assert.equal(section.includes('dangerouslySetInnerHTML'), false)
+  assert.equal(section.includes('bg-gradient'), false)
+  assert.equal(section.includes('rounded-full'), false)
+})
+
 test('the clip modal wraps titles and keeps truncated jugada text readable', () => {
   const modal = source('components/video-modal.tsx')
 

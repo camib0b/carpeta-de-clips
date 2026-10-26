@@ -3,6 +3,8 @@
 // Runtime types generated with workerd@1.20260526.1 2026-05-28 nodejs_compat
 interface __BaseEnv_CloudflareEnv {
 	CLIPPED_XML: R2Bucket;
+	// Inbox writes on carpeta-clips. `pnpm run cf-typegen` keeps this from wrangler.jsonc.
+	MEDIA: R2Bucket;
 	DB: D1Database;
 	IMAGES: ImagesBinding;
 	ASSETS: Fetcher;
