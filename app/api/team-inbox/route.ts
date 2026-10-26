@@ -8,6 +8,7 @@ import {
   uploadTeamInboxPart,
 } from '@/lib/team-inbox.server'
 import { teamInboxMessages } from '@/lib/team-inbox'
+import { isPrivateTeamOfferReady } from '@/lib/private-team-offer'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +37,14 @@ async function readJsonBody(request: Request): Promise<unknown> {
   return request.json()
 }
 
+function offerClosedResponse(): NextResponse {
+  return json({ error: 'La carga de equipos no está habilitada.' }, 503)
+}
+
 export async function POST(request: Request): Promise<NextResponse> {
+  if (!isPrivateTeamOfferReady()) {
+    return offerClosedResponse()
+  }
   const action = new URL(request.url).searchParams.get('action') ?? 'create'
   try {
     if (action === 'create') {
@@ -64,6 +72,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 }
 
 export async function PUT(request: Request): Promise<NextResponse> {
+  if (!isPrivateTeamOfferReady()) {
+    return offerClosedResponse()
+  }
   try {
     const part = await uploadTeamInboxPart(request)
     return json(part, 200)

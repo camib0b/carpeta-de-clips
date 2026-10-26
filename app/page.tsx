@@ -11,6 +11,7 @@ import {
   landingEntranceDelay,
 } from '@/lib/landing-entrance'
 import { landingTeamRowLabel } from '@/lib/landing-team-row-label'
+import { isPrivateTeamOfferReady } from '@/lib/private-team-offer'
 import { siteDescription, siteName } from '@/lib/site-metadata'
 
 export const dynamic = 'force-dynamic'
@@ -114,17 +115,19 @@ export default async function HomePage() {
             entranceStepStart={latestUploadEntranceStepStart}
           />
         )}
-        <PrivateTeamFolderSection
-          entranceStepStart={
-            latestUploadedMatch
-              ? latestUploadEntranceStepStart +
-                latestUploadedMatchLastEntranceStepIndex(
-                  latestUploadedMatch.previews.length,
-                ) +
-                1
-              : latestUploadEntranceStepStart
-          }
-        />
+        {(process.env.NODE_ENV !== 'production' || isPrivateTeamOfferReady()) && (
+          <PrivateTeamFolderSection
+            entranceStepStart={
+              latestUploadedMatch
+                ? latestUploadEntranceStepStart +
+                  latestUploadedMatchLastEntranceStepIndex(
+                    latestUploadedMatch.previews.length,
+                  ) +
+                  1
+                : latestUploadEntranceStepStart
+            }
+          />
+        )}
       </main>
 
       {/* Footer */}
