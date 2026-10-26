@@ -1153,19 +1153,10 @@ export function VideoModal({
                 className="hidden shrink-0 px-3 pb-2 text-[0.65rem] leading-snug text-muted-foreground [@media(hover:hover)_and_(pointer:fine)]:block"
               >
                 <kbd>←</kbd> <kbd>→</kbd> avanzan 3 s.
-                {hasInstances ? (
-                  <>
-                    {' '}
-                    <kbd>↑</kbd> <kbd>↓</kbd>, <kbd>[</kbd> <kbd>]</kbd> y Tab cambian de jugada.
-                  </>
-                ) : null}{' '}
-                <kbd>Espacio</kbd> pausa o reproduce.
-                {hostedUrl ? (
-                  <>
-                    {' '}
-                    En pausa, <kbd>,</kbd> y <kbd>.</kbd> mueven un cuadro.
-                  </>
-                ) : null}
+                <br />
+                <kbd>↑</kbd> <kbd>↓</kbd> cambian de jugada.
+                <br />
+                <kbd>.</kbd> y <kbd>,</kbd> avanzan cuadros en pausa
               </p>
 
               {hostedUrl && (
