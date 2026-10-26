@@ -72,6 +72,27 @@ function objectKeyPath(objectKey: string | null | undefined): string | null {
 }
 
 /**
+ * Builds a public URL for any object in `carpeta-clips` when
+ * `NEXT_PUBLIC_MEDIA_BASE_URL` is configured. Does not check clip visibility;
+ * callers gate restricted media themselves.
+ */
+export function publicMediaObjectUrl(
+  objectKey: string | null | undefined,
+): string | null {
+  const keyPath = objectKeyPath(objectKey)
+  if (keyPath == null) {
+    return null
+  }
+
+  const baseUrl = configuredMediaBaseUrl()
+  if (baseUrl == null) {
+    return null
+  }
+
+  return `${baseUrl}/${keyPath}`
+}
+
+/**
  * The only builder of self-hosted clip video URLs.
  *
  * Returns null (YouTube fallback) when the clip has no `r2Key`, when
@@ -88,17 +109,12 @@ export function mediaUrl(
     return null
   }
 
-  const fullKey = objectKeyPath(clip.r2Key)
-  if (fullKey == null) {
-    return null
-  }
-
-  const baseUrl = configuredMediaBaseUrl()
-  if (baseUrl == null) {
+  if (objectKeyPath(clip.r2Key) == null) {
     return null
   }
 
   const lowKey = objectKeyPath(clip.r2KeyLow)
-  const objectKey = options?.preferLow && lowKey != null ? lowKey : fullKey
-  return `${baseUrl}/${objectKey}`
+  const preferredObjectKey =
+    options?.preferLow && lowKey != null ? clip.r2KeyLow : clip.r2Key
+  return publicMediaObjectUrl(preferredObjectKey)
 }

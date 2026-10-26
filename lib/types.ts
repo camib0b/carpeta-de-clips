@@ -62,6 +62,11 @@ export interface VideoClip {
    * uses this when it is set, and otherwise plays `r2Key`.
    */
   r2KeyLow?: string
+  /**
+   * Object key of a JPEG/WebP poster in `carpeta-clips` for library cards.
+   * When set and public, cards prefer this over YouTube mqdefault.
+   */
+  thumbKey?: string
   /** Frames per second of the self-hosted file, when probed. */
   fps?: number
   /**

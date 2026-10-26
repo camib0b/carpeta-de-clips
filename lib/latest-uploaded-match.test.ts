@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { DatabaseSync } from 'node:sqlite'
 import test from 'node:test'
 
-import { mediaUrl } from './media-url'
 import {
   LATEST_UPLOADED_MATCH_POSTER_COUNT,
   LATEST_UPLOADED_MATCH_PREVIEW_SQL,
@@ -47,6 +46,7 @@ function createCatalogDatabase(): DatabaseSync {
       uploaded_at TEXT NOT NULL,
       r2_key TEXT,
       r2_key_low TEXT,
+      thumb_key TEXT,
       visibility TEXT NOT NULL DEFAULT 'public'
     );
   `)
@@ -113,18 +113,12 @@ test('latest uploaded match follows clip upload time, not the day it was played'
       `INSERT INTO clips (youtube_id, match_id, title, game_concept, uploaded_at)
        VALUES (?, ?, ?, ?, ?)`,
     )
-    .run('played-later-clip', 'played-later', 'Corto', 'Corner Cortos', '2026-08-22T07:00:00Z')
-  database
-    .prepare(
-      `INSERT INTO clips (youtube_id, match_id, title, game_concept, uploaded_at)
-       VALUES (?, ?, ?, ?, ?)`,
-    )
     .run(
-      'uploaded-later-old',
-      'uploaded-later',
-      'Salidas',
-      'Salidas',
-      '2026-05-20T08:00:00Z',
+      'played-later-clip',
+      'played-later',
+      'Goles',
+      'Goles',
+      '2026-09-01T12:00:00Z',
     )
   database
     .prepare(
@@ -149,7 +143,7 @@ test('latest uploaded match follows clip upload time, not the day it was played'
   assert.equal(match.rivalLabel, 'COGS')
 })
 
-test('poster query keeps public self-hosted clips and prefers the newest upload', () => {
+test('poster query lists clips for the match by newest upload', () => {
   const database = createCatalogDatabase()
   insertMatch(database, {
     id: 'match',
@@ -163,21 +157,25 @@ test('poster query keeps public self-hosted clips and prefers the newest upload'
 
   const insertClip = database.prepare(
     `INSERT INTO clips (
-       youtube_id, match_id, title, game_concept, uploaded_at, r2_key, r2_key_low, visibility
-     ) VALUES (?, 'match', ?, 'Salidas', ?, ?, ?, ?)`,
+       youtube_id, match_id, title, game_concept, uploaded_at, thumb_key, visibility
+     ) VALUES (?, 'match', ?, 'Salidas', ?, ?, ?)`,
   )
-  insertClip.run('no-media', 'Sin archivo', '2026-09-03T00:00:00Z', null, null, 'public')
-  insertClip.run('blank-key', 'Clave vacía', '2026-09-03T01:00:00Z', '   ', null, 'public')
+  insertClip.run('pending-01', 'Sin poster', '2026-09-03T00:00:00Z', null, 'public')
   insertClip.run(
-    'restricted',
+    'restricted01',
     'Restringido',
     '2026-09-03T02:00:00Z',
-    'restricted.mp4',
-    null,
+    'restricted.thumb.jpg',
     'restricted',
   )
-  insertClip.run('older', 'Anterior', '2026-09-01T00:00:00Z', 'older.mp4', 'older-low.mp4', 'public')
-  insertClip.run('newer', 'Reciente', '2026-09-02T00:00:00Z', 'newer.mp4', null, 'public')
+  insertClip.run('J9UmilJC89Q', 'Anterior', '2026-09-01T00:00:00Z', null, 'public')
+  insertClip.run(
+    '4Xndr1EF0fk',
+    'Reciente',
+    '2026-09-02T00:00:00Z',
+    'newer.thumb.abc.480.webp',
+    'public',
+  )
 
   const rows = database
     .prepare(LATEST_UPLOADED_MATCH_PREVIEW_SQL)
@@ -185,37 +183,70 @@ test('poster query keeps public self-hosted clips and prefers the newest upload'
 
   assert.deepEqual(
     rows.map((row) => row.title),
-    ['Reciente', 'Anterior'],
+    ['Restringido', 'Sin poster', 'Reciente', 'Anterior'],
   )
-  assert.equal(rows[0]?.r2_key, 'newer.mp4')
-  assert.equal(rows[1]?.r2_key_low, 'older-low.mp4')
+  assert.equal(rows[2]?.thumb_key, 'newer.thumb.abc.480.webp')
 })
 
-test('poster selection stops at four and skips urls that cannot be shown', () => {
+test('poster selection stops at four and skips posters that cannot be shown', () => {
   const previousMediaBaseUrl = process.env.NEXT_PUBLIC_MEDIA_BASE_URL
   process.env.NEXT_PUBLIC_MEDIA_BASE_URL = 'https://media.carpeta.cl'
 
   const rows: LatestUploadedMatchPreviewRow[] = [
-    { clip_id: 1, title: 'Uno', r2_key: 'one.mp4', r2_key_low: 'one-low.mp4', visibility: 'public' },
-    { clip_id: 2, title: 'Dos', r2_key: 'two.mp4', r2_key_low: null, visibility: 'restricted' },
-    { clip_id: 3, title: 'Tres', r2_key: 'three.mp4', r2_key_low: null, visibility: 'public' },
-    { clip_id: 4, title: 'Cuatro', r2_key: 'four.mp4', r2_key_low: null, visibility: 'public' },
-    { clip_id: 5, title: 'Cinco', r2_key: 'five.mp4', r2_key_low: null, visibility: 'public' },
-    { clip_id: 6, title: 'Seis', r2_key: 'six.mp4', r2_key_low: null, visibility: 'public' },
+    {
+      clip_id: 1,
+      title: 'Uno',
+      youtube_id: 'J9UmilJC89Q',
+      thumb_key: null,
+      visibility: 'public',
+    },
+    {
+      clip_id: 2,
+      title: 'Dos',
+      youtube_id: '4Xndr1EF0fk',
+      thumb_key: 'two.thumb.jpg',
+      visibility: 'restricted',
+    },
+    {
+      clip_id: 3,
+      title: 'Tres',
+      youtube_id: 'Mu_kV47bhpA',
+      thumb_key: 'three.thumb.abc.480.webp',
+      visibility: 'public',
+    },
+    {
+      clip_id: 4,
+      title: 'Cuatro',
+      youtube_id: 'KMw-aUzQO-8',
+      thumb_key: null,
+      visibility: 'public',
+    },
+    {
+      clip_id: 5,
+      title: 'Cinco',
+      youtube_id: 'pending-2026-10-25',
+      thumb_key: null,
+      visibility: 'public',
+    },
+    {
+      clip_id: 6,
+      title: 'Seis',
+      youtube_id: 'dQw4w9WgXcQ',
+      thumb_key: null,
+      visibility: 'public',
+    },
   ]
 
   try {
-    const previews = selectLatestUploadedMatchPreviews(rows, (clip) =>
-      mediaUrl(clip, { preferLow: true }),
-    )
+    const previews = selectLatestUploadedMatchPreviews(rows)
 
     assert.equal(previews.length, LATEST_UPLOADED_MATCH_POSTER_COUNT)
     assert.deepEqual(
       previews.map((preview) => preview.title),
-      ['Uno', 'Tres', 'Cuatro', 'Cinco'],
+      ['Uno', 'Tres', 'Cuatro', 'Seis'],
     )
-    assert.equal(previews[0]?.mediaUrl, 'https://media.carpeta.cl/one-low.mp4')
-    assert.equal(previews[1]?.mediaUrl, 'https://media.carpeta.cl/three.mp4')
+    assert.equal(previews[0]?.youtubeId, 'J9UmilJC89Q')
+    assert.equal(previews[1]?.thumbKey, 'three.thumb.abc.480.webp')
   } finally {
     if (previousMediaBaseUrl == null) {
       delete process.env.NEXT_PUBLIC_MEDIA_BASE_URL

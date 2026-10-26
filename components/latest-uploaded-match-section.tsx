@@ -10,6 +10,7 @@ import {
   formatUploadedAndPlayedLine,
 } from '@/lib/match-display'
 import type { LatestUploadedMatch } from '@/lib/latest-uploaded-match'
+import { ClipThumbnailVisual } from '@/components/clip-thumbnail-visual'
 
 const LATEST_UPLOAD_POSTER_ENTRANCE_STEP_START = 3
 
@@ -18,17 +19,6 @@ export function latestUploadedMatchLastEntranceStepIndex(previewCount: number): 
   return previewCount > 0
     ? LATEST_UPLOAD_POSTER_ENTRANCE_STEP_START + previewCount - 1
     : 2
-}
-
-/**
- * React's video typings omit `loading`. Where a browser honors it on video,
- * the poster waits until it is near the viewport. `preload="metadata"` still
- * avoids downloading the whole file, and nothing here sets autoplay.
- */
-declare module 'react' {
-  interface VideoHTMLAttributes<T> {
-    loading?: 'eager' | 'lazy'
-  }
 }
 
 function entranceStyle(
@@ -129,18 +119,14 @@ export function LatestUploadedMatchSection({
                   entranceStepStart,
                 )}
               >
-                <video
-                  className="landing-match-poster pointer-events-none aspect-video w-full min-w-0 object-cover"
-                  src={`${preview.mediaUrl}#t=0.1`}
-                  muted
-                  playsInline
-                  preload="metadata"
-                  controls={false}
-                  disablePictureInPicture
-                  disableRemotePlayback
-                  loading="lazy"
-                  aria-hidden="true"
-                  tabIndex={-1}
+                <ClipThumbnailVisual
+                  youtubeId={preview.youtubeId}
+                  thumbKey={preview.thumbKey}
+                  visibility={preview.visibility}
+                  alt=""
+                  className="pointer-events-none aspect-video w-full min-w-0"
+                  loading="eager"
+                  fetchPriority={previewIndex === 0 ? 'high' : undefined}
                 />
               </span>
             ))}

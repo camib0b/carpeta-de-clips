@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { formatMatchDate, formatScoreWithShootout } from '@/lib/match-display'
 import { formatHomeAwayMatchup, getTeamAbbreviation } from '@/lib/team-abbreviations'
+import { ClipThumbnailVisual } from '@/components/clip-thumbnail-visual'
 import { VideoClip } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -10,6 +11,8 @@ interface VideoCardProps {
   video: VideoClip
   onClick: () => void
   playEntranceAnimation: boolean
+  thumbnailLoading?: 'eager' | 'lazy'
+  thumbnailFetchPriority?: 'high' | 'low' | 'auto'
 }
 
 /**
@@ -17,7 +20,13 @@ interface VideoCardProps {
  * belongs to the image above it.
  * Metadata hierarchy: clip title → home vs away (and score) → date (and optional division).
  */
-export function VideoCard({ video, onClick, playEntranceAnimation }: VideoCardProps) {
+export function VideoCard({
+  video,
+  onClick,
+  playEntranceAnimation,
+  thumbnailLoading = 'lazy',
+  thumbnailFetchPriority,
+}: VideoCardProps) {
   // Keep the class that was chosen on this card's first mount. A later grid
   // render must not strip an entrance that is already running.
   const playEntranceAnimationRef = useRef(playEntranceAnimation)
@@ -45,10 +54,14 @@ export function VideoCard({ video, onClick, playEntranceAnimation }: VideoCardPr
     >
       {/* Thumbnail */}
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        <img
-          src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`}
+        <ClipThumbnailVisual
+          youtubeId={video.youtubeId}
+          thumbKey={video.thumbKey}
+          visibility={video.visibility}
           alt={video.title}
-          className="h-full w-full object-cover transition-opacity duration-200 group-hover:opacity-80"
+          className="group-hover:opacity-80"
+          loading={thumbnailLoading}
+          fetchPriority={thumbnailFetchPriority}
         />
         {/* Play indicator on hover */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">

@@ -55,6 +55,7 @@ type ClipJoinRow = {
   r2_xml_object_key: string | null
   r2_key: string | null
   r2_key_low: string | null
+  thumb_key: string | null
   fps: number | null
   duration_s: number | null
   visibility: string | null
@@ -189,6 +190,7 @@ function clipJoinRowToVideoClip(row: ClipJoinRow): VideoClip {
     r2XmlObjectKey: optionalString(row.r2_xml_object_key),
     r2Key: optionalString(row.r2_key),
     r2KeyLow: optionalString(row.r2_key_low),
+    thumbKey: optionalString(row.thumb_key),
     fps: optionalNumber(row.fps),
     durationS: optionalNumber(row.duration_s),
     visibility: clipVisibilityFromDatabase(row.visibility),
@@ -216,6 +218,7 @@ const CLIP_JOIN_SELECT = `
     matches.r2_xml_object_key,
     clips.r2_key,
     clips.r2_key_low,
+    clips.thumb_key,
     clips.fps,
     clips.duration_s,
     clips.visibility
@@ -366,9 +369,7 @@ export async function getLatestUploadedMatch(): Promise<LatestUploadedMatch | nu
     )
   }
 
-  const previews = selectLatestUploadedMatchPreviews(previewRows, (clip) =>
-    mediaUrl(clip, { preferLow: true }),
-  )
+  const previews = selectLatestUploadedMatchPreviews(previewRows)
 
   return toLatestUploadedMatch(
     row,

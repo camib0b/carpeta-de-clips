@@ -105,6 +105,8 @@ test('cards, banners, and the latest-upload row wrap instead of overflowing', ()
 
   assert.match(card, /line-clamp-2 wrap-anywhere/)
   assert.match(card, /title=\{video\.title\}/)
+  assert.match(card, /ClipThumbnailVisual/)
+  assert.match(card, /thumbKey=\{video\.thumbKey\}/)
   assert.match(card, /min-w-0/)
   assert.match(grid, /grid min-w-0 grid-cols-1/)
   assert.match(grid, /clipLibraryEmptyState/)

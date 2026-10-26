@@ -135,18 +135,49 @@ function parseArgs(argv: string[]) {
   const jsonPath = argv.find((arg) => !arg.startsWith('--'))
   if (!jsonPath) {
     throw new Error(
-      'Usage: tsx scripts/upsert-playlist.ts [--local|--remote|--sql-only] payload.json',
+      'Usage: tsx scripts/upsert-playlist.ts [--local|--remote|--sql-only] [--skip-thumbnails] payload.json',
     )
   }
   return {
     jsonPath: path.resolve(jsonPath),
     wranglerTarget: applyRemote ? '--remote' : '--local',
     dryRun: argv.includes('--sql-only'),
+    skipThumbnails: argv.includes('--skip-thumbnails'),
   }
 }
 
+function payloadHasSelfHostedVideo(
+  clips: UpsertPayload['clips'],
+): boolean {
+  return clips.some(
+    (clip) =>
+      typeof clip.r2Key === 'string' && clip.r2Key.trim().length > 0,
+  )
+}
+
+function generateThumbnailsForMatch(
+  matchId: string,
+  wranglerTarget: '--local' | '--remote',
+): void {
+  execFileSync(
+    'pnpm',
+    [
+      'exec',
+      'tsx',
+      'scripts/generate-clip-thumbnails.ts',
+      wranglerTarget,
+      '--match',
+      matchId,
+      '--execute-sql',
+    ],
+    { cwd: REPOSITORY_ROOT, stdio: 'inherit' },
+  )
+}
+
 function main() {
-  const { jsonPath, wranglerTarget, dryRun } = parseArgs(process.argv.slice(2))
+  const { jsonPath, wranglerTarget, dryRun, skipThumbnails } = parseArgs(
+    process.argv.slice(2),
+  )
   const payload = JSON.parse(fs.readFileSync(jsonPath, 'utf8')) as UpsertPayload
   if (!payload.match?.id || !Array.isArray(payload.clips)) {
     throw new Error('payload.json must include match.id and clips[]')
@@ -175,6 +206,13 @@ function main() {
     { cwd: REPOSITORY_ROOT, stdio: 'inherit' },
   )
   fs.unlinkSync(tempFile)
+
+  if (
+    !skipThumbnails &&
+    payloadHasSelfHostedVideo(payload.clips)
+  ) {
+    generateThumbnailsForMatch(payload.match.id, wranglerTarget)
+  }
 }
 
 main()
