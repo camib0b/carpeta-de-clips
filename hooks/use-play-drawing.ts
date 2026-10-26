@@ -38,7 +38,7 @@ export function usePlayDrawing(
   strokes: DrawingStroke[]
   canEdit: boolean
   addStroke: (stroke: DrawingStroke) => void
-  clearStrokes: () => void
+  undoLastStroke: () => void
 } {
   const playKey = clipId != null && playOrd != null ? `${clipId}:${playOrd}` : null
   const cacheRef = useRef(new Map<string, CachedPlayDrawing>())
@@ -235,26 +235,27 @@ export function usePlayDrawing(
     [scheduleSave],
   )
 
-  const clearStrokes = useCallback(() => {
+  const undoLastStroke = useCallback(() => {
     const currentClipId = clipIdRef.current
     const currentPlayOrd = playOrdRef.current
     const currentKey = playKeyRef.current
-    if (currentClipId == null || currentPlayOrd == null || currentKey == null) return
-    if (!canEditRef.current) return
-
-    localEditVersionRef.current += 1
-    strokesRef.current = []
-    setStrokes([])
-    cacheRef.current.set(currentKey, { strokes: [] })
-    pendingSaveRef.current = {
-      clipId: currentClipId,
-      playOrd: currentPlayOrd,
-      strokes: [],
+    if (
+      !canEditRef.current ||
+      currentClipId == null ||
+      currentPlayOrd == null ||
+      currentKey == null
+    ) {
+      return
     }
-    void flushPendingSave()
-  }, [flushPendingSave])
+    if (strokesRef.current.length === 0) return
 
-  return { strokes, canEdit, addStroke, clearStrokes }
+    const nextStrokes = strokesRef.current.slice(0, -1)
+    strokesRef.current = nextStrokes
+    setStrokes(nextStrokes)
+    scheduleSave(currentClipId, currentPlayOrd, nextStrokes)
+  }, [scheduleSave])
+
+  return { strokes, canEdit, addStroke, undoLastStroke }
 }
 
 function isAbortError(error: unknown): boolean {
