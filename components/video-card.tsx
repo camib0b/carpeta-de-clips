@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { formatMatchDate, formatScoreWithShootout } from '@/lib/match-display'
 import { formatHomeAwayMatchup, getTeamAbbreviation } from '@/lib/team-abbreviations'
+import { ClipThumbnailVisual } from '@/components/clip-thumbnail-visual'
 import { VideoClip } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -45,10 +46,14 @@ export function VideoCard({ video, onClick, playEntranceAnimation }: VideoCardPr
     >
       {/* Thumbnail */}
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        <img
-          src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`}
+        <ClipThumbnailVisual
+          youtubeId={video.youtubeId}
+          thumbKey={video.thumbKey}
+          r2Key={video.r2Key}
+          r2KeyLow={video.r2KeyLow}
+          visibility={video.visibility}
           alt={video.title}
-          className="h-full w-full object-cover transition-opacity duration-200 group-hover:opacity-80"
+          className="group-hover:opacity-80"
         />
         {/* Play indicator on hover */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">

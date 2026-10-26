@@ -71,7 +71,8 @@ Playlist import:
 - [ ] 4. Upsert match + INSERT clips (conflict keeps title/concept; omitted r2_key is kept)
 - [ ] 5. Set matches.r2_xml_object_key (enables Descargar XML)
 - [ ] 6. Verify clips + XML key in D1
-- [ ] 7. Commit / push / deploy only if the user asks
+- [ ] 7. Generate card thumbnails when clips have `r2Key` (or skip with `--skip-thumbnails` on upsert)
+- [ ] 8. Commit / push / deploy only if the user asks
 ```
 
 ### 1. Fetch videos
@@ -174,6 +175,12 @@ Ground-truth test (optional, uses a local AVA export path): `UC B vs OR - 16-yd 
 pnpm exec tsx scripts/upsert-playlist.ts --local payload-with-instances.json
 ```
 
+When the payload includes self-hosted `r2Key` values, `upsert-playlist.ts` also runs `scripts/generate-clip-thumbnails.ts` for that match (needs `ffmpeg`). Pass `--skip-thumbnails` to opt out. Backfill all missing posters:
+
+```bash
+pnpm exec tsx scripts/generate-clip-thumbnails.ts --remote --all-missing --execute-sql
+```
+
 Match id is the storage slug from `storageSlugFromClip` / `matchKeyToStorageSlug`:
 
 - Key: `date|homeTeam|awayTeam|rivalTeam` (+ `|Others` when `libraryName` is Others)
@@ -252,6 +259,7 @@ Do not re-add clips to a TypeScript array. Do not invent scores or dates.
 | `lib/catalog.ts` | D1 queries used by those re-exports |
 | `lib/catalog-upsert.ts` | Match upsert + clip insert SQL |
 | `scripts/upsert-playlist.ts` | Apply a playlist JSON to local or remote D1 |
+| `scripts/generate-clip-thumbnails.ts` | Extract JPEG posters from R2 MP4s and set `clips.thumb_key` |
 | `scripts/instances-from-sidecars.ts` | Attach `instances` from AVA `*.clips.json` into a payload |
 | `scripts/derive-clip-instances.ts` | Backfill `instances` from mp4 keyframes + match XML (local only) |
 | `migrations/0003_clip_instances.sql` | `clip_instances` table (per-play offsets inside a clip) |

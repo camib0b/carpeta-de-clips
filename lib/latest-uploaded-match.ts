@@ -1,4 +1,4 @@
-import type { MediaUrlClip } from '@/lib/media-url'
+import { publicMediaObjectUrl, type MediaUrlClip } from '@/lib/media-url'
 
 /**
  * How many self-hosted posters the home section shows.
@@ -42,6 +42,7 @@ export const LATEST_UPLOADED_MATCH_PREVIEW_SQL = `
     clips.title,
     clips.r2_key,
     clips.r2_key_low,
+    clips.thumb_key,
     clips.visibility
   FROM clips
   WHERE clips.match_id = ?
@@ -72,13 +73,17 @@ export type LatestUploadedMatchPreviewRow = {
   title: string
   r2_key: string | null
   r2_key_low: string | null
+  thumb_key: string | null
   visibility: string | null
 }
 
 export type LatestUploadedMatchPreview = {
   clipId: string
   title: string
-  mediaUrl: string
+  /** JPEG poster from `thumb_key`, preferred over the video-frame trick. */
+  thumbUrl?: string
+  /** Self-hosted MP4 when no thumb is stored (metadata frame at `#t=0.1`). */
+  mediaUrl?: string
 }
 
 export type LatestUploadedMatch = {
@@ -141,19 +146,24 @@ export function selectLatestUploadedMatchPreviews(
       break
     }
 
+    const thumbUrl =
+      row.visibility === 'restricted'
+        ? null
+        : publicMediaObjectUrl(row.thumb_key)
     const resolvedMediaUrl = resolveMediaUrl({
       r2Key: row.r2_key,
       r2KeyLow: row.r2_key_low,
       visibility: row.visibility,
     })
-    if (resolvedMediaUrl == null) {
+    if (thumbUrl == null && resolvedMediaUrl == null) {
       continue
     }
 
     previews.push({
       clipId: String(row.clip_id),
       title: row.title,
-      mediaUrl: resolvedMediaUrl,
+      thumbUrl: thumbUrl ?? undefined,
+      mediaUrl: resolvedMediaUrl ?? undefined,
     })
   }
 

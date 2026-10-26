@@ -129,19 +129,30 @@ export function LatestUploadedMatchSection({
                   entranceStepStart,
                 )}
               >
-                <video
-                  className="landing-match-poster pointer-events-none aspect-video w-full min-w-0 object-cover"
-                  src={`${preview.mediaUrl}#t=0.1`}
-                  muted
-                  playsInline
-                  preload="metadata"
-                  controls={false}
-                  disablePictureInPicture
-                  disableRemotePlayback
-                  loading="lazy"
-                  aria-hidden="true"
-                  tabIndex={-1}
-                />
+                {preview.thumbUrl ? (
+                  <img
+                    className="pointer-events-none aspect-video w-full min-w-0 object-cover"
+                    src={preview.thumbUrl}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    aria-hidden="true"
+                  />
+                ) : preview.mediaUrl ? (
+                  <video
+                    className="landing-match-poster pointer-events-none aspect-video w-full min-w-0 object-cover"
+                    src={`${preview.mediaUrl}#t=0.1`}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    controls={false}
+                    disablePictureInPicture
+                    disableRemotePlayback
+                    loading="lazy"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                  />
+                ) : null}
               </span>
             ))}
           </span>

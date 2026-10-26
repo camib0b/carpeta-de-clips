@@ -47,6 +47,7 @@ function createCatalogDatabase(): DatabaseSync {
       uploaded_at TEXT NOT NULL,
       r2_key TEXT,
       r2_key_low TEXT,
+      thumb_key TEXT,
       visibility TEXT NOT NULL DEFAULT 'public'
     );
   `)
@@ -196,12 +197,54 @@ test('poster selection stops at four and skips urls that cannot be shown', () =>
   process.env.NEXT_PUBLIC_MEDIA_BASE_URL = 'https://media.carpeta.cl'
 
   const rows: LatestUploadedMatchPreviewRow[] = [
-    { clip_id: 1, title: 'Uno', r2_key: 'one.mp4', r2_key_low: 'one-low.mp4', visibility: 'public' },
-    { clip_id: 2, title: 'Dos', r2_key: 'two.mp4', r2_key_low: null, visibility: 'restricted' },
-    { clip_id: 3, title: 'Tres', r2_key: 'three.mp4', r2_key_low: null, visibility: 'public' },
-    { clip_id: 4, title: 'Cuatro', r2_key: 'four.mp4', r2_key_low: null, visibility: 'public' },
-    { clip_id: 5, title: 'Cinco', r2_key: 'five.mp4', r2_key_low: null, visibility: 'public' },
-    { clip_id: 6, title: 'Seis', r2_key: 'six.mp4', r2_key_low: null, visibility: 'public' },
+    {
+      clip_id: 1,
+      title: 'Uno',
+      r2_key: 'one.mp4',
+      r2_key_low: 'one-low.mp4',
+      thumb_key: null,
+      visibility: 'public',
+    },
+    {
+      clip_id: 2,
+      title: 'Dos',
+      r2_key: 'two.mp4',
+      r2_key_low: null,
+      thumb_key: null,
+      visibility: 'restricted',
+    },
+    {
+      clip_id: 3,
+      title: 'Tres',
+      r2_key: 'three.mp4',
+      r2_key_low: null,
+      thumb_key: 'three.thumb.jpg',
+      visibility: 'public',
+    },
+    {
+      clip_id: 4,
+      title: 'Cuatro',
+      r2_key: 'four.mp4',
+      r2_key_low: null,
+      thumb_key: null,
+      visibility: 'public',
+    },
+    {
+      clip_id: 5,
+      title: 'Cinco',
+      r2_key: 'five.mp4',
+      r2_key_low: null,
+      thumb_key: null,
+      visibility: 'public',
+    },
+    {
+      clip_id: 6,
+      title: 'Seis',
+      r2_key: 'six.mp4',
+      r2_key_low: null,
+      thumb_key: null,
+      visibility: 'public',
+    },
   ]
 
   try {
@@ -215,6 +258,7 @@ test('poster selection stops at four and skips urls that cannot be shown', () =>
       ['Uno', 'Tres', 'Cuatro', 'Cinco'],
     )
     assert.equal(previews[0]?.mediaUrl, 'https://media.carpeta.cl/one-low.mp4')
+    assert.equal(previews[1]?.thumbUrl, 'https://media.carpeta.cl/three.thumb.jpg')
     assert.equal(previews[1]?.mediaUrl, 'https://media.carpeta.cl/three.mp4')
   } finally {
     if (previousMediaBaseUrl == null) {

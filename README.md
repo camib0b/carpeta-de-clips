@@ -74,6 +74,7 @@ Both commands apply all pending migrations (Wrangler records them in `d1_migrati
 | `0003_clip_instances.sql` | `clip_instances` (plays inside a compiled clip) |
 | `0004_others_library_display_name.sql` | Display name `Otros` for library `others` |
 | `0005_clip_self_hosted_media.sql` | Optional `r2_key`, `r2_key_low`, `fps`, `duration_s`, `visibility` on `clips` |
+| `0006_clip_thumbnail_key.sql` | Optional `thumb_key` (JPEG poster in `carpeta-clips`) on `clips` |
 
 `pnpm run db:seed:generate` no longer regenerates `0002`: `lib/clip-catalog.ts` no longer exports the old `videoClips` array. Use the committed migration (or `scripts/upsert-playlist.ts` for new matches).
 
@@ -93,15 +94,30 @@ Production XML is read from R2 (`CLIPPED_XML` → `clipped-xml`) using `matches.
 
 ## Self-hosted clip video
 
-When `mediaUrl()` in `lib/media-url.ts` returns a URL, the modal plays a native `<video>`; otherwise it uses the YouTube embed. Thumbnails stay on YouTube. Objects live in the public R2 bucket `carpeta-clips` at `https://media.carpeta.cl`. Set `NEXT_PUBLIC_MEDIA_BASE_URL` as documented in `.env.example`.
+When `mediaUrl()` in `lib/media-url.ts` returns a URL, the modal plays a native `<video>`; otherwise it uses the YouTube embed. Library cards use `clips.thumb_key` when set (`https://media.carpeta.cl/<thumb_key>`), then a lightweight metadata frame from the self-hosted MP4 (`<video preload="metadata" src="…#t=0.1">`, same trick as the home “último partido” row), then a real YouTube `mqdefault` poster, then a neutral in-card placeholder (placeholder `youtube_id` values such as `pending-…` skip YouTube). The home preview row prefers `thumb_key` the same way. Objects live in the public R2 bucket `carpeta-clips` at `https://media.carpeta.cl`. Set `NEXT_PUBLIC_MEDIA_BASE_URL` as documented in `.env.example`.
 
 | Column | Meaning |
 |---|---|
 | `r2_key` | Primary MP4 object key (nullable) |
 | `r2_key_low` | Optional smaller copy |
+| `thumb_key` | Optional JPEG poster for library cards (nullable) |
 | `fps` | Frames per second (nullable; frame step defaults to 30) |
 | `duration_s` | Full-file duration in seconds (nullable) |
 | `visibility` | `public` (default) or `restricted` |
+
+### Clip card thumbnails
+
+Generate posters from the self-hosted MP4 (~1s in, 640px wide JPEG) and upload to R2:
+
+```bash
+# After applying migration 0006 on remote D1:
+pnpm exec tsx scripts/generate-clip-thumbnails.ts --remote --all-missing --execute-sql
+
+# One match (storage slug = matches.id):
+pnpm exec tsx scripts/generate-clip-thumbnails.ts --remote --match '2026-10-25--UC_Sub_16_A--Manquehue--MQA' --execute-sql
+```
+
+`scripts/upsert-playlist.ts` runs the same generator for the match when the payload includes `r2Key` (skip with `--skip-thumbnails`). Requires `ffmpeg` on PATH.
 
 `mediaUrl` returns null (YouTube fallback) when there is no `r2_key`, when `visibility` is not `public`, or when the media base URL is unset. Restricted clips are not served yet.
 
