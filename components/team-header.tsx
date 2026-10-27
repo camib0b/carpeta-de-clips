@@ -25,7 +25,7 @@ export function TeamHeader({ team }: TeamHeaderProps) {
         <Link
           href="/"
           data-team-library-home=""
-          className="pointer-events-auto relative z-[60] mb-8 inline-flex items-center gap-2 bg-background text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="link-underline pointer-events-auto relative z-[60] mb-8 inline-flex items-center gap-2 bg-background text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           onClick={(event) => {
             if (
               event.button !== 0 ||
@@ -45,7 +45,7 @@ export function TeamHeader({ team }: TeamHeaderProps) {
         </Link>
 
         {/* Team name and icon */}
-        <div className="flex min-w-0 items-center gap-4">
+        <div className="hero-enter flex min-w-0 items-center gap-4">
           <TeamIcon slug={team.slug} name={team.name} size="lg" />
           <h1 className="min-w-0 wrap-anywhere text-2xl font-medium tracking-tight text-foreground">
             {landingTeamRowLabel(team)}

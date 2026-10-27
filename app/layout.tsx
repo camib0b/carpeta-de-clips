@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Roboto, Roboto_Mono } from 'next/font/google'
+import { PatternedBackground } from '@camib0b/ui/patterned-background'
 import { Toaster } from '@/components/ui/sonner'
 import {
   siteAuthor,
@@ -70,8 +71,11 @@ export default function RootLayout({
       className={`${roboto.variable} ${robotoMono.variable} bg-background`}
     >
       <body className="font-sans antialiased min-h-screen">
-        {children}
-        <Toaster />
+        <PatternedBackground />
+        <div className="relative z-10">
+          {children}
+          <Toaster />
+        </div>
       </body>
     </html>
   )

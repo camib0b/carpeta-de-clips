@@ -2,6 +2,8 @@
 @import 'tw-animate-css';
 @import '@camib0b/ui/theme-v4.css';
 @import '@camib0b/ui/motion.css';
+/* PatternedBackground keeps its utility classes in the package script. */
+@source '../node_modules/@camib0b/ui/dist/patterned-background.js';
 
 /*
   Color, radius, shadow, duration, and easing tokens come from @camib0b/ui.
@@ -92,10 +94,17 @@
 /*
   Home entrance. 250ms, 8px rise, ease-out-strong. Delay is inline on each
   element. The class does not set pointer-events, so a row can be clicked
-  while it fades.
+  while it fades. Hero and team titles use the same keyframe at 600ms,
+  12px, and ease-hero.
 */
 .landing-enter {
+  --landing-enter-rise: 8px;
   animation: landing-enter 250ms var(--ease-out-strong) both;
+}
+
+.hero-enter {
+  --landing-enter-rise: 12px;
+  animation: landing-enter 600ms var(--ease-hero) both;
 }
 
 /*
@@ -120,10 +129,27 @@
   clip-path: none;
 }
 
+/*
+  Home team rows use the shared curtain fall. Its clip-path shrinks the hit
+  target, so clear it and leave the row clickable for the whole stagger.
+  The dev worst-case toggle sets data-break-ui-static and skips the fall.
+*/
+.home-team-list .curtain-reveal-item[data-curtain='playing'],
+.home-team-list .curtain-reveal-item[data-curtain='armed'] {
+  clip-path: none !important;
+}
+
+.home-team-list[data-break-ui-static] .curtain-reveal-item {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+  clip-path: none !important;
+}
+
 @keyframes landing-enter {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(var(--landing-enter-rise, 8px));
   }
   to {
     opacity: 1;
@@ -242,6 +268,9 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   * {
     @apply border-border outline-ring/50;
   }
@@ -288,6 +317,14 @@
     transform var(--duration-press) var(--ease-out-strong);
 }
 
+/*
+  `.link-underline` is display:inline-block and unlayered, which would drop
+  the team-home row's inline-flex. Keep the icon and label on one line.
+*/
+a[data-team-library-home].link-underline {
+  display: inline-flex;
+}
+
 /* Primary buttons lift 2px on hover. Reduced motion keeps the shadow and skips the lift. */
 @media (prefers-reduced-motion: no-preference) {
   [data-slot='button'].bg-primary:hover:not(:disabled):not([aria-disabled='true']) {
@@ -326,12 +363,20 @@
 
   /*
     The universal animation reset would skip the home fade entirely.
-    Keep a 250ms opacity change and drop the 8px rise.
+    Keep an opacity change and drop the rise: 250ms for rows, 600ms for
+    the hero and team title.
   */
   .landing-enter {
     animation-name: landing-enter-opacity !important;
     animation-duration: 250ms !important;
     animation-timing-function: var(--ease-out-strong) !important;
+    animation-fill-mode: both !important;
+  }
+
+  .hero-enter {
+    animation-name: landing-enter-opacity !important;
+    animation-duration: 600ms !important;
+    animation-timing-function: var(--ease-hero) !important;
     animation-fill-mode: both !important;
   }
 }
