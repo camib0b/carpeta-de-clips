@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   ChevronLeft,
   ChevronRight,
@@ -63,6 +62,12 @@ import {
 } from '@/components/video-modal-hosted-controls'
 import { fetchClipDrawingPlayOrds } from '@/lib/clip-drawings-client'
 import { usePlayDrawing } from '@/hooks/use-play-drawing'
+import {
+  TEAM_LIBRARY_HOME_HREF,
+  pointerHitsRectangle,
+  teamLibraryHomeOverlayAction,
+  type TeamLibraryHomePointer,
+} from '@/lib/team-library-home-link'
 
 const MINIMUM_SWIPE_DISTANCE = 60
 const SWIPE_HINT_STORAGE_KEY = 'carpeta-de-clips-modal-swipe-hint-seen'
@@ -129,23 +134,41 @@ function dismissPointerEvent(event: Event): MouseEvent | null {
   return originalEvent instanceof MouseEvent ? originalEvent : null
 }
 
-function dismissHitsTeamHomeLink(event: Event): { targetIsLink: boolean } | null {
+function homePointerFromMouseEvent(pointerEvent: MouseEvent): TeamLibraryHomePointer {
+  return {
+    button: pointerEvent.button,
+    metaKey: pointerEvent.metaKey,
+    ctrlKey: pointerEvent.ctrlKey,
+    shiftKey: pointerEvent.shiftKey,
+    altKey: pointerEvent.altKey,
+    clientX: pointerEvent.clientX,
+    clientY: pointerEvent.clientY,
+  }
+}
+
+function homeLinkRectangle(): DOMRect | null {
+  const link = document.querySelector(TEAM_HOME_LINK_SELECTOR)
+  if (!(link instanceof HTMLElement)) return null
+  return link.getBoundingClientRect()
+}
+
+function dismissHitsTeamHomeLink(
+  event: Event,
+): { targetIsHomeLink: boolean; pointer: TeamLibraryHomePointer | null } | null {
   const pointerEvent = dismissPointerEvent(event)
   const target = pointerEvent?.target ?? event.target
   if (isTeamHomeLinkElement(target)) {
-    return { targetIsLink: true }
+    return {
+      targetIsHomeLink: true,
+      pointer: pointerEvent == null ? null : homePointerFromMouseEvent(pointerEvent),
+    }
   }
   if (pointerEvent == null) return null
-  const link = document.querySelector(TEAM_HOME_LINK_SELECTOR)
-  if (!(link instanceof HTMLElement)) return null
-  const rect = link.getBoundingClientRect()
-  const hitsLink =
-    pointerEvent.clientX >= rect.left &&
-    pointerEvent.clientX <= rect.right &&
-    pointerEvent.clientY >= rect.top &&
-    pointerEvent.clientY <= rect.bottom
-  if (!hitsLink) return null
-  return { targetIsLink: false }
+  const rectangle = homeLinkRectangle()
+  if (rectangle == null) return null
+  const pointer = homePointerFromMouseEvent(pointerEvent)
+  if (!pointerHitsRectangle(pointer, rectangle)) return null
+  return { targetIsHomeLink: false, pointer }
 }
 
 interface YouTubePlayer {
@@ -742,7 +765,6 @@ export function VideoModal({
   initialPlayOrd,
   onJugadaOrdChange,
 }: VideoModalProps) {
-  const router = useRouter()
   const [breakUiMode, selectBreakUiMode] = useModalBreakUiMode()
   const [closedForHomeNavigation, setClosedForHomeNavigation] = useState(false)
   const [hostedPlaybackFailed, setHostedPlaybackFailed] = useState(false)
@@ -890,24 +912,30 @@ export function VideoModal({
       const homeLinkHit = dismissHitsTeamHomeLink(event)
       if (homeLinkHit == null) return
 
-      const pointerEvent = dismissPointerEvent(event)
+      const assignHome =
+        homeLinkHit.pointer != null &&
+        teamLibraryHomeOverlayAction({
+          pointer: homeLinkHit.pointer,
+          linkRectangle: homeLinkHit.targetIsHomeLink ? null : homeLinkRectangle(),
+          targetIsHomeLink: homeLinkHit.targetIsHomeLink,
+        }) === 'assign'
       const plainPrimaryClick =
-        pointerEvent == null ||
-        (pointerEvent.button === 0 &&
-          !pointerEvent.metaKey &&
-          !pointerEvent.ctrlKey &&
-          !pointerEvent.shiftKey &&
-          !pointerEvent.altKey)
+        homeLinkHit.pointer == null ||
+        (homeLinkHit.pointer.button === 0 &&
+          !homeLinkHit.pointer.metaKey &&
+          !homeLinkHit.pointer.ctrlKey &&
+          !homeLinkHit.pointer.shiftKey &&
+          !homeLinkHit.pointer.altKey)
 
       event.preventDefault()
       if (!plainPrimaryClick) return
 
       setClosedForHomeNavigation(true)
-      if (homeLinkHit.targetIsLink || homeNavigationStartedRef.current) return
+      if (!assignHome || homeNavigationStartedRef.current) return
       homeNavigationStartedRef.current = true
-      router.push('/')
+      window.location.assign(TEAM_LIBRARY_HOME_HREF)
     },
-    [router],
+    [],
   )
 
   useEffect(() => {

@@ -1,28 +1,24 @@
-const skeletonMarkClassName = 'bg-foreground/60'
+const skeletonMarkClassName = 'skeleton-mark bg-muted/40'
 
 /**
  * Shown while the home page server render is still in flight.
- * Marks use foreground at 60% so they stay at or above 3:1 on bg-background
- * in light and dark. They do not pulse: animate-pulse fades to 50% opacity
- * and would drop the light-mode mark under 3:1.
+ * Marks mirror the hero and the public team rows. They stay close to the
+ * page background. The sweep lives on `.skeleton-mark` and is still under
+ * prefers-reduced-motion.
  */
 export default function HomeLoading() {
   return (
     <div className="min-h-screen bg-background" role="status">
       <span className="sr-only text-muted-foreground">Cargando</span>
-      <header>
+      <header className="border-b border-border">
         <div className="mx-auto max-w-2xl px-6 py-16 md:py-24">
           <div
             aria-hidden="true"
-            className={`h-8 w-56 max-w-full rounded md:h-9 ${skeletonMarkClassName}`}
+            className={`h-8 w-48 max-w-full rounded md:h-9 ${skeletonMarkClassName}`}
           />
           <div
             aria-hidden="true"
             className={`mt-4 h-5 w-full max-w-md rounded ${skeletonMarkClassName}`}
-          />
-          <div
-            aria-hidden="true"
-            className={`mt-2 h-5 w-2/3 max-w-sm rounded ${skeletonMarkClassName}`}
           />
         </div>
       </header>
@@ -32,13 +28,10 @@ export default function HomeLoading() {
           className={`mb-2 h-3 w-36 rounded ${skeletonMarkClassName}`}
         />
         <ul aria-hidden="true">
-          {Array.from({ length: 4 }, (_, index) => (
-            <li key={index} className="flex items-center justify-between gap-3 py-6">
-              <div className="flex min-w-0 items-center gap-4">
-                <div className={`h-8 w-8 shrink-0 rounded-md ${skeletonMarkClassName}`} />
-                <div className={`h-5 w-40 max-w-[50vw] rounded ${skeletonMarkClassName}`} />
-              </div>
-              <div className={`h-4 w-16 shrink-0 rounded ${skeletonMarkClassName}`} />
+          {Array.from({ length: 3 }, (_, index) => (
+            <li key={index} className="flex items-center gap-4 py-6">
+              <div className={`h-8 w-8 shrink-0 rounded-md ${skeletonMarkClassName}`} />
+              <div className={`h-5 w-40 max-w-[50vw] rounded ${skeletonMarkClassName}`} />
             </li>
           ))}
         </ul>
