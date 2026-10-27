@@ -43,7 +43,7 @@ const BREAK_UI_TOGGLE_ENABLED = process.env.NODE_ENV === 'development'
 
 const STEPS = [
   'Envía los videos en cualquier formato, ocupando alguno de los 3 mecanismos ofrecidos.',
-  'Realiza el pago según la modalidad de carpeta escogida.',
+  'Realiza el pago según el nivel de detalle requerido y el plazo aceptado.',
   'Recibirás tu carpeta con los partidos cortados, ordenados por concepto, listos para ser analizado y presentado.',
 ]
 
