@@ -45,6 +45,9 @@
       "migrations_dir": "migrations"
     }
   ],
+  "vars": {
+    "TEAM_INBOX_ENABLED": "true"
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
