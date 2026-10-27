@@ -42,9 +42,9 @@ import { submitTeamInbox } from '@/lib/team-inbox-upload'
 const BREAK_UI_TOGGLE_ENABLED = process.env.NODE_ENV === 'development'
 
 const STEPS = [
-  'El equipo envía los archivos de video del partido.',
-  'Realiza el pago según el nivel de detalle requerido y el plazo aceptado.',
-  'Recibe su carpeta en carpeta.cl, armada y con los videos etiquetados en el mismo formato de clips, XML y jugadas.',
+  'Envía los videos en cualquier formato, ocupando alguno de los 3 mecanismos ofrecidos.',
+  'Realiza el pago según la modalidad de carpeta escogida.',
+  'Recibirás tu carpeta con los partidos cortados, ordenados por concepto, listos para ser analizado y presentado.',
 ]
 
 /**
@@ -629,9 +629,9 @@ export function PrivateTeamFolderSection({
         Carpeta privada para equipos
       </h2>
       <p className="min-w-0 text-base leading-relaxed text-foreground">
-        Un equipo puede encargar su propia carpeta en carpeta.cl.
+        Encarga tu propia carpeta con los recortes de los partidos que te interesen.
       </p>
-      <ol className="mt-8 min-w-0 space-y-3 text-sm leading-relaxed text-foreground">
+      <ol className="mt-6 min-w-0 space-y-2 text-sm leading-relaxed text-foreground">
         {STEPS.map((step, stepIndex) => (
           <li key={step} className="flex min-w-0 items-start gap-3">
             <span className="shrink-0 tabular-nums text-muted-foreground">
@@ -641,9 +641,6 @@ export function PrivateTeamFolderSection({
           </li>
         ))}
       </ol>
-      <p className="mt-8 min-w-0 text-sm leading-relaxed text-foreground">
-        El plazo empieza cuando llegan el pago y el archivo de video.
-      </p>
       <ul className="mt-8 grid min-w-0 grid-cols-1 gap-8 sm:grid-cols-2">
         {offerTiers.map((tier) => (
           <li key={tier.id} className="min-w-0 border-t border-border pt-4">
@@ -670,6 +667,9 @@ export function PrivateTeamFolderSection({
           </li>
         ))}
       </ul>
+      <p className="mt-8 min-w-0 text-sm leading-relaxed text-muted-foreground">
+        El plazo empieza cuando llegan el pago y el archivo de video.
+      </p>
 
       <p
         id="equipos-send-label"
