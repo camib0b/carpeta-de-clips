@@ -438,7 +438,7 @@ function InboxSubmissionNotice({
   submitting,
   previewLocked,
 }: {
-  note: string
+  note?: string
   progressLabel: string | null
   errorMessage: string | null
   successTeamName: string | null
@@ -459,7 +459,9 @@ function InboxSubmissionNotice({
       <Button type="submit" variant="outline" disabled={previewLocked || submitting}>
         {submitting ? 'Enviando' : 'Enviar'}
       </Button>
-      <p className="mt-3 min-w-0 text-sm leading-relaxed text-muted-foreground">{note}</p>
+      {note != null && note.length > 0 && (
+        <p className="mt-3 min-w-0 text-sm leading-relaxed text-muted-foreground">{note}</p>
+      )}
       {errorMessage && (
         <p
           id="team-inbox-error"
@@ -972,7 +974,6 @@ export function PrivateTeamFolderSection({
                 </div>
               </div>
               <InboxSubmissionNotice
-                note="Esto envía la carga directa. El correo no pasa por este formulario."
                 progressLabel={progressLabel}
                 errorMessage={errorMessage}
                 successTeamName={successTeamName}
