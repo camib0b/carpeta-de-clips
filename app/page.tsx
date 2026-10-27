@@ -1,16 +1,10 @@
 import { Suspense } from 'react'
-import dynamic from 'next/dynamic'
+import nextDynamic from 'next/dynamic'
 import Link from 'next/link'
 import {
   LatestUploadedMatchSection,
   latestUploadedMatchLastEntranceStepIndex,
 } from '@/components/latest-uploaded-match-section'
-
-const PrivateTeamFolderSection = dynamic(() =>
-  import('@/components/private-team-folder-section').then(
-    (module) => module.PrivateTeamFolderSection,
-  ),
-)
 import { TeamIcon } from '@/components/team-icon'
 import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
 import {
@@ -22,6 +16,12 @@ import { isPrivateTeamOfferReady } from '@/lib/private-team-offer'
 import { siteDescription, siteName } from '@/lib/site-metadata'
 
 export const dynamic = 'force-dynamic'
+
+const PrivateTeamFolderSection = nextDynamic(() =>
+  import('@/components/private-team-folder-section').then(
+    (module) => module.PrivateTeamFolderSection,
+  ),
+)
 
 const TEAM_ROW_START_STEP_INDEX = 2
 
