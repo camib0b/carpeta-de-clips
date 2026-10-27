@@ -265,16 +265,6 @@ function sendMethodTabClassName(selected: boolean): string {
   ].join(' ')
 }
 
-function offerSegmentClassName(selected: boolean): string {
-  return [
-    'min-w-0 flex-1 rounded-sm px-3 py-2 text-sm transition-colors duration-200',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-    selected
-      ? 'bg-background text-foreground shadow-sm'
-      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-  ].join(' ')
-}
-
 function OfferSegmentGroup<T extends string>({
   groupId,
   label,
@@ -317,6 +307,11 @@ function OfferSegmentGroup<T extends string>({
     tabRefs.current[nextIndex]?.focus({ preventScroll: true })
   }
 
+  const selectedIndex = Math.max(
+    0,
+    options.findIndex((option) => option.id === value),
+  )
+
   return (
     <div className="min-w-0 space-y-2">
       <span id={`${groupId}-label`} className={labelClassName}>
@@ -325,7 +320,9 @@ function OfferSegmentGroup<T extends string>({
       <div
         role="radiogroup"
         aria-labelledby={`${groupId}-label`}
-        className="flex min-w-0 rounded-md border border-border bg-muted p-1"
+        data-count={options.length}
+        data-segment={selectedIndex}
+        className="segmented w-full min-w-0"
       >
         {options.map((option, index) => {
           const selected = value === option.id
@@ -338,9 +335,10 @@ function OfferSegmentGroup<T extends string>({
               type="button"
               role="radio"
               aria-checked={selected}
+              aria-selected={selected}
               tabIndex={selected ? 0 : -1}
               disabled={disabled}
-              className={offerSegmentClassName(selected)}
+              className="!min-w-0"
               onClick={() => onChange(option.id)}
               onKeyDown={(event) => {
                 if (
@@ -799,7 +797,7 @@ export function PrivateTeamFolderSection({
           </span>
         </p>
         <div>
-          <Button variant="outline" asChild>
+          <Button variant="default" asChild>
             <a
               href={selectedPaymentUrl}
               aria-label={`Pagar ${selectedDetail.label} ${selectedTurnaround.label}`}

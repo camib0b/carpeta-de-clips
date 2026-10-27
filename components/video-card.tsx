@@ -48,7 +48,7 @@ export function VideoCard({
     <button
       onClick={onClick}
       className={cn(
-        'group w-full min-w-0 overflow-hidden rounded-md border border-border bg-card text-left transition-[color,background-color,border-color,opacity,scale] duration-200 motion-safe:active:scale-[0.98] hover:border-foreground/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'press tap-reset group w-full min-w-0 overflow-hidden rounded-md border border-border bg-card text-left transition-[color,background-color,border-color,opacity] duration-color ease-color hover:border-foreground/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         playEntranceAnimationRef.current && 'motion-safe:animate-fade-up',
       )}
     >
@@ -64,7 +64,7 @@ export function VideoCard({
           fetchPriority={thumbnailFetchPriority}
         />
         {/* Play indicator on hover */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-color ease-color group-hover:opacity-100">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-foreground/90">
             <svg
               className="ml-1 h-5 w-5 text-background"

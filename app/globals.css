@@ -1,60 +1,55 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '@camib0b/ui/theme-v4.css';
+@import '@camib0b/ui/motion.css';
 
 /*
-  Cool neutrals (hue 220) and one teal state color (hue 172), from the
-  camilaescudero.cl tokens. Light and dark follow prefers-color-scheme.
-  muted-foreground is one step off the source lightness so small text still
-  clears WCAG AA on the muted surface (speed pills, hover fills).
+  Color, radius, shadow, duration, and easing tokens come from @camib0b/ui.
+  This site follows prefers-color-scheme, and the package ships dark values on
+  .dark, so the dark block below repeats those values under the media query.
+  --state and --state-foreground are carpeta-only.
 */
 :root {
   color-scheme: light;
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(220 14% 10%);
-  --card: hsl(220 14% 98%);
-  --card-foreground: hsl(220 14% 10%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(220 14% 10%);
-  --primary: hsl(220 14% 28%);
-  --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(220 10% 95%);
-  --secondary-foreground: hsl(220 14% 10%);
-  --muted: hsl(220 10% 95%);
-  --muted-foreground: hsl(220 8% 42%);
-  --accent: hsl(220 10% 93%);
-  --accent-foreground: hsl(220 14% 10%);
-  --destructive: hsl(0 72% 51%);
-  --destructive-foreground: hsl(0 0% 100%);
-  --border: hsl(220 10% 90%);
-  --input: hsl(220 10% 90%);
-  --ring: hsl(172 50% 26%);
   --state: hsl(172 50% 26%);
   --state-foreground: hsl(0 0% 100%);
-  --radius: 0.5rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --background: hsl(220 14% 4%);
-    --foreground: hsl(220 14% 93%);
-    --card: hsl(220 14% 7%);
-    --card-foreground: hsl(220 14% 93%);
-    --popover: hsl(220 14% 7%);
-    --popover-foreground: hsl(220 14% 93%);
-    --primary: hsl(220 14% 75%);
-    --primary-foreground: hsl(220 14% 10%);
-    --secondary: hsl(220 10% 12%);
-    --secondary-foreground: hsl(220 14% 93%);
-    --muted: hsl(220 8% 14%);
-    --muted-foreground: hsl(220 8% 60%);
-    --accent: hsl(220 8% 14%);
-    --accent-foreground: hsl(220 14% 93%);
-    --destructive: hsl(0 62% 40%);
-    --destructive-foreground: hsl(0 0% 100%);
-    --border: hsl(220 8% 18%);
-    --input: hsl(220 8% 16%);
-    --ring: hsl(172 50% 48%);
+    --background: 220 14% 4%;
+    --foreground: 220 14% 93%;
+    --card: 220 14% 7%;
+    --card-foreground: 220 14% 93%;
+    --popover: 220 14% 7%;
+    --popover-foreground: 220 14% 93%;
+    --primary: 220 14% 75%;
+    --primary-foreground: 220 14% 4%;
+    --secondary: 220 10% 12%;
+    --secondary-foreground: 220 14% 93%;
+    --muted: 220 8% 14%;
+    --muted-foreground: 220 8% 55%;
+    --accent: 220 8% 14%;
+    --accent-foreground: 220 14% 93%;
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 220 14% 93%;
+    --border: 220 8% 18%;
+    --input: 220 8% 16%;
+    --ring: 220 14% 75%;
+    --shadow-elev-1: 0 1px 2px rgba(0, 0, 0, 0.24);
+    --shadow-elev-2: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-elev-3: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --contrib-empty: 220 10% 6%;
+    --contrib-q1: 172 28% 10%;
+    --contrib-q2: 172 40% 20%;
+    --contrib-q3: 172 52% 42%;
+    --contrib-q4: 172 56% 52%;
+    --accent-teal: 172 56% 52%;
+    --series-portfolio: 200 18% 74%;
+    --series-benchmark: 220 8% 64%;
+    --number-positive: 152 28% 68%;
+    --number-negative: 0 42% 72%;
     --state: hsl(172 50% 48%);
     --state-foreground: hsl(220 14% 4%);
   }
@@ -63,30 +58,8 @@
 @theme inline {
   --font-sans: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-roboto-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
   --color-state: var(--state);
   --color-state-foreground: var(--state-foreground);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --text-xs: 0.75rem;
   --text-xs--line-height: 1.1;
@@ -102,7 +75,7 @@
   --text-2xl--line-height: 1.2;
   --text-3xl: 1.875rem;
   --text-3xl--line-height: 1.15;
-  --animate-fade-up: fade-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-fade-up: fade-up 420ms var(--ease-hero) both;
 }
 
 @keyframes fade-up {
@@ -117,12 +90,12 @@
 }
 
 /*
-  Home entrance. 250ms, 8px rise, same ease-out as the AVA page
-  (cubic-bezier(0.23, 1, 0.32, 1)). Delay is inline on each element.
-  The class does not set pointer-events, so a row can be clicked while it fades.
+  Home entrance. 250ms, 8px rise, ease-out-strong. Delay is inline on each
+  element. The class does not set pointer-events, so a row can be clicked
+  while it fades.
 */
 .landing-enter {
-  animation: landing-enter 250ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation: landing-enter 250ms var(--ease-out-strong) both;
 }
 
 @keyframes landing-enter {
@@ -165,7 +138,7 @@
 @keyframes keyboard-seek-badge {
   0% {
     opacity: 0;
-    animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    animation-timing-function: var(--ease-out-strong);
   }
   10.256410256% {
     opacity: 1;
@@ -173,7 +146,7 @@
   }
   74.358974359% {
     opacity: 1;
-    animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    animation-timing-function: var(--ease-out-strong);
   }
   100% {
     opacity: 0;
@@ -191,11 +164,11 @@
 }
 
 .swipe-navigation-hint {
-  animation: swipe-navigation-hint-fade 400ms cubic-bezier(0.23, 1, 0.32, 1) 3s forwards;
+  animation: swipe-navigation-hint-fade 400ms var(--ease-out-strong) 3s forwards;
 }
 
 .swipe-navigation-hint-icon {
-  animation: swipe-navigation-hint-pulse 1.5s cubic-bezier(0.23, 1, 0.32, 1) 2;
+  animation: swipe-navigation-hint-pulse 1.5s var(--ease-out-strong) 2;
 }
 
 @keyframes swipe-navigation-hint-pulse {
@@ -216,7 +189,7 @@
 .video-modal-motion {
   --tw-enter-scale: 1;
   --tw-exit-scale: 1;
-  --tw-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --tw-ease: var(--ease-out-strong);
 }
 
 .video-modal-motion[data-state='open'] {
@@ -231,7 +204,7 @@
 
 /* Filter popover: zoom from 0.97, open 150ms, close 100ms. */
 [data-slot='popover-content'] {
-  --tw-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --tw-ease: var(--ease-out-strong);
 }
 
 [data-slot='popover-content'][data-state='open'] {
@@ -272,6 +245,34 @@
   }
 }
 
+/*
+  .press sets `transition` to transform only, which would drop color changes
+  on the same element. duration-color opts into both timings: color at
+  --duration-color / --color-ease, press scale at --duration-press /
+  --ease-out-strong. Shadow on the primary lift uses the movement curve.
+*/
+.press.duration-color {
+  transition:
+    color var(--duration-color) var(--color-ease),
+    background-color var(--duration-color) var(--color-ease),
+    border-color var(--duration-color) var(--color-ease),
+    outline-color var(--duration-color) var(--color-ease),
+    text-decoration-color var(--duration-color) var(--color-ease),
+    fill var(--duration-color) var(--color-ease),
+    stroke var(--duration-color) var(--color-ease),
+    opacity var(--duration-color) var(--color-ease),
+    box-shadow var(--duration-button) var(--ease-out-strong),
+    translate var(--duration-press) var(--ease-out-strong),
+    transform var(--duration-press) var(--ease-out-strong);
+}
+
+/* Primary buttons lift 2px on hover. Reduced motion keeps the shadow and skips the lift. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-slot='button'].bg-primary:hover:not(:disabled):not([aria-disabled='true']) {
+    translate: 0 -2px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -282,8 +283,9 @@
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    transition-property: opacity, color, background-color, border-color, outline-color,
+      text-decoration-color, fill, stroke, box-shadow, visibility !important;
   }
 
   .animate-fade-up {
@@ -301,13 +303,13 @@
   }
 
   /*
-    The universal duration reset would skip the home fade entirely.
+    The universal animation reset would skip the home fade entirely.
     Keep a 250ms opacity change and drop the 8px rise.
   */
   .landing-enter {
     animation-name: landing-enter-opacity !important;
     animation-duration: 250ms !important;
-    animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1) !important;
+    animation-timing-function: var(--ease-out-strong) !important;
     animation-fill-mode: both !important;
   }
 }

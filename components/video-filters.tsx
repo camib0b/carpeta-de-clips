@@ -98,7 +98,7 @@ function MultiSelectFilter({
             variant="outline"
             aria-labelledby={`${labelId} ${id}-value`}
             className={cn(
-              'h-9 w-full min-w-0 justify-between border-border font-normal transition-colors duration-200',
+              'tap-reset h-9 w-full min-w-0 justify-between border-border font-normal',
               !isAllSelected && 'border-state text-state',
               triggerClassName,
             )}
@@ -106,7 +106,7 @@ function MultiSelectFilter({
             <span id={`${id}-value`} className="min-w-0 truncate" title={triggerLabel}>
               {triggerLabel}
             </span>
-            <ChevronDownIcon className="size-4 shrink-0 opacity-50" />
+            <ChevronDownIcon className="size-4 shrink-0" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
@@ -123,7 +123,7 @@ function MultiSelectFilter({
               aria-label={allLabel}
               aria-checked={isAllSelected}
               tabIndex={0}
-              className="flex min-w-0 cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors duration-200 hover:bg-accent"
+              className="press tap-reset flex min-w-0 cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors duration-color ease-color hover:bg-accent"
               onClick={() => onChange([])}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -144,7 +144,7 @@ function MultiSelectFilter({
                   aria-label={option}
                   aria-checked={isSelected}
                   tabIndex={0}
-                  className="flex min-w-0 cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors duration-200 hover:bg-accent"
+                  className="press tap-reset flex min-w-0 cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors duration-color ease-color hover:bg-accent"
                   onClick={() => onChange(toggleSelectedValue(selected, option))}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {

@@ -20,6 +20,7 @@
     "test": "tsx --test \"lib/**/*.test.ts\" \"scripts/**/*.test.ts\""
   },
   "dependencies": {
+    "@camib0b/ui": "github:camib0b/ui#8abf981ef55bba2eaad5de3535c3365746869d6a",
     "@opennextjs/cloudflare": "^1.19.11",
     "@radix-ui/react-dialog": "1.1.15",
     "@radix-ui/react-popover": "1.1.15",
