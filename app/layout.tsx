@@ -70,12 +70,17 @@ export default function RootLayout({
       lang="es"
       className={`${roboto.variable} ${robotoMono.variable} bg-background`}
     >
-      <body className="font-sans antialiased min-h-screen">
-        <PatternedBackground />
-        <div className="relative z-10">
-          {children}
-          <Toaster />
+      <body className="relative z-0 font-sans antialiased min-h-screen">
+        {/*
+          The pattern stays behind the page. A z-index on the page wrapper
+          would trap the team-home link, and the clip dialog's z-50 overlay
+          (portaled to body) would sit on top of it.
+        */}
+        <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10">
+          <PatternedBackground />
         </div>
+        {children}
+        <Toaster />
       </body>
     </html>
   )

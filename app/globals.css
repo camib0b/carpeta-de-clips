@@ -325,6 +325,43 @@ a[data-team-library-home].link-underline {
   display: inline-flex;
 }
 
+/*
+  Route skeletons. The fill is muted at low opacity, close to the page
+  background. A highlight sweeps once per 1.8s on ease-out-strong, then rests,
+  so the loop does not snap. Reduced motion keeps the soft fill and skips
+  the sweep.
+*/
+.skeleton-mark {
+  background-image: linear-gradient(
+    100deg,
+    transparent 0%,
+    hsl(var(--foreground) / 0.06) 45%,
+    transparent 80%
+  );
+  background-repeat: no-repeat;
+  background-size: 220% 100%;
+  background-position: 120% 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton-mark {
+    animation: skeleton-shimmer 1.8s infinite;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 120% 0;
+    animation-timing-function: var(--ease-out-strong);
+  }
+  62% {
+    background-position: -120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
 /* Primary buttons lift 2px on hover. Reduced motion keeps the shadow and skips the lift. */
 @media (prefers-reduced-motion: no-preference) {
   [data-slot='button'].bg-primary:hover:not(:disabled):not([aria-disabled='true']) {
@@ -378,5 +415,10 @@ a[data-team-library-home].link-underline {
     animation-duration: 600ms !important;
     animation-timing-function: var(--ease-hero) !important;
     animation-fill-mode: both !important;
+  }
+
+  .skeleton-mark {
+    animation: none !important;
+    background-image: none;
   }
 }
