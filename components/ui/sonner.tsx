@@ -10,7 +10,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            'rounded-md border border-border bg-popover text-popover-foreground shadow-none',
+            'rounded-md border border-border bg-popover text-popover-foreground shadow-elev-2',
         },
       }}
       style={

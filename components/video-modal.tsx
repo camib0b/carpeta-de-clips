@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { ClipThumbnailVisual } from '@/components/clip-thumbnail-visual'
 import { ShareClipButton } from '@/components/share-clip-button'
 import { cn } from '@/lib/utils'
 import {
@@ -294,10 +295,10 @@ interface JugadasListProps {
 }
 
 const modalChipClassName =
-  'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[0.7rem] transition-colors duration-200 motion-safe:active:scale-[0.98] disabled:opacity-50'
+  'press tap-reset inline-flex items-center gap-1 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[0.7rem] duration-color focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50'
 
 const modalChipSelectedClassName = 'bg-state text-state-foreground'
-const modalChipIdleClassName = 'bg-muted text-muted-foreground hover:text-foreground'
+const modalChipIdleClassName = 'bg-muted text-foreground'
 
 function PlaybackRateControl({
   rate,
@@ -450,7 +451,7 @@ function JugadasList({
               aria-label={ariaLabel}
               aria-current={isActive ? 'true' : undefined}
               className={cn(
-                'grid w-full min-w-0 grid-cols-[auto_auto_minmax(0,max-content)_minmax(0,1fr)_auto] items-center gap-x-2 border-b border-border px-3 py-2 text-left font-mono text-xs tabular-nums transition-[background-color] duration-[120ms] ease-[cubic-bezier(0.23,1,0.32,1)]',
+                'grid w-full min-w-0 grid-cols-[auto_auto_minmax(0,max-content)_minmax(0,1fr)_auto] items-center gap-x-2 border-b border-border px-3 py-2 text-left font-mono text-xs tabular-nums transition-[background-color] duration-[120ms] ease-out-strong',
                 isActive
                   ? 'bg-state font-medium text-state-foreground hover:bg-state'
                   : 'hover:bg-muted/60',
@@ -773,6 +774,7 @@ export function VideoModal({
   const [isPlaybackPolling, setIsPlaybackPolling] = useState(false)
   const [manualActiveIndex, setManualActiveIndex] = useState<number | null>(null)
   const [qualityReady, setQualityReady] = useState(false)
+  const [playbackFrameReady, setPlaybackFrameReady] = useState(false)
   const [preferLow, setPreferLow] = useState(false)
   const [playbackRate, setPlaybackRate] = useState<PlaybackRate>(1)
   const keyboardSeekBadgeIdRef = useRef(0)
@@ -793,6 +795,20 @@ export function VideoModal({
   const useNativePlayer = hasSelfHostedFile && !hostedPlaybackFailed
   const needsYouTubePlayer = open && video != null && !useNativePlayer
   const YouTubePlayer = useYouTubePlayerComponent(needsYouTubePlayer)
+  const playbackSourceKey =
+    video == null
+      ? null
+      : useNativePlayer && qualityReady
+        ? (mediaUrl(video, { preferLow }) ?? `youtube:${video.youtubeId}`)
+        : `youtube:${video.youtubeId}`
+  const playbackSourceKeyRef = useRef(playbackSourceKey)
+  if (playbackSourceKeyRef.current !== playbackSourceKey) {
+    playbackSourceKeyRef.current = playbackSourceKey
+    if (playbackFrameReady) {
+      setPlaybackFrameReady(false)
+    }
+  }
+  const showPlaybackFrame = qualityReady && playbackFrameReady
   const instancesRef = useRef(instances)
   instancesRef.current = instances
 
@@ -820,6 +836,7 @@ export function VideoModal({
       setPlaybackTimeS(0)
       setManualActiveIndex(null)
       setQualityReady(false)
+      setPlaybackFrameReady(false)
       setKeyboardSeekBadge(null)
       setPenEnabled(false)
       setDrawingsVisible(true)
@@ -998,9 +1015,17 @@ export function VideoModal({
       }
       applyHighestPlaybackQuality(player)
       applyInitialPlayOrd()
+      setPlaybackFrameReady(true)
     },
     [applyHighestPlaybackQuality, applyInitialPlayOrd],
   )
+
+  const assignHostedVideo = useCallback((node: HTMLVideoElement | null) => {
+    hostedVideoRef.current = node
+    if (node != null && node.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      setPlaybackFrameReady(true)
+    }
+  }, [])
 
   const handleHostedMetadata = useCallback(
     (event: React.SyntheticEvent<HTMLVideoElement>) => {
@@ -1585,7 +1610,7 @@ export function VideoModal({
         className={cn(
           'flex w-[calc(100%-0.5rem)] max-w-none flex-col gap-0 overflow-hidden p-0',
           'max-h-[calc(100dvh-0.5rem)] sm:max-w-none',
-          'video-modal-motion zoom-in-100! zoom-out-100! ease-[cubic-bezier(0.23,1,0.32,1)]',
+          'video-modal-motion zoom-in-100! zoom-out-100! ease-out-strong',
           'data-[state=open]:duration-150 data-[state=closed]:duration-100',
         )}
         onOpenAutoFocus={handleOpenAutoFocus}
@@ -1616,17 +1641,39 @@ export function VideoModal({
               className="relative aspect-video"
               style={{ width: 'min(100%, calc((100dvh - 0.5rem) * 16 / 9))' }}
             >
+              <div
+                aria-hidden="true"
+                className={cn(
+                  'pointer-events-none absolute inset-0 transition-opacity duration-color ease-out-strong',
+                  showPlaybackFrame ? 'opacity-0' : 'opacity-100',
+                )}
+              >
+                <div className="absolute inset-0 bg-muted" />
+                <ClipThumbnailVisual
+                  youtubeId={video.youtubeId}
+                  thumbKey={video.thumbKey}
+                  visibility={video.visibility}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              </div>
               {hostedUrl ? (
                 <video
                   key={hostedUrl}
-                  ref={hostedVideoRef}
+                  ref={assignHostedVideo}
                   src={hostedUrl}
-                  className="absolute inset-0 h-full w-full bg-black"
+                  className={cn(
+                    'absolute inset-0 h-full w-full bg-black transition-opacity duration-color ease-out-strong',
+                    showPlaybackFrame ? 'opacity-100' : 'opacity-0',
+                  )}
                   playsInline
                   controls={!useHostedTouchControls}
                   autoPlay
                   crossOrigin="anonymous"
                   preload="metadata"
+                  onLoadedData={() => {
+                    setPlaybackFrameReady(true)
+                  }}
                   onLoadedMetadata={handleHostedMetadata}
                   onError={(event) => {
                     const mediaError = event.currentTarget.error
@@ -1648,7 +1695,10 @@ export function VideoModal({
               ) : needsYouTubePlayer && YouTubePlayer ? (
                 <YouTubePlayer
                   videoId={video.youtubeId}
-                  className="absolute inset-0"
+                  className={cn(
+                    'absolute inset-0 transition-opacity duration-color ease-out-strong',
+                    showPlaybackFrame ? 'opacity-100' : 'opacity-0',
+                  )}
                   iframeClassName="h-full w-full"
                   opts={{
                     width: '100%',
