@@ -43,7 +43,7 @@ const BREAK_UI_TOGGLE_ENABLED = process.env.NODE_ENV === 'development'
 
 const STEPS = [
   'El equipo envía los archivos de video del partido.',
-  'Paga ese partido en Estándar o en Express.',
+  'Realiza el pago según el nivel de detalle requerido y el plazo aceptado.',
   'Recibe su carpeta en carpeta.cl, armada y con los videos etiquetados en el mismo formato de clips, XML y jugadas.',
 ]
 
@@ -262,14 +262,150 @@ function FieldLabel({
   )
 }
 
+const SEND_METHODS = [
+  { id: 'upload', label: 'Carga directa' },
+  { id: 'link', label: 'Enlace' },
+  { id: 'email', label: 'Correo' },
+] as const
+
+type SendMethod = (typeof SEND_METHODS)[number]['id']
+
+function sendMethodTabClassName(selected: boolean): string {
+  return [
+    '-mb-px shrink-0 whitespace-nowrap border-b-2 pb-3 text-sm transition-colors duration-200',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+    selected
+      ? 'border-foreground text-foreground'
+      : 'border-transparent text-muted-foreground hover:text-foreground',
+  ].join(' ')
+}
+
+function TeamContactFields({
+  teamName,
+  contactEmail,
+  previewLocked,
+  submitting,
+  invalidField,
+  describedBy,
+  onTeamNameChange,
+  onContactEmailChange,
+}: {
+  teamName: string
+  contactEmail: string
+  previewLocked: boolean
+  submitting: boolean
+  invalidField: TeamInboxField | null
+  describedBy: (field: TeamInboxField, hintId?: string) => string | undefined
+  onTeamNameChange: (value: string) => void
+  onContactEmailChange: (value: string) => void
+}) {
+  return (
+    <>
+      <div className="min-w-0 space-y-2">
+        <FieldLabel htmlFor="team-inbox-team-name">Nombre del equipo</FieldLabel>
+        <input
+          id="team-inbox-team-name"
+          name="teamName"
+          type="text"
+          autoComplete="organization"
+          maxLength={TEAM_NAME_MAX_LENGTH}
+          value={teamName}
+          readOnly={previewLocked}
+          disabled={submitting}
+          aria-invalid={invalidField === 'teamName'}
+          aria-describedby={describedBy('teamName')}
+          onChange={(event) => {
+            onTeamNameChange(event.target.value)
+          }}
+          className={fieldClassName}
+        />
+      </div>
+      <div className="min-w-0 space-y-2">
+        <FieldLabel htmlFor="team-inbox-email">Correo de contacto</FieldLabel>
+        <input
+          id="team-inbox-email"
+          name="contactEmail"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          spellCheck={false}
+          maxLength={CONTACT_EMAIL_MAX_LENGTH}
+          value={contactEmail}
+          readOnly={previewLocked}
+          disabled={submitting}
+          aria-invalid={invalidField === 'contactEmail'}
+          aria-describedby={describedBy('contactEmail')}
+          onChange={(event) => {
+            onContactEmailChange(event.target.value)
+          }}
+          className={fieldClassName}
+        />
+      </div>
+    </>
+  )
+}
+
+function InboxSubmissionNotice({
+  note,
+  progressLabel,
+  errorMessage,
+  successTeamName,
+  successEmail,
+  submitting,
+  previewLocked,
+}: {
+  note: string
+  progressLabel: string | null
+  errorMessage: string | null
+  successTeamName: string | null
+  successEmail: string | null
+  submitting: boolean
+  previewLocked: boolean
+}) {
+  return (
+    <div className="min-w-0 py-8">
+      {progressLabel && (
+        <p
+          aria-live="polite"
+          className="mb-4 min-w-0 wrap-anywhere text-sm tabular-nums text-muted-foreground"
+        >
+          {progressLabel}
+        </p>
+      )}
+      <Button type="submit" variant="outline" disabled={previewLocked || submitting}>
+        {submitting ? 'Enviando' : 'Enviar'}
+      </Button>
+      <p className="mt-3 min-w-0 text-sm leading-relaxed text-muted-foreground">{note}</p>
+      {errorMessage && (
+        <p
+          id="team-inbox-error"
+          role="alert"
+          className="mt-4 min-w-0 wrap-anywhere text-sm text-destructive"
+        >
+          {errorMessage}
+        </p>
+      )}
+      {successTeamName && successEmail && (
+        <p role="status" className="mt-4 min-w-0 wrap-anywhere text-sm text-foreground">
+          Quedó registrado para {successTeamName}. El correo de contacto es {successEmail}. La
+          carpeta se arma después del pago.
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function PrivateTeamFolderSection({
   entranceStepStart = 0,
 }: {
   entranceStepStart?: number
 }) {
   const fileInputId = useId()
+  const sendMethodBaseId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const sendMethodTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [previewMode, setPreviewMode] = useState<PreviewMode>('demo')
+  const [sendMethod, setSendMethod] = useState<SendMethod>('upload')
   const offerTiers = offerTiersForPreview(previewMode)
   const [fields, setFields] = useState<InboxFields>(EMPTY_FIELDS)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -373,20 +509,55 @@ export function PrivateTeamFolderSection({
     }))
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (previewLocked || submitting) {
+  function selectSendMethod(method: SendMethod) {
+    if (submitting) {
       return
     }
+    setSendMethod(method)
+  }
+
+  function moveSendMethod(index: number, key: string) {
+    if (submitting) {
+      return
+    }
+    const lastIndex = SEND_METHODS.length - 1
+    let nextIndex = index
+    if (key === 'ArrowRight') {
+      nextIndex = index === lastIndex ? 0 : index + 1
+    } else if (key === 'ArrowLeft') {
+      nextIndex = index === 0 ? lastIndex : index - 1
+    } else if (key === 'Home') {
+      nextIndex = 0
+    } else if (key === 'End') {
+      nextIndex = lastIndex
+    } else {
+      return
+    }
+    const nextMethod = SEND_METHODS[nextIndex]
+    if (nextMethod == null) {
+      return
+    }
+    selectSendMethod(nextMethod.id)
+    sendMethodTabRefs.current[nextIndex]?.focus({ preventScroll: true })
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (previewLocked || submitting || sendMethod === 'email') {
+      return
+    }
+    const submittingUpload = sendMethod === 'upload'
     const validation = validateTeamInboxSubmission({
       teamName: fields.teamName,
       contactEmail: fields.contactEmail,
-      externalLink: fields.externalLink,
-      files: fields.files.map((file) => ({
-        fileName: file.name,
-        contentType: file.contentType,
-        sizeBytes: file.sizeBytes,
-      })),
+      externalLink: submittingUpload ? null : fields.externalLink,
+      files: submittingUpload
+        ? fields.files.map((file) => ({
+            fileName: file.name,
+            contentType: file.contentType,
+            sizeBytes: file.sizeBytes,
+          }))
+        : [],
     })
     if (!validation.ok) {
       setErrorMessage(validation.error)
@@ -397,13 +568,15 @@ export function PrivateTeamFolderSection({
     }
 
     const realFiles: File[] = []
-    for (const file of fields.files) {
-      if (file.file == null) {
-        setErrorMessage(teamInboxMessages.uploadFailed)
-        setInvalidField('files')
-        return
+    if (submittingUpload) {
+      for (const file of fields.files) {
+        if (file.file == null) {
+          setErrorMessage(teamInboxMessages.uploadFailed)
+          setInvalidField('files')
+          return
+        }
+        realFiles.push(file.file)
       }
-      realFiles.push(file.file)
     }
 
     setSubmitting(true)
@@ -440,7 +613,7 @@ export function PrivateTeamFolderSection({
     <section
       id="equipos"
       aria-labelledby="equipos-heading"
-      className={`landing-enter min-w-0 scroll-mt-8 border-t border-border pt-12${BREAK_UI_TOGGLE_ENABLED ? ' pb-20' : ''}`}
+      className={`landing-enter min-w-0 scroll-mt-8${BREAK_UI_TOGGLE_ENABLED ? ' pb-20' : ''}`}
       style={{
         animationDelay: landingEntranceDelay(
           entranceStepStart,
@@ -448,6 +621,7 @@ export function PrivateTeamFolderSection({
         ),
       }}
     >
+      <div aria-hidden="true" className="border-t border-border mb-28" />
       <h2
         id="equipos-heading"
         className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
@@ -497,210 +671,239 @@ export function PrivateTeamFolderSection({
         ))}
       </ul>
 
-      <p className="mt-12 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+      <p
+        id="equipos-send-label"
+        className="mt-12 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
+      >
         Cómo enviar los videos
       </p>
-      <form noValidate className="min-w-0" onSubmit={handleSubmit}>
-        <div className="mt-4 min-w-0 divide-y divide-border border-t border-border">
-          <div className="min-w-0 py-8">
-            <h3 className="text-base font-medium text-foreground">Carga directa</h3>
-            <p className="mt-2 min-w-0 text-sm leading-relaxed text-muted-foreground">
-              Sube los archivos a esta página. Quedan guardados para armar la carpeta.
-            </p>
-            <div className="mt-6 space-y-5">
-              <div className="min-w-0 space-y-2">
-                <FieldLabel htmlFor="team-inbox-team-name">Nombre del equipo</FieldLabel>
-                <input
-                  id="team-inbox-team-name"
-                  name="teamName"
-                  type="text"
-                  autoComplete="organization"
-                  maxLength={TEAM_NAME_MAX_LENGTH}
-                  value={fields.teamName}
-                  readOnly={previewLocked}
-                  disabled={submitting}
-                  aria-invalid={invalidField === 'teamName'}
-                  aria-describedby={describedBy('teamName')}
-                  onChange={(event) => {
-                    setFields((current) => ({ ...current, teamName: event.target.value }))
+      <div
+        role="tablist"
+        aria-labelledby="equipos-send-label"
+        className="mt-4 flex min-w-0 flex-wrap gap-x-6 border-b border-border"
+      >
+        {SEND_METHODS.map((method, index) => {
+          const selected = sendMethod === method.id
+          return (
+            <button
+              key={method.id}
+              ref={(node) => {
+                sendMethodTabRefs.current[index] = node
+              }}
+              type="button"
+              role="tab"
+              id={`${sendMethodBaseId}-${method.id}-tab`}
+              aria-controls={`${sendMethodBaseId}-${method.id}-panel`}
+              aria-selected={selected}
+              tabIndex={selected ? 0 : -1}
+              className={sendMethodTabClassName(selected)}
+              onClick={() => selectSendMethod(method.id)}
+              onKeyDown={(event) => {
+                if (
+                  event.key !== 'ArrowRight' &&
+                  event.key !== 'ArrowLeft' &&
+                  event.key !== 'Home' &&
+                  event.key !== 'End'
+                ) {
+                  return
+                }
+                event.preventDefault()
+                moveSendMethod(index, event.key)
+              }}
+            >
+              {method.label}
+            </button>
+          )
+        })}
+      </div>
+      {sendMethod === 'email' ? (
+        <div
+          role="tabpanel"
+          id={`${sendMethodBaseId}-email-panel`}
+          aria-labelledby={`${sendMethodBaseId}-email-tab`}
+          className="min-w-0 py-8"
+        >
+          <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
+            Escribe a este correo con el nombre del equipo. Si el archivo es grande, el
+            correo puede rechazar el adjunto.
+          </p>
+          <a
+            href={teamInboxMailtoHref(TEAM_INBOX_EMAIL)}
+            className="mt-4 block min-w-0 wrap-anywhere text-sm text-foreground underline underline-offset-4"
+          >
+            {TEAM_INBOX_EMAIL}
+          </a>
+        </div>
+      ) : (
+        <form noValidate className="min-w-0" onSubmit={handleSubmit}>
+          {sendMethod === 'upload' ? (
+            <div
+              role="tabpanel"
+              id={`${sendMethodBaseId}-upload-panel`}
+              aria-labelledby={`${sendMethodBaseId}-upload-tab`}
+              className="min-w-0 pt-8"
+            >
+              <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
+                Sube los archivos a esta página. Quedan guardados para armar la carpeta.
+              </p>
+              <div className="mt-6 space-y-5">
+                <TeamContactFields
+                  teamName={fields.teamName}
+                  contactEmail={fields.contactEmail}
+                  previewLocked={previewLocked}
+                  submitting={submitting}
+                  invalidField={invalidField}
+                  describedBy={describedBy}
+                  onTeamNameChange={(value) => {
+                    setFields((current) => ({ ...current, teamName: value }))
                   }}
-                  className={fieldClassName}
-                />
-              </div>
-              <div className="min-w-0 space-y-2">
-                <FieldLabel htmlFor="team-inbox-email">Correo de contacto</FieldLabel>
-                <input
-                  id="team-inbox-email"
-                  name="contactEmail"
-                  type="email"
-                  autoComplete="email"
-                  inputMode="email"
-                  spellCheck={false}
-                  maxLength={CONTACT_EMAIL_MAX_LENGTH}
-                  value={fields.contactEmail}
-                  readOnly={previewLocked}
-                  disabled={submitting}
-                  aria-invalid={invalidField === 'contactEmail'}
-                  aria-describedby={describedBy('contactEmail')}
-                  onChange={(event) => {
-                    setFields((current) => ({
-                      ...current,
-                      contactEmail: event.target.value,
-                    }))
-                  }}
-                  className={fieldClassName}
-                />
-              </div>
-              <div className="min-w-0 space-y-2">
-                <span id="team-inbox-files-label" className={labelClassName}>
-                  Archivos
-                </span>
-                <input
-                  ref={fileInputRef}
-                  id={fileInputId}
-                  type="file"
-                  accept="video/*"
-                  multiple
-                  tabIndex={-1}
-                  disabled={previewLocked || submitting}
-                  aria-labelledby="team-inbox-files-label"
-                  className="sr-only"
-                  onChange={(event) => {
-                    chooseFiles(event.target.files)
-                    event.target.value = ''
+                  onContactEmailChange={(value) => {
+                    setFields((current) => ({ ...current, contactEmail: value }))
                   }}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={previewLocked || submitting}
-                  aria-describedby={describedBy('files', 'team-inbox-files-hint')}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Elegir archivos
-                </Button>
-                <p
-                  id="team-inbox-files-hint"
-                  className="min-w-0 text-sm leading-relaxed text-muted-foreground"
-                >
-                  {formatInboxLimitSummary()} Los archivos grandes se envían por partes. No
-                  cierres la página hasta que termine.
-                </p>
-                <p className="min-w-0 text-sm text-muted-foreground">
-                  {fields.files.length === 0
-                    ? 'Ningún archivo elegido.'
-                    : formatSelectedFileSummary(fields.files)}
-                </p>
-                {fields.files.length > 0 && (
-                  <ul className="min-w-0 divide-y divide-border">
-                    {fields.files.map((file, fileIndex) => (
-                      <li
-                        key={`${file.name}-${file.sizeBytes}-${fileIndex}`}
-                        className="flex min-w-0 items-start gap-3 py-3"
-                      >
-                        <span
-                          dir="auto"
-                          title={file.name}
-                          className="min-w-0 flex-1 wrap-anywhere text-sm text-foreground"
+                <div className="min-w-0 space-y-2">
+                  <span id="team-inbox-files-label" className={labelClassName}>
+                    Archivos
+                  </span>
+                  <input
+                    ref={fileInputRef}
+                    id={fileInputId}
+                    type="file"
+                    accept="video/*"
+                    multiple
+                    tabIndex={-1}
+                    disabled={previewLocked || submitting}
+                    aria-labelledby="team-inbox-files-label"
+                    className="sr-only"
+                    onChange={(event) => {
+                      chooseFiles(event.target.files)
+                      event.target.value = ''
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={previewLocked || submitting}
+                    aria-describedby={describedBy('files', 'team-inbox-files-hint')}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Elegir archivos
+                  </Button>
+                  <p
+                    id="team-inbox-files-hint"
+                    className="min-w-0 text-sm leading-relaxed text-muted-foreground"
+                  >
+                    {formatInboxLimitSummary()} Los archivos grandes se envían por partes. No
+                    cierres la página hasta que termine.
+                  </p>
+                  <p className="min-w-0 text-sm text-muted-foreground">
+                    {fields.files.length === 0
+                      ? 'Ningún archivo elegido.'
+                      : formatSelectedFileSummary(fields.files)}
+                  </p>
+                  {fields.files.length > 0 && (
+                    <ul className="min-w-0 divide-y divide-border">
+                      {fields.files.map((file, fileIndex) => (
+                        <li
+                          key={`${file.name}-${file.sizeBytes}-${fileIndex}`}
+                          className="flex min-w-0 items-start gap-3 py-3"
                         >
-                          {file.name}
-                        </span>
-                        <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                          {formatByteSize(file.sizeBytes)}
-                        </span>
-                        <button
-                          type="button"
-                          className="shrink-0 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
-                          onClick={() => removeFile(fileIndex)}
-                          disabled={submitting}
-                        >
-                          Quitar
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                          <span
+                            dir="auto"
+                            title={file.name}
+                            className="min-w-0 flex-1 wrap-anywhere text-sm text-foreground"
+                          >
+                            {file.name}
+                          </span>
+                          <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                            {formatByteSize(file.sizeBytes)}
+                          </span>
+                          <button
+                            type="button"
+                            className="shrink-0 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                            onClick={() => removeFile(fileIndex)}
+                            disabled={submitting}
+                          >
+                            Quitar
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
-
-          <div className="min-w-0 py-8">
-            <h3 className="text-base font-medium text-foreground">Enlace</h3>
-            <p className="mt-2 min-w-0 text-sm leading-relaxed text-muted-foreground">
-              Pega un enlace de Google Drive, WeTransfer u otro servicio.
-            </p>
-            <div className="mt-6 min-w-0 space-y-2">
-              <FieldLabel htmlFor="team-inbox-link">Enlace</FieldLabel>
-              <input
-                id="team-inbox-link"
-                name="externalLink"
-                type="url"
-                inputMode="url"
-                spellCheck={false}
-                maxLength={EXTERNAL_LINK_MAX_LENGTH}
-                value={fields.externalLink}
-                readOnly={previewLocked}
-                disabled={submitting}
-                aria-invalid={invalidField === 'externalLink'}
-                aria-describedby={describedBy('externalLink')}
-                onChange={(event) => {
-                  setFields((current) => ({
-                    ...current,
-                    externalLink: event.target.value,
-                  }))
-                }}
-                className={fieldClassName}
+              <InboxSubmissionNotice
+                note="Esto envía la carga directa. El correo no pasa por este formulario."
+                progressLabel={progressLabel}
+                errorMessage={errorMessage}
+                successTeamName={successTeamName}
+                successEmail={successEmail}
+                submitting={submitting}
+                previewLocked={previewLocked}
               />
             </div>
-          </div>
-
-          <div className="min-w-0 py-8">
-            <h3 className="text-base font-medium text-foreground">Correo</h3>
-            <p className="mt-2 min-w-0 text-sm leading-relaxed text-muted-foreground">
-              Escribe a este correo con el nombre del equipo. Si el archivo es grande, el
-              correo puede rechazar el adjunto.
-            </p>
-            <a
-              href={teamInboxMailtoHref(TEAM_INBOX_EMAIL)}
-              className="mt-4 block min-w-0 wrap-anywhere text-sm text-foreground underline underline-offset-4"
+          ) : (
+            <div
+              role="tabpanel"
+              id={`${sendMethodBaseId}-link-panel`}
+              aria-labelledby={`${sendMethodBaseId}-link-tab`}
+              className="min-w-0 pt-8"
             >
-              {TEAM_INBOX_EMAIL}
-            </a>
-          </div>
-        </div>
-
-        <div className="min-w-0 py-8">
-          {progressLabel && (
-            <p
-              aria-live="polite"
-              className="mb-4 min-w-0 wrap-anywhere text-sm tabular-nums text-muted-foreground"
-            >
-              {progressLabel}
-            </p>
+              <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
+                Pega un enlace de Google Drive, WeTransfer u otro servicio.
+              </p>
+              <div className="mt-6 space-y-5">
+                <TeamContactFields
+                  teamName={fields.teamName}
+                  contactEmail={fields.contactEmail}
+                  previewLocked={previewLocked}
+                  submitting={submitting}
+                  invalidField={invalidField}
+                  describedBy={describedBy}
+                  onTeamNameChange={(value) => {
+                    setFields((current) => ({ ...current, teamName: value }))
+                  }}
+                  onContactEmailChange={(value) => {
+                    setFields((current) => ({ ...current, contactEmail: value }))
+                  }}
+                />
+                <div className="min-w-0 space-y-2">
+                  <FieldLabel htmlFor="team-inbox-link">Enlace</FieldLabel>
+                  <input
+                    id="team-inbox-link"
+                    name="externalLink"
+                    type="url"
+                    inputMode="url"
+                    spellCheck={false}
+                    maxLength={EXTERNAL_LINK_MAX_LENGTH}
+                    value={fields.externalLink}
+                    readOnly={previewLocked}
+                    disabled={submitting}
+                    aria-invalid={invalidField === 'externalLink'}
+                    aria-describedby={describedBy('externalLink')}
+                    onChange={(event) => {
+                      setFields((current) => ({
+                        ...current,
+                        externalLink: event.target.value,
+                      }))
+                    }}
+                    className={fieldClassName}
+                  />
+                </div>
+              </div>
+              <InboxSubmissionNotice
+                note="Esto envía el enlace. El correo no pasa por este formulario."
+                progressLabel={progressLabel}
+                errorMessage={errorMessage}
+                successTeamName={successTeamName}
+                successEmail={successEmail}
+                submitting={submitting}
+                previewLocked={previewLocked}
+              />
+            </div>
           )}
-          <Button type="submit" variant="outline" disabled={previewLocked || submitting}>
-            {submitting ? 'Enviando' : 'Enviar'}
-          </Button>
-          <p className="mt-3 min-w-0 text-sm leading-relaxed text-muted-foreground">
-            Esto envía la carga directa y el enlace. El correo no pasa por este formulario.
-          </p>
-          {errorMessage && (
-            <p
-              id="team-inbox-error"
-              role="alert"
-              className="mt-4 min-w-0 wrap-anywhere text-sm text-destructive"
-            >
-              {errorMessage}
-            </p>
-          )}
-          {successTeamName && successEmail && (
-            <p role="status" className="mt-4 min-w-0 wrap-anywhere text-sm text-foreground">
-              Quedó registrado para {successTeamName}. El correo de contacto es {successEmail}.
-              La carpeta se arma después del pago.
-            </p>
-          )}
-        </div>
-      </form>
+        </form>
+      )}
       {BREAK_UI_TOGGLE_ENABLED ? (
         <BreakUiDataToggle mode={previewMode} onModeChange={selectPreviewMode} />
       ) : null}
