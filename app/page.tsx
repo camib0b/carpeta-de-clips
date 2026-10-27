@@ -1,9 +1,16 @@
+import { Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import {
   LatestUploadedMatchSection,
   latestUploadedMatchLastEntranceStepIndex,
 } from '@/components/latest-uploaded-match-section'
-import { PrivateTeamFolderSection } from '@/components/private-team-folder-section'
+
+const PrivateTeamFolderSection = dynamic(() =>
+  import('@/components/private-team-folder-section').then(
+    (module) => module.PrivateTeamFolderSection,
+  ),
+)
 import { TeamIcon } from '@/components/team-icon'
 import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
 import {
@@ -116,17 +123,19 @@ export default async function HomePage() {
           />
         )}
         {(process.env.NODE_ENV !== 'production' || isPrivateTeamOfferReady()) && (
-          <PrivateTeamFolderSection
-            entranceStepStart={
-              latestUploadedMatch
-                ? latestUploadEntranceStepStart +
-                  latestUploadedMatchLastEntranceStepIndex(
-                    latestUploadedMatch.previews.length,
-                  ) +
-                  1
-                : latestUploadEntranceStepStart
-            }
-          />
+          <Suspense fallback={null}>
+            <PrivateTeamFolderSection
+              entranceStepStart={
+                latestUploadedMatch
+                  ? latestUploadEntranceStepStart +
+                    latestUploadedMatchLastEntranceStepIndex(
+                      latestUploadedMatch.previews.length,
+                    ) +
+                    1
+                  : latestUploadEntranceStepStart
+              }
+            />
+          </Suspense>
         )}
       </main>
 

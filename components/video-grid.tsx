@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { VideoClip } from '@/lib/types'
 import { VideoCard } from './video-card'
-import { VideoModal } from './video-modal'
 import { useLibraryClipSelection } from '@/hooks/use-library-clip'
 import { useLibraryFilters } from '@/hooks/use-library-filters'
 import { MatchContextBanner } from './match-context-banner'
@@ -12,6 +12,11 @@ import { clipLibraryEmptyState } from '@/lib/break-ui/clip-library-empty-state'
 import { listUniqueMatchSummaries } from '@/lib/match-display'
 import { storageSlugFromClip } from '@/lib/match-keys'
 import { cn } from '@/lib/utils'
+
+const VideoModal = dynamic(
+  () => import('./video-modal').then((module) => module.VideoModal),
+  { ssr: false },
+)
 
 function clipBelongsToHiddenMatch(
   clip: VideoClip,
