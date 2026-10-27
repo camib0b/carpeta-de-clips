@@ -262,7 +262,15 @@
     stroke var(--duration-color) var(--color-ease),
     opacity var(--duration-color) var(--color-ease),
     box-shadow var(--duration-button) var(--ease-out-strong),
+    translate var(--duration-press) var(--ease-out-strong),
     transform var(--duration-press) var(--ease-out-strong);
+}
+
+/* Primary buttons lift 2px on hover. Reduced motion keeps the shadow and skips the lift. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-slot='button'].bg-primary:hover:not(:disabled):not([aria-disabled='true']) {
+    translate: 0 -2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
