@@ -20,11 +20,17 @@ import {
   landingEntranceDelay,
 } from '@/lib/landing-entrance'
 import {
-  PRIVATE_TEAM_OFFER_TIERS,
+  PRIVATE_TEAM_OFFER_DETAIL_LEVELS,
+  PRIVATE_TEAM_OFFER_TURNAROUNDS,
+  PRIVATE_TEAM_OFFER_WIDEST_PRICE_CLP,
   TEAM_INBOX_EMAIL,
   formatPricePerMatchClp,
+  paymentUrlForPrice,
+  priceForPrivateTeamOffer,
+  turnaroundForPrivateTeamOffer,
   teamInboxMailtoHref,
-  type PrivateTeamOfferTier,
+  type PrivateTeamOfferDetailId,
+  type PrivateTeamOfferTurnaroundId,
 } from '@/lib/private-team-offer'
 import {
   CONTACT_EMAIL_MAX_LENGTH,
@@ -47,38 +53,17 @@ const STEPS = [
   'Recibirás tu carpeta con los partidos cortados, ordenados por concepto, listos para ser analizado y presentado.',
 ]
 
-/**
- * Dev-only prices and labels for the tier list. The first row is a long name
- * and a nine-digit CLP amount; the second is a one-letter name, $1, and a
- * turnaround long enough to wrap inside one column.
- */
-const WORST_PRIVATE_TEAM_OFFER_TIERS: readonly PrivateTeamOfferTier[] = [
-  {
-    id: 'standard',
-    label: 'Estándar para el plantel completo de la categoría sub-16 visitante',
-    priceClp: 999_999_999,
-    paymentUrl: 'https://fintoc.me/cami-escu/25000',
-    turnaround: '3 días',
-  },
-  {
-    id: 'express',
-    label: 'E',
-    priceClp: 1,
-    paymentUrl: 'https://fintoc.me/cami-escu/40000',
-    turnaround:
-      '24 horas desde que llegan el pago y el archivo de video del partido completo',
-  },
+const OFFER_BREAK_UI_COMBOS: {
+  detailId: PrivateTeamOfferDetailId
+  turnaroundId: PrivateTeamOfferTurnaroundId
+}[] = [
+  { detailId: 'basic', turnaroundId: 'standard' },
+  { detailId: 'basic', turnaroundId: 'express' },
+  { detailId: 'exhaustive', turnaroundId: 'standard' },
+  { detailId: 'exhaustive', turnaroundId: 'express' },
 ]
 
-function offerTiersForPreview(mode: PreviewMode): readonly PrivateTeamOfferTier[] {
-  if (process.env.NODE_ENV !== 'development' || mode === 'demo' || mode === 'error') {
-    return PRIVATE_TEAM_OFFER_TIERS
-  }
-  if (mode === 'one') {
-    return PRIVATE_TEAM_OFFER_TIERS.slice(0, 1)
-  }
-  return WORST_PRIVATE_TEAM_OFFER_TIERS
-}
+const OFFER_PRICE_MIN_WIDTH = formatPricePerMatchClp(PRIVATE_TEAM_OFFER_WIDEST_PRICE_CLP)
 
 const fieldClassName =
   'h-9 w-full min-w-0 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors duration-200 focus-visible:border-state focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50'
@@ -280,6 +265,105 @@ function sendMethodTabClassName(selected: boolean): string {
   ].join(' ')
 }
 
+function offerSegmentClassName(selected: boolean): string {
+  return [
+    'min-w-0 flex-1 rounded-sm px-3 py-2 text-sm transition-colors duration-200',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+    selected
+      ? 'bg-background text-foreground shadow-sm'
+      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+  ].join(' ')
+}
+
+function OfferSegmentGroup<T extends string>({
+  groupId,
+  label,
+  options,
+  value,
+  disabled,
+  onChange,
+}: {
+  groupId: string
+  label: string
+  options: { id: T; label: string }[]
+  value: T
+  disabled: boolean
+  onChange: (next: T) => void
+}) {
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
+
+  function moveSelection(index: number, key: string) {
+    if (disabled) {
+      return
+    }
+    const lastIndex = options.length - 1
+    let nextIndex = index
+    if (key === 'ArrowRight') {
+      nextIndex = index === lastIndex ? 0 : index + 1
+    } else if (key === 'ArrowLeft') {
+      nextIndex = index === 0 ? lastIndex : index - 1
+    } else if (key === 'Home') {
+      nextIndex = 0
+    } else if (key === 'End') {
+      nextIndex = lastIndex
+    } else {
+      return
+    }
+    const next = options[nextIndex]
+    if (next == null) {
+      return
+    }
+    onChange(next.id)
+    tabRefs.current[nextIndex]?.focus({ preventScroll: true })
+  }
+
+  return (
+    <div className="min-w-0 space-y-2">
+      <span id={`${groupId}-label`} className={labelClassName}>
+        {label}
+      </span>
+      <div
+        role="radiogroup"
+        aria-labelledby={`${groupId}-label`}
+        className="flex min-w-0 rounded-md border border-border bg-muted p-1"
+      >
+        {options.map((option, index) => {
+          const selected = value === option.id
+          return (
+            <button
+              key={option.id}
+              ref={(node) => {
+                tabRefs.current[index] = node
+              }}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
+              disabled={disabled}
+              className={offerSegmentClassName(selected)}
+              onClick={() => onChange(option.id)}
+              onKeyDown={(event) => {
+                if (
+                  event.key !== 'ArrowRight' &&
+                  event.key !== 'ArrowLeft' &&
+                  event.key !== 'Home' &&
+                  event.key !== 'End'
+                ) {
+                  return
+                }
+                event.preventDefault()
+                moveSelection(index, event.key)
+              }}
+            >
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function TeamContactFields({
   teamName,
   contactEmail,
@@ -402,11 +486,16 @@ export function PrivateTeamFolderSection({
 }) {
   const fileInputId = useId()
   const sendMethodBaseId = useId()
+  const offerDetailGroupId = useId()
+  const offerTurnaroundGroupId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const sendMethodTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [previewMode, setPreviewMode] = useState<PreviewMode>('demo')
   const [sendMethod, setSendMethod] = useState<SendMethod>('upload')
-  const offerTiers = offerTiersForPreview(previewMode)
+  const [detailId, setDetailId] = useState<PrivateTeamOfferDetailId>('basic')
+  const [turnaroundId, setTurnaroundId] =
+    useState<PrivateTeamOfferTurnaroundId>('standard')
+  const [offerBreakComboIndex, setOfferBreakComboIndex] = useState(0)
   const [fields, setFields] = useState<InboxFields>(EMPTY_FIELDS)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [invalidField, setInvalidField] = useState<TeamInboxField | null>(null)
@@ -425,6 +514,33 @@ export function PrivateTeamFolderSection({
     setPreviewMode(mode)
     applyPreview(mode)
   }, [])
+
+  useEffect(() => {
+    if (!BREAK_UI_TOGGLE_ENABLED || previewMode !== 'worst') {
+      return
+    }
+    const timer = window.setInterval(() => {
+      setOfferBreakComboIndex((current) => (current + 1) % OFFER_BREAK_UI_COMBOS.length)
+    }, 1200)
+    return () => window.clearInterval(timer)
+  }, [previewMode])
+
+  const previewOfferCombo =
+    BREAK_UI_TOGGLE_ENABLED && previewMode === 'worst'
+      ? OFFER_BREAK_UI_COMBOS[offerBreakComboIndex]
+      : BREAK_UI_TOGGLE_ENABLED && previewMode === 'one'
+        ? OFFER_BREAK_UI_COMBOS[0]
+        : null
+
+  const selectedDetailId = previewOfferCombo?.detailId ?? detailId
+  const selectedTurnaroundId = previewOfferCombo?.turnaroundId ?? turnaroundId
+  const selectedDetail =
+    PRIVATE_TEAM_OFFER_DETAIL_LEVELS.find((level) => level.id === selectedDetailId) ??
+    PRIVATE_TEAM_OFFER_DETAIL_LEVELS[0]
+  const selectedTurnaround = turnaroundForPrivateTeamOffer(selectedTurnaroundId)
+  const selectedPriceClp = priceForPrivateTeamOffer(selectedDetailId, selectedTurnaroundId)
+  const selectedPaymentUrl = paymentUrlForPrice(selectedPriceClp)
+  const offerTogglesLocked = previewLocked
 
   function applyPreview(mode: PreviewMode) {
     const draft = previewDraft(mode)
@@ -641,32 +757,56 @@ export function PrivateTeamFolderSection({
           </li>
         ))}
       </ol>
-      <ul className="mt-8 grid min-w-0 grid-cols-1 gap-8 sm:grid-cols-2">
-        {offerTiers.map((tier) => (
-          <li key={tier.id} className="min-w-0 border-t border-border pt-4">
-            <h3 className="min-w-0 text-base font-medium wrap-anywhere text-foreground">
-              {tier.label}
-            </h3>
-            <p className="mt-2 flex min-w-0 flex-wrap gap-x-2 text-sm text-foreground">
-              <span className="text-muted-foreground">Precio por partido</span>
-              <span className="whitespace-nowrap tabular-nums">
-                {formatPricePerMatchClp(tier.priceClp)}
-              </span>
-            </p>
-            <p className="mt-2 flex min-w-0 flex-wrap gap-x-2 text-sm text-foreground">
-              <span className="text-muted-foreground">Plazo</span>
-              <span className="min-w-0 wrap-anywhere">{tier.turnaround}</span>
-            </p>
-            <div className="mt-4">
-              <Button variant="outline" asChild>
-                <a href={tier.paymentUrl} aria-label={`Pagar ${tier.label}`}>
-                  Pagar
-                </a>
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className="mt-8 min-w-0 space-y-6 border-t border-border pt-8">
+        <OfferSegmentGroup
+          groupId={offerDetailGroupId}
+          label="Nivel de detalle"
+          options={PRIVATE_TEAM_OFFER_DETAIL_LEVELS.map((level) => ({
+            id: level.id,
+            label: level.label,
+          }))}
+          value={selectedDetailId}
+          disabled={offerTogglesLocked}
+          onChange={setDetailId}
+        />
+        <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
+          {selectedDetail.description}
+        </p>
+        <OfferSegmentGroup
+          groupId={offerTurnaroundGroupId}
+          label="Plazo"
+          options={PRIVATE_TEAM_OFFER_TURNAROUNDS.map((turnaround) => ({
+            id: turnaround.id,
+            label: turnaround.label,
+          }))}
+          value={selectedTurnaroundId}
+          disabled={offerTogglesLocked}
+          onChange={setTurnaroundId}
+        />
+        <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-sm text-foreground">
+          <span className="text-muted-foreground">Precio por partido</span>
+          <span
+            className="inline-block whitespace-nowrap tabular-nums"
+            style={{ minWidth: `${OFFER_PRICE_MIN_WIDTH.length}ch` }}
+          >
+            {formatPricePerMatchClp(selectedPriceClp)}
+          </span>
+        </p>
+        <p className="flex min-w-0 flex-wrap gap-x-2 text-sm text-foreground">
+          <span className="text-muted-foreground">Plazo</span>
+          <span className="min-w-0">{selectedTurnaround.turnaround}</span>
+        </p>
+        <div>
+          <Button variant="outline" asChild>
+            <a
+              href={selectedPaymentUrl}
+              aria-label={`Pagar ${selectedDetail.label} ${selectedTurnaround.label}`}
+            >
+              Pagar
+            </a>
+          </Button>
+        </div>
+      </div>
       <p className="mt-8 min-w-0 text-sm leading-relaxed text-muted-foreground">
         El plazo empieza cuando llegan el pago y el archivo de video.
       </p>
