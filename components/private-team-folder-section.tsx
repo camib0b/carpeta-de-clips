@@ -50,7 +50,7 @@ const BREAK_UI_TOGGLE_ENABLED = process.env.NODE_ENV === 'development'
 const STEPS = [
   'Envía los videos en cualquier formato, ocupando alguno de los 3 mecanismos ofrecidos.',
   'Realiza el pago según el nivel de detalle requerido y el plazo aceptado.',
-  'Recibirás tu carpeta con los partidos cortados, ordenados por concepto, listos para ser analizado y presentado.',
+  'Recibirás tu carpeta con los partidos cortados, ordenados por concepto, listos para ser presentados.',
 ]
 
 const OFFER_BREAK_UI_COMBOS: {
@@ -438,7 +438,7 @@ function InboxSubmissionNotice({
   submitting,
   previewLocked,
 }: {
-  note: string
+  note?: string
   progressLabel: string | null
   errorMessage: string | null
   successTeamName: string | null
@@ -459,7 +459,9 @@ function InboxSubmissionNotice({
       <Button type="submit" variant="outline" disabled={previewLocked || submitting}>
         {submitting ? 'Enviando' : 'Enviar'}
       </Button>
-      <p className="mt-3 min-w-0 text-sm leading-relaxed text-muted-foreground">{note}</p>
+      {note != null && note.length > 0 && (
+        <p className="mt-3 min-w-0 text-sm leading-relaxed text-muted-foreground">{note}</p>
+      )}
       {errorMessage && (
         <p
           id="team-inbox-error"
@@ -783,6 +785,10 @@ export function PrivateTeamFolderSection({
           disabled={offerTogglesLocked}
           onChange={setTurnaroundId}
         />
+        <p className="flex min-w-0 flex-wrap gap-x-2 text-sm text-foreground">
+          <span className="text-muted-foreground">Plazo</span>
+          <span className="min-w-0">{selectedTurnaround.turnaround}</span>
+        </p>
         <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-sm text-foreground">
           <span className="text-muted-foreground">Precio por partido</span>
           <span
@@ -791,10 +797,6 @@ export function PrivateTeamFolderSection({
           >
             {formatPricePerMatchClp(selectedPriceClp)}
           </span>
-        </p>
-        <p className="flex min-w-0 flex-wrap gap-x-2 text-sm text-foreground">
-          <span className="text-muted-foreground">Plazo</span>
-          <span className="min-w-0">{selectedTurnaround.turnaround}</span>
         </p>
         <div>
           <Button variant="outline" asChild>
@@ -808,7 +810,7 @@ export function PrivateTeamFolderSection({
         </div>
       </div>
       <p className="mt-8 min-w-0 text-sm leading-relaxed text-muted-foreground">
-        El plazo empieza cuando llegan el pago y el archivo de video.
+        El plazo empieza a correr cuando llega el pago y el video del partido.
       </p>
 
       <p
@@ -864,8 +866,7 @@ export function PrivateTeamFolderSection({
           className="min-w-0 py-8"
         >
           <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
-            Escribe a este correo con el nombre del equipo. Si el archivo es grande, el
-            correo puede rechazar el adjunto.
+            Indicar nombre del equipo en el asunto.
           </p>
           <a
             href={teamInboxMailtoHref(TEAM_INBOX_EMAIL)}
@@ -884,7 +885,7 @@ export function PrivateTeamFolderSection({
               className="min-w-0 pt-8"
             >
               <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
-                Sube los archivos a esta página. Quedan guardados para armar la carpeta.
+                Carga el partido en este formulario. Quedará guardado para armar la carpeta.
               </p>
               <div className="mt-6 space-y-5">
                 <TeamContactFields
@@ -973,7 +974,6 @@ export function PrivateTeamFolderSection({
                 </div>
               </div>
               <InboxSubmissionNotice
-                note="Esto envía la carga directa. El correo no pasa por este formulario."
                 progressLabel={progressLabel}
                 errorMessage={errorMessage}
                 successTeamName={successTeamName}
@@ -990,7 +990,7 @@ export function PrivateTeamFolderSection({
               className="min-w-0 pt-8"
             >
               <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
-                Pega un enlace de Google Drive, WeTransfer u otro servicio.
+                Enlace de YouTube, Google Drive, WeTransfer u otro.
               </p>
               <div className="mt-6 space-y-5">
                 <TeamContactFields
