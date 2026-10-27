@@ -27,7 +27,7 @@ export const PRIVATE_TEAM_OFFER_DETAIL_LEVELS: readonly PrivateTeamOfferDetailLe
   {
     id: 'basic',
     label: 'Básico',
-    description: 'Salidas, goles, cortos e ingresos al área de cada equipo.',
+    description: 'Salidas, goles, cortos e ingresos al área de ambos equipos.',
   },
   {
     id: 'exhaustive',
