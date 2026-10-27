@@ -55,7 +55,7 @@ export default async function HomePage() {
           className="landing-enter mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
           style={{ animationDelay: landingEntranceDelay(1, LANDING_ENTRANCE_STEP_MS) }}
         >
-          Equipos públicos
+          Carpetas públicas
         </p>
         <nav className="mb-28">
           {teamsWithClipCounts.length === 0 ? (
