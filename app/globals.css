@@ -98,6 +98,28 @@
   animation: landing-enter 250ms var(--ease-out-strong) both;
 }
 
+/*
+  Clip grid curtain. The shared fall staggers by --curtain-stagger (80ms).
+  Cap that delay at the 12th card so a long page does not keep rising.
+  The shared clip-path also clips hit testing; this grid keeps the fall
+  and leaves the whole card clickable for the entire animation.
+*/
+.library-clip-results[data-curtain-live] .curtain-reveal-item[data-curtain='playing'] {
+  animation-delay: calc(min(var(--curtain-index, 0), 11) * var(--curtain-stagger));
+  clip-path: none !important;
+}
+
+.library-clip-results[data-curtain-live] .curtain-reveal-item[data-curtain='armed'] {
+  clip-path: none !important;
+}
+
+.library-clip-results:not([data-curtain-live]) .curtain-reveal-item {
+  animation: none;
+  opacity: 1;
+  transform: none;
+  clip-path: none;
+}
+
 @keyframes landing-enter {
   from {
     opacity: 0;

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { CurtainReveal } from '@camib0b/ui'
 import { VideoClip } from '@/lib/types'
 import { VideoCard } from './video-card'
 import { useLibraryClipSelection } from '@/hooks/use-library-clip'
@@ -17,6 +18,15 @@ const VideoModal = dynamic(
   () => import('./video-modal').then((module) => module.VideoModal),
   { ssr: false },
 )
+
+/** Shared curtain stagger is 80ms. Only the first 12 cards get their own step. */
+const CURTAIN_STAGGER_CARD_CAP = 12
+const CURTAIN_STAGGER_MS = 80
+const CURTAIN_FALL_MS = 480
+
+function filteredClipKey(videos: VideoClip[]): string {
+  return videos.map((video) => video.id).join('\n')
+}
 
 function clipBelongsToHiddenMatch(
   clip: VideoClip,
@@ -60,11 +70,9 @@ interface VideoGridProps {
  * Displays videos in a responsive grid with client-side filtering
  */
 export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: VideoGridProps) {
-  const skipCardEntranceAnimationRef = useRef(false)
-  useEffect(() => {
-    skipCardEntranceAnimationRef.current = true
-  }, [])
-  const playCardEntranceAnimation = !skipCardEntranceAnimationRef.current
+  const resultsMotionRef = useRef<HTMLDivElement>(null)
+  const [curtainLive, setCurtainLive] = useState(true)
+  const skipResultsFadeRef = useRef(true)
 
   const {
     selectedConcepts,
@@ -113,6 +121,39 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
       ),
     [clipsMatchingFilters, hiddenMatchSlugs],
   )
+  const filteredClipIdentity = filteredClipKey(filteredVideos)
+  const previousFilteredClipIdentityRef = useRef<string | null>(null)
+  if (previousFilteredClipIdentityRef.current == null) {
+    previousFilteredClipIdentityRef.current = filteredClipIdentity
+  } else if (previousFilteredClipIdentityRef.current !== filteredClipIdentity) {
+    previousFilteredClipIdentityRef.current = filteredClipIdentity
+    if (curtainLive) {
+      setCurtainLive(false)
+    }
+  }
+
+  useEffect(() => {
+    const settleDelayMs =
+      (CURTAIN_STAGGER_CARD_CAP - 1) * CURTAIN_STAGGER_MS + CURTAIN_FALL_MS + 40
+    const timeoutId = window.setTimeout(() => {
+      setCurtainLive(false)
+    }, settleDelayMs)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
+
+  useEffect(() => {
+    if (skipResultsFadeRef.current) {
+      skipResultsFadeRef.current = false
+      return
+    }
+    const results = resultsMotionRef.current
+    if (results == null) {
+      return
+    }
+    results.classList.remove('animate-fade-up')
+    void results.offsetWidth
+    results.classList.add('animate-fade-up')
+  }, [filteredClipIdentity])
 
   const shouldShowMatchBanner = selectedRivals.length > 0
 
@@ -175,17 +216,24 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
 
       {/* Video Grid */}
       {filteredVideos.length > 0 ? (
-        <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredVideos.map((video, index) => (
-            <VideoCard
-              key={video.id}
-              video={video}
-              playEntranceAnimation={playCardEntranceAnimation}
-              onClick={() => openClip(video)}
-              thumbnailLoading={index < 3 ? 'eager' : 'lazy'}
-              thumbnailFetchPriority={index === 0 ? 'high' : undefined}
-            />
-          ))}
+        <div
+          ref={resultsMotionRef}
+          data-curtain-live={curtainLive ? '' : undefined}
+          className="library-clip-results"
+        >
+          <CurtainReveal className="library-clip-grid grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredVideos.map((video, index) => (
+              <div key={video.id} className="relative flex min-w-0 hover:z-10">
+                <VideoCard
+                  video={video}
+                  playEntranceAnimation={false}
+                  onClick={() => openClip(video)}
+                  thumbnailLoading={index < 3 ? 'eager' : 'lazy'}
+                  thumbnailFetchPriority={index === 0 ? 'high' : undefined}
+                />
+              </div>
+            ))}
+          </CurtainReveal>
         </div>
       ) : (
         <LibraryEmptyState

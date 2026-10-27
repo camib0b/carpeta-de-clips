@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
+import { useRevealPresence } from '@camib0b/ui'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -66,7 +68,7 @@ const OFFER_BREAK_UI_COMBOS: {
 const OFFER_PRICE_MIN_WIDTH = formatPricePerMatchClp(PRIVATE_TEAM_OFFER_WIDEST_PRICE_CLP)
 
 const fieldClassName =
-  'h-9 w-full min-w-0 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors duration-200 focus-visible:border-state focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50'
+  'h-9 w-full min-w-0 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors duration-color ease-color focus-visible:border-state focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50'
 
 const labelClassName =
   'text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground'
@@ -257,12 +259,146 @@ type SendMethod = (typeof SEND_METHODS)[number]['id']
 
 function sendMethodTabClassName(selected: boolean): string {
   return [
-    '-mb-px shrink-0 whitespace-nowrap border-b-2 pb-3 text-sm transition-colors duration-200',
+    'shrink-0 whitespace-nowrap pb-3 text-sm transition-colors duration-color ease-color',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-    selected
-      ? 'border-foreground text-foreground'
-      : 'border-transparent text-muted-foreground hover:text-foreground',
+    selected ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
   ].join(' ')
+}
+
+type TabIndicator = {
+  left: number
+  top: number
+  width: number
+}
+
+function measureTabIndicator(list: HTMLElement, tab: HTMLElement): TabIndicator {
+  const listRect = list.getBoundingClientRect()
+  const tabRect = tab.getBoundingClientRect()
+  return {
+    left: tabRect.left - listRect.left,
+    top: tabRect.bottom - listRect.top - 2,
+    width: tabRect.width,
+  }
+}
+
+function uploadProgressPercent(progressLabel: string | null): number | null {
+  if (progressLabel == null) {
+    return null
+  }
+  const match = /parte (\d+) de (\d+)/.exec(progressLabel)
+  if (match == null) {
+    return null
+  }
+  const partNumber = Number(match[1])
+  const partCount = Number(match[2])
+  if (!Number.isFinite(partNumber) || !Number.isFinite(partCount) || partCount <= 0) {
+    return null
+  }
+  return Math.min(100, Math.max(0, (partNumber / partCount) * 100))
+}
+
+function sendMethodPanelClassName(selected: boolean, animate: boolean): string {
+  return [
+    'w-full min-w-0',
+    animate ? 'contact-reveal' : '',
+    selected ? 'relative' : 'absolute inset-x-0 top-0',
+    !animate && !selected ? 'pointer-events-none opacity-0' : '',
+  ]
+    .filter((className) => className.length > 0)
+    .join(' ')
+}
+
+function useAnimatedPanelHeight(node: HTMLElement | null): number | null {
+  const [height, setHeight] = useState<number | null>(null)
+  const hasMeasuredRef = useRef(false)
+
+  useLayoutEffect(() => {
+    if (node == null) {
+      return
+    }
+    let outerFrame = 0
+    let innerFrame = 0
+
+    const readAndSet = (immediate: boolean) => {
+      const nextHeight = node.offsetHeight
+      if (immediate || !hasMeasuredRef.current) {
+        hasMeasuredRef.current = true
+        setHeight(nextHeight)
+        return
+      }
+      window.cancelAnimationFrame(outerFrame)
+      window.cancelAnimationFrame(innerFrame)
+      outerFrame = window.requestAnimationFrame(() => {
+        innerFrame = window.requestAnimationFrame(() => {
+          setHeight(node.offsetHeight)
+        })
+      })
+    }
+
+    readAndSet(!hasMeasuredRef.current)
+    const observer = new ResizeObserver(() => {
+      readAndSet(false)
+    })
+    observer.observe(node)
+    return () => {
+      observer.disconnect()
+      window.cancelAnimationFrame(outerFrame)
+      window.cancelAnimationFrame(innerFrame)
+    }
+  }, [node])
+
+  return height
+}
+
+function OfferPrice({ amountLabel }: { amountLabel: string }) {
+  const activeLabelRef = useRef(amountLabel)
+  const [hasChanged, setHasChanged] = useState(false)
+  const [outgoingLabel, setOutgoingLabel] = useState<string | null>(null)
+  const [outgoingOpen, setOutgoingOpen] = useState(false)
+  const { isRevealMounted } = useRevealPresence(outgoingOpen)
+
+  if (activeLabelRef.current !== amountLabel) {
+    const previousLabel = activeLabelRef.current
+    activeLabelRef.current = amountLabel
+    setOutgoingLabel(previousLabel)
+    setOutgoingOpen(true)
+    if (!hasChanged) {
+      setHasChanged(true)
+    }
+  }
+
+  useEffect(() => {
+    if (!outgoingOpen) {
+      return
+    }
+    const frameId = window.requestAnimationFrame(() => {
+      setOutgoingOpen(false)
+    })
+    return () => window.cancelAnimationFrame(frameId)
+  }, [outgoingOpen, outgoingLabel])
+
+  return (
+    <span
+      className="inline-grid whitespace-nowrap tabular-nums"
+      style={{ minWidth: `${OFFER_PRICE_MIN_WIDTH.length}ch` }}
+    >
+      {isRevealMounted && outgoingLabel != null ? (
+        <span
+          className="contact-reveal col-start-1 row-start-1"
+          data-state={outgoingOpen ? 'open' : undefined}
+        >
+          {outgoingLabel}
+        </span>
+      ) : null}
+      <span
+        key={hasChanged ? amountLabel : 'current'}
+        className={hasChanged ? 'contact-reveal col-start-1 row-start-1' : 'col-start-1 row-start-1'}
+        data-state={hasChanged ? 'open' : undefined}
+      >
+        {amountLabel}
+      </span>
+    </span>
+  )
 }
 
 function OfferSegmentGroup<T extends string>({
@@ -363,6 +499,7 @@ function OfferSegmentGroup<T extends string>({
 }
 
 function TeamContactFields({
+  idPrefix,
   teamName,
   contactEmail,
   previewLocked,
@@ -372,21 +509,29 @@ function TeamContactFields({
   onTeamNameChange,
   onContactEmailChange,
 }: {
+  idPrefix: string
   teamName: string
   contactEmail: string
   previewLocked: boolean
   submitting: boolean
   invalidField: TeamInboxField | null
-  describedBy: (field: TeamInboxField, hintId?: string) => string | undefined
+  describedBy: (
+    field: TeamInboxField,
+    hintId?: string,
+    errorElementId?: string,
+  ) => string | undefined
   onTeamNameChange: (value: string) => void
   onContactEmailChange: (value: string) => void
 }) {
+  const teamNameId = `${idPrefix}-team-name`
+  const emailId = `${idPrefix}-email`
+
   return (
     <>
       <div className="min-w-0 space-y-2">
-        <FieldLabel htmlFor="team-inbox-team-name">Nombre del equipo</FieldLabel>
+        <FieldLabel htmlFor={teamNameId}>Nombre del equipo</FieldLabel>
         <input
-          id="team-inbox-team-name"
+          id={teamNameId}
           name="teamName"
           type="text"
           autoComplete="organization"
@@ -395,7 +540,7 @@ function TeamContactFields({
           readOnly={previewLocked}
           disabled={submitting}
           aria-invalid={invalidField === 'teamName'}
-          aria-describedby={describedBy('teamName')}
+          aria-describedby={describedBy('teamName', undefined, `${idPrefix}-error`)}
           onChange={(event) => {
             onTeamNameChange(event.target.value)
           }}
@@ -403,9 +548,9 @@ function TeamContactFields({
         />
       </div>
       <div className="min-w-0 space-y-2">
-        <FieldLabel htmlFor="team-inbox-email">Correo de contacto</FieldLabel>
+        <FieldLabel htmlFor={emailId}>Correo de contacto</FieldLabel>
         <input
-          id="team-inbox-email"
+          id={emailId}
           name="contactEmail"
           type="email"
           autoComplete="email"
@@ -416,7 +561,7 @@ function TeamContactFields({
           readOnly={previewLocked}
           disabled={submitting}
           aria-invalid={invalidField === 'contactEmail'}
-          aria-describedby={describedBy('contactEmail')}
+          aria-describedby={describedBy('contactEmail', undefined, `${idPrefix}-error`)}
           onChange={(event) => {
             onContactEmailChange(event.target.value)
           }}
@@ -431,6 +576,7 @@ function InboxSubmissionNotice({
   note,
   progressLabel,
   errorMessage,
+  errorElementId,
   successTeamName,
   successEmail,
   submitting,
@@ -439,20 +585,41 @@ function InboxSubmissionNotice({
   note?: string
   progressLabel: string | null
   errorMessage: string | null
+  errorElementId: string
   successTeamName: string | null
   successEmail: string | null
   submitting: boolean
   previewLocked: boolean
 }) {
+  const progressPercent = uploadProgressPercent(progressLabel)
+
   return (
     <div className="min-w-0 py-8">
       {progressLabel && (
-        <p
-          aria-live="polite"
-          className="mb-4 min-w-0 wrap-anywhere text-sm tabular-nums text-muted-foreground"
-        >
-          {progressLabel}
-        </p>
+        <div className="mb-4 min-w-0">
+          <p
+            id={`${errorElementId}-progress`}
+            aria-live="polite"
+            className="min-w-0 wrap-anywhere text-sm tabular-nums text-muted-foreground"
+          >
+            {progressLabel}
+          </p>
+          {progressPercent != null ? (
+            <div
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(progressPercent)}
+              aria-labelledby={`${errorElementId}-progress`}
+              className="mt-2 h-1 w-full overflow-hidden bg-muted"
+            >
+              <div
+                className="h-full bg-foreground motion-safe:transition-[width] motion-safe:duration-color motion-safe:ease-out-strong"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          ) : null}
+        </div>
       )}
       <Button type="submit" variant="outline" disabled={previewLocked || submitting}>
         {submitting ? 'Enviando' : 'Enviar'}
@@ -462,7 +629,7 @@ function InboxSubmissionNotice({
       )}
       {errorMessage && (
         <p
-          id="team-inbox-error"
+          id={errorElementId}
           role="alert"
           className="mt-4 min-w-0 wrap-anywhere text-sm text-destructive"
         >
@@ -503,6 +670,15 @@ export function PrivateTeamFolderSection({
   const [successTeamName, setSuccessTeamName] = useState<string | null>(null)
   const [successEmail, setSuccessEmail] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [animateSendMethodPanels, setAnimateSendMethodPanels] = useState(false)
+  const [tabIndicator, setTabIndicator] = useState<TabIndicator | null>(null)
+  const sendMethodTabListRef = useRef<HTMLDivElement>(null)
+  const [emailPanel, setEmailPanel] = useState<HTMLDivElement | null>(null)
+  const [uploadPanel, setUploadPanel] = useState<HTMLFormElement | null>(null)
+  const [linkPanel, setLinkPanel] = useState<HTMLFormElement | null>(null)
+  const activeSendPanel =
+    sendMethod === 'upload' ? uploadPanel : sendMethod === 'link' ? linkPanel : emailPanel
+  const sendPanelHeight = useAnimatedPanelHeight(activeSendPanel)
 
   const previewLocked = BREAK_UI_TOGGLE_ENABLED && previewMode !== 'demo'
 
@@ -567,13 +743,34 @@ export function PrivateTeamFolderSection({
     applyPreview(mode)
   }
 
-  function describedBy(field: TeamInboxField, hintId?: string): string | undefined {
+  function describedBy(
+    field: TeamInboxField,
+    hintId?: string,
+    errorElementId = 'team-inbox-upload-error',
+  ): string | undefined {
     const ids = [
       hintId,
-      invalidField === field && errorMessage ? 'team-inbox-error' : null,
+      invalidField === field && errorMessage ? errorElementId : null,
     ].filter((id): id is string => id != null)
     return ids.length > 0 ? ids.join(' ') : undefined
   }
+
+  useLayoutEffect(() => {
+    const list = sendMethodTabListRef.current
+    const selectedIndex = SEND_METHODS.findIndex((method) => method.id === sendMethod)
+    const tab = sendMethodTabRefs.current[selectedIndex]
+    if (list == null || tab == null) {
+      return
+    }
+    const update = () => {
+      setTabIndicator(measureTabIndicator(list, tab))
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(list)
+    observer.observe(tab)
+    return () => observer.disconnect()
+  }, [sendMethod])
 
   function chooseFiles(fileList: FileList | null) {
     if (previewLocked || submitting || fileList == null || fileList.length === 0) {
@@ -629,6 +826,7 @@ export function PrivateTeamFolderSection({
     if (submitting) {
       return
     }
+    setAnimateSendMethodPanels(true)
     setSendMethod(method)
   }
 
@@ -680,6 +878,7 @@ export function PrivateTeamFolderSection({
       setInvalidField(validation.field)
       setSuccessTeamName(null)
       setSuccessEmail(null)
+      toast.error(validation.error)
       return
     }
 
@@ -689,6 +888,7 @@ export function PrivateTeamFolderSection({
         if (file.file == null) {
           setErrorMessage(teamInboxMessages.uploadFailed)
           setInvalidField('files')
+          toast.error(teamInboxMessages.uploadFailed)
           return
         }
         realFiles.push(file.file)
@@ -712,14 +912,16 @@ export function PrivateTeamFolderSection({
       setProgressLabel(null)
       setSuccessTeamName(validation.value.teamName)
       setSuccessEmail(validation.value.contactEmail)
+      toast.success('Quedó registrado. La carpeta se arma después del pago.')
     } catch (error) {
       setProgressLabel(null)
-      setErrorMessage(
+      const message =
         error instanceof Error && error.message.length > 0
           ? error.message
-          : teamInboxMessages.uploadFailed,
-      )
+          : teamInboxMessages.uploadFailed
+      setErrorMessage(message)
       setInvalidField('form')
+      toast.error(message)
     } finally {
       setSubmitting(false)
     }
@@ -789,12 +991,7 @@ export function PrivateTeamFolderSection({
         </p>
         <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-sm text-foreground">
           <span className="text-muted-foreground">Precio por partido</span>
-          <span
-            className="inline-block whitespace-nowrap tabular-nums"
-            style={{ minWidth: `${OFFER_PRICE_MIN_WIDTH.length}ch` }}
-          >
-            {formatPricePerMatchClp(selectedPriceClp)}
-          </span>
+          <OfferPrice amountLabel={formatPricePerMatchClp(selectedPriceClp)} />
         </p>
         <div>
           <Button variant="default" asChild>
@@ -818,9 +1015,10 @@ export function PrivateTeamFolderSection({
         Cómo enviar los videos
       </p>
       <div
+        ref={sendMethodTabListRef}
         role="tablist"
         aria-labelledby="equipos-send-label"
-        className="mt-4 flex min-w-0 flex-wrap gap-x-6 border-b border-border"
+        className="relative mt-4 flex min-w-0 flex-wrap gap-x-6 border-b border-border"
       >
         {SEND_METHODS.map((method, index) => {
           const selected = sendMethod === method.id
@@ -855,193 +1053,251 @@ export function PrivateTeamFolderSection({
             </button>
           )
         })}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute h-0.5 bg-foreground motion-safe:transition-[transform,width] motion-safe:duration-color motion-safe:ease-out-strong"
+          style={{
+            width: tabIndicator?.width ?? 0,
+            transform:
+              tabIndicator == null
+                ? undefined
+                : `translate(${tabIndicator.left}px, ${tabIndicator.top}px)`,
+            opacity: tabIndicator == null ? 0 : 1,
+          }}
+        />
       </div>
-      {sendMethod === 'email' ? (
+      <div
+        className="relative overflow-hidden motion-safe:transition-[height] motion-safe:duration-color motion-safe:ease-out-strong"
+        style={sendPanelHeight != null ? { height: sendPanelHeight } : undefined}
+      >
         <div
+          ref={setEmailPanel}
           role="tabpanel"
           id={`${sendMethodBaseId}-email-panel`}
           aria-labelledby={`${sendMethodBaseId}-email-tab`}
-          className="min-w-0 py-8"
-        >
-          <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
-            Indicar nombre del equipo en el asunto.
-          </p>
-          <a
-            href={teamInboxMailtoHref(TEAM_INBOX_EMAIL)}
-            className="mt-4 block min-w-0 wrap-anywhere text-sm text-foreground underline underline-offset-4"
-          >
-            {TEAM_INBOX_EMAIL}
-          </a>
-        </div>
-      ) : (
-        <form noValidate className="min-w-0" onSubmit={handleSubmit}>
-          {sendMethod === 'upload' ? (
-            <div
-              role="tabpanel"
-              id={`${sendMethodBaseId}-upload-panel`}
-              aria-labelledby={`${sendMethodBaseId}-upload-tab`}
-              className="min-w-0 pt-8"
-            >
-              <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
-                Carga el partido en este formulario. Quedará guardado para armar la carpeta.
-              </p>
-              <div className="mt-6 space-y-5">
-                <TeamContactFields
-                  teamName={fields.teamName}
-                  contactEmail={fields.contactEmail}
-                  previewLocked={previewLocked}
-                  submitting={submitting}
-                  invalidField={invalidField}
-                  describedBy={describedBy}
-                  onTeamNameChange={(value) => {
-                    setFields((current) => ({ ...current, teamName: value }))
-                  }}
-                  onContactEmailChange={(value) => {
-                    setFields((current) => ({ ...current, contactEmail: value }))
-                  }}
-                />
-                <div className="min-w-0 space-y-2">
-                  <span id="team-inbox-files-label" className={labelClassName}>
-                    Archivos
-                  </span>
-                  <input
-                    ref={fileInputRef}
-                    id={fileInputId}
-                    type="file"
-                    accept="video/*"
-                    multiple
-                    tabIndex={-1}
-                    disabled={previewLocked || submitting}
-                    aria-labelledby="team-inbox-files-label"
-                    className="sr-only"
-                    onChange={(event) => {
-                      chooseFiles(event.target.files)
-                      event.target.value = ''
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={previewLocked || submitting}
-                    aria-describedby={describedBy('files', 'team-inbox-files-hint')}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Elegir archivos
-                  </Button>
-                  <p
-                    id="team-inbox-files-hint"
-                    className="min-w-0 text-sm leading-relaxed text-muted-foreground"
-                  >
-                    {formatInboxLimitSummary()} Los archivos grandes se envían por partes. No
-                    cierres la página hasta que termine.
-                  </p>
-                  <p className="min-w-0 text-sm text-muted-foreground">
-                    {fields.files.length === 0
-                      ? 'Ningún archivo elegido.'
-                      : formatSelectedFileSummary(fields.files)}
-                  </p>
-                  {fields.files.length > 0 && (
-                    <ul className="min-w-0 divide-y divide-border">
-                      {fields.files.map((file, fileIndex) => (
-                        <li
-                          key={`${file.name}-${file.sizeBytes}-${fileIndex}`}
-                          className="flex min-w-0 items-start gap-3 py-3"
-                        >
-                          <span
-                            dir="auto"
-                            title={file.name}
-                            className="min-w-0 flex-1 wrap-anywhere text-sm text-foreground"
-                          >
-                            {file.name}
-                          </span>
-                          <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                            {formatByteSize(file.sizeBytes)}
-                          </span>
-                          <button
-                            type="button"
-                            className="shrink-0 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
-                            onClick={() => removeFile(fileIndex)}
-                            disabled={submitting}
-                          >
-                            Quitar
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-              <InboxSubmissionNotice
-                progressLabel={progressLabel}
-                errorMessage={errorMessage}
-                successTeamName={successTeamName}
-                successEmail={successEmail}
-                submitting={submitting}
-                previewLocked={previewLocked}
-              />
-            </div>
-          ) : (
-            <div
-              role="tabpanel"
-              id={`${sendMethodBaseId}-link-panel`}
-              aria-labelledby={`${sendMethodBaseId}-link-tab`}
-              className="min-w-0 pt-8"
-            >
-              <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
-                Enlace de YouTube, Google Drive, WeTransfer u otro.
-              </p>
-              <div className="mt-6 space-y-5">
-                <TeamContactFields
-                  teamName={fields.teamName}
-                  contactEmail={fields.contactEmail}
-                  previewLocked={previewLocked}
-                  submitting={submitting}
-                  invalidField={invalidField}
-                  describedBy={describedBy}
-                  onTeamNameChange={(value) => {
-                    setFields((current) => ({ ...current, teamName: value }))
-                  }}
-                  onContactEmailChange={(value) => {
-                    setFields((current) => ({ ...current, contactEmail: value }))
-                  }}
-                />
-                <div className="min-w-0 space-y-2">
-                  <FieldLabel htmlFor="team-inbox-link">Enlace</FieldLabel>
-                  <input
-                    id="team-inbox-link"
-                    name="externalLink"
-                    type="url"
-                    inputMode="url"
-                    spellCheck={false}
-                    maxLength={EXTERNAL_LINK_MAX_LENGTH}
-                    value={fields.externalLink}
-                    readOnly={previewLocked}
-                    disabled={submitting}
-                    aria-invalid={invalidField === 'externalLink'}
-                    aria-describedby={describedBy('externalLink')}
-                    onChange={(event) => {
-                      setFields((current) => ({
-                        ...current,
-                        externalLink: event.target.value,
-                      }))
-                    }}
-                    className={fieldClassName}
-                  />
-                </div>
-              </div>
-              <InboxSubmissionNotice
-                note="Esto envía el enlace. El correo no pasa por este formulario."
-                progressLabel={progressLabel}
-                errorMessage={errorMessage}
-                successTeamName={successTeamName}
-                successEmail={successEmail}
-                submitting={submitting}
-                previewLocked={previewLocked}
-              />
-            </div>
+          inert={sendMethod !== 'email'}
+          aria-hidden={sendMethod === 'email' ? undefined : true}
+          data-state={
+            animateSendMethodPanels && sendMethod === 'email' ? 'open' : undefined
+          }
+          className={sendMethodPanelClassName(
+            sendMethod === 'email',
+            animateSendMethodPanels,
           )}
+        >
+          <div className="min-w-0 py-8">
+            <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
+              Indicar nombre del equipo en el asunto.
+            </p>
+            <a
+              href={teamInboxMailtoHref(TEAM_INBOX_EMAIL)}
+              className="mt-4 block min-w-0 wrap-anywhere text-sm text-foreground underline underline-offset-4"
+            >
+              {TEAM_INBOX_EMAIL}
+            </a>
+          </div>
+        </div>
+        <form
+          ref={setUploadPanel}
+          noValidate
+          role="tabpanel"
+          id={`${sendMethodBaseId}-upload-panel`}
+          aria-labelledby={`${sendMethodBaseId}-upload-tab`}
+          inert={sendMethod !== 'upload'}
+          aria-hidden={sendMethod === 'upload' ? undefined : true}
+          data-state={
+            animateSendMethodPanels && sendMethod === 'upload' ? 'open' : undefined
+          }
+          className={sendMethodPanelClassName(
+            sendMethod === 'upload',
+            animateSendMethodPanels,
+          )}
+          onSubmit={handleSubmit}
+        >
+          <div className="min-w-0 pt-8">
+            <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
+              Carga el partido en este formulario. Quedará guardado para armar la carpeta.
+            </p>
+            <div className="mt-6 space-y-5">
+              <TeamContactFields
+                idPrefix="team-inbox-upload"
+                teamName={fields.teamName}
+                contactEmail={fields.contactEmail}
+                previewLocked={previewLocked}
+                submitting={submitting}
+                invalidField={invalidField}
+                describedBy={describedBy}
+                onTeamNameChange={(value) => {
+                  setFields((current) => ({ ...current, teamName: value }))
+                }}
+                onContactEmailChange={(value) => {
+                  setFields((current) => ({ ...current, contactEmail: value }))
+                }}
+              />
+              <div className="min-w-0 space-y-2">
+                <span id="team-inbox-files-label" className={labelClassName}>
+                  Archivos
+                </span>
+                <input
+                  ref={fileInputRef}
+                  id={fileInputId}
+                  type="file"
+                  accept="video/*"
+                  multiple
+                  tabIndex={-1}
+                  disabled={previewLocked || submitting}
+                  aria-labelledby="team-inbox-files-label"
+                  className="sr-only"
+                  onChange={(event) => {
+                    chooseFiles(event.target.files)
+                    event.target.value = ''
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={previewLocked || submitting}
+                  aria-describedby={describedBy(
+                    'files',
+                    'team-inbox-files-hint',
+                    'team-inbox-upload-error',
+                  )}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Elegir archivos
+                </Button>
+                <p
+                  id="team-inbox-files-hint"
+                  className="min-w-0 text-sm leading-relaxed text-muted-foreground"
+                >
+                  {formatInboxLimitSummary()} Los archivos grandes se envían por partes. No
+                  cierres la página hasta que termine.
+                </p>
+                <p className="min-w-0 text-sm text-muted-foreground">
+                  {fields.files.length === 0
+                    ? 'Ningún archivo elegido.'
+                    : formatSelectedFileSummary(fields.files)}
+                </p>
+                {fields.files.length > 0 && (
+                  <ul className="min-w-0 divide-y divide-border">
+                    {fields.files.map((file, fileIndex) => (
+                      <li
+                        key={`${file.name}-${file.sizeBytes}-${fileIndex}`}
+                        className="flex min-w-0 items-start gap-3 py-3"
+                      >
+                        <span
+                          dir="auto"
+                          title={file.name}
+                          className="min-w-0 flex-1 wrap-anywhere text-sm text-foreground"
+                        >
+                          {file.name}
+                        </span>
+                        <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                          {formatByteSize(file.sizeBytes)}
+                        </span>
+                        <button
+                          type="button"
+                          className="shrink-0 text-sm text-muted-foreground transition-colors duration-color ease-color hover:text-foreground"
+                          onClick={() => removeFile(fileIndex)}
+                          disabled={submitting}
+                        >
+                          Quitar
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+            <InboxSubmissionNotice
+              progressLabel={sendMethod === 'upload' ? progressLabel : null}
+              errorMessage={sendMethod === 'upload' ? errorMessage : null}
+              errorElementId="team-inbox-upload-error"
+              successTeamName={sendMethod === 'upload' ? successTeamName : null}
+              successEmail={sendMethod === 'upload' ? successEmail : null}
+              submitting={submitting}
+              previewLocked={previewLocked}
+            />
+          </div>
         </form>
-      )}
+        <form
+          ref={setLinkPanel}
+          noValidate
+          role="tabpanel"
+          id={`${sendMethodBaseId}-link-panel`}
+          aria-labelledby={`${sendMethodBaseId}-link-tab`}
+          inert={sendMethod !== 'link'}
+          aria-hidden={sendMethod === 'link' ? undefined : true}
+          data-state={
+            animateSendMethodPanels && sendMethod === 'link' ? 'open' : undefined
+          }
+          className={sendMethodPanelClassName(
+            sendMethod === 'link',
+            animateSendMethodPanels,
+          )}
+          onSubmit={handleSubmit}
+        >
+          <div className="min-w-0 pt-8">
+            <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
+              Enlace de YouTube, Google Drive, WeTransfer u otro.
+            </p>
+            <div className="mt-6 space-y-5">
+              <TeamContactFields
+                idPrefix="team-inbox-link"
+                teamName={fields.teamName}
+                contactEmail={fields.contactEmail}
+                previewLocked={previewLocked}
+                submitting={submitting}
+                invalidField={invalidField}
+                describedBy={describedBy}
+                onTeamNameChange={(value) => {
+                  setFields((current) => ({ ...current, teamName: value }))
+                }}
+                onContactEmailChange={(value) => {
+                  setFields((current) => ({ ...current, contactEmail: value }))
+                }}
+              />
+              <div className="min-w-0 space-y-2">
+                <FieldLabel htmlFor="team-inbox-link">Enlace</FieldLabel>
+                <input
+                  id="team-inbox-link"
+                  name="externalLink"
+                  type="url"
+                  inputMode="url"
+                  spellCheck={false}
+                  maxLength={EXTERNAL_LINK_MAX_LENGTH}
+                  value={fields.externalLink}
+                  readOnly={previewLocked}
+                  disabled={submitting}
+                  aria-invalid={invalidField === 'externalLink'}
+                  aria-describedby={describedBy(
+                    'externalLink',
+                    undefined,
+                    'team-inbox-link-error',
+                  )}
+                  onChange={(event) => {
+                    setFields((current) => ({
+                      ...current,
+                      externalLink: event.target.value,
+                    }))
+                  }}
+                  className={fieldClassName}
+                />
+              </div>
+            </div>
+            <InboxSubmissionNotice
+              note="Esto envía el enlace. El correo no pasa por este formulario."
+              progressLabel={sendMethod === 'link' ? progressLabel : null}
+              errorMessage={sendMethod === 'link' ? errorMessage : null}
+              errorElementId="team-inbox-link-error"
+              successTeamName={sendMethod === 'link' ? successTeamName : null}
+              successEmail={sendMethod === 'link' ? successEmail : null}
+              submitting={submitting}
+              previewLocked={previewLocked}
+            />
+          </div>
+        </form>
+      </div>
       {BREAK_UI_TOGGLE_ENABLED ? (
         <BreakUiDataToggle mode={previewMode} onModeChange={selectPreviewMode} />
       ) : null}

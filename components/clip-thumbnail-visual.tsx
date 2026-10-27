@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   CLIP_CARD_THUMB_HEIGHT,
   CLIP_CARD_THUMB_SIZES,
@@ -71,6 +71,8 @@ export function ClipThumbnailVisual({
     [clipInput.visibility, thumbKey],
   )
   const [stage, setStage] = useState<ThumbnailStage>('resolved')
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
+  const loadedSrcRef = useRef<string | null>(null)
 
   const youtubeUrl =
     isRealYouTubeVideoId(youtubeId) ? youtubeThumbnailUrl(youtubeId) : null
@@ -94,6 +96,44 @@ export function ClipThumbnailVisual({
     })
   }
 
+  const currentSrc =
+    showSelfHosted && selfHosted != null
+      ? selfHosted.src
+      : showYoutube && youtubeUrl != null
+        ? youtubeUrl
+        : null
+  if (loadedSrcRef.current !== currentSrc) {
+    loadedSrcRef.current = currentSrc
+    if (loadedSrc != null) {
+      setLoadedSrc(null)
+    }
+  }
+  const imageIsLoaded = currentSrc != null && loadedSrc === currentSrc
+  const currentSrcRef = useRef(currentSrc)
+  currentSrcRef.current = currentSrc
+
+  const markImageLoaded = useCallback((image: HTMLImageElement) => {
+    const source = image.currentSrc || image.src
+    if (source.length === 0 || image.dataset.thumbSrc !== currentSrcRef.current) {
+      return
+    }
+    setLoadedSrc(currentSrcRef.current)
+  }, [])
+
+  const assignThumbnail = useCallback(
+    (image: HTMLImageElement | null) => {
+      if (image != null && image.complete && image.naturalWidth > 0) {
+        markImageLoaded(image)
+      }
+    },
+    [markImageLoaded],
+  )
+
+  const imageClassName = cn(
+    'h-full w-full object-cover transition-opacity duration-200 ease-out-strong',
+    imageIsLoaded ? cn('opacity-100', className) : 'opacity-0',
+  )
+
   if (showSelfHosted && selfHosted != null) {
     return (
       <img
@@ -103,10 +143,12 @@ export function ClipThumbnailVisual({
         width={selfHosted.width}
         height={selfHosted.height}
         alt={alt}
-        className={cn(
-          'h-full w-full object-cover transition-opacity duration-200',
-          className,
-        )}
+        data-thumb-src={selfHosted.src}
+        className={imageClassName}
+        ref={assignThumbnail}
+        onLoad={(event) => {
+          markImageLoaded(event.currentTarget)
+        }}
         onError={stepDownFromImageError}
         loading={loading}
         decoding="async"
@@ -122,10 +164,12 @@ export function ClipThumbnailVisual({
         width={CLIP_CARD_THUMB_WIDTH}
         height={CLIP_CARD_THUMB_HEIGHT}
         alt={alt}
-        className={cn(
-          'h-full w-full object-cover transition-opacity duration-200',
-          className,
-        )}
+        data-thumb-src={youtubeUrl}
+        className={imageClassName}
+        ref={assignThumbnail}
+        onLoad={(event) => {
+          markImageLoaded(event.currentTarget)
+        }}
         onError={() => setStage('neutral')}
         loading={loading}
         decoding="async"
