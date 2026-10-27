@@ -2,18 +2,35 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
-  FINTOC_PAYMENT_URL,
-  PRICE_PER_MATCH_CLP,
   PRIVATE_TEAM_OFFER_PLACEHOLDER_PRICE_CLP,
+  PRIVATE_TEAM_OFFER_TIERS,
   TEAM_INBOX_EMAIL,
+  formatPricePerMatchClp,
   isPrivateTeamOfferReady,
   type PrivateTeamOfferConfig,
+  type PrivateTeamOfferTier,
 } from './private-team-offer'
 
+const READY_TIERS: PrivateTeamOfferTier[] = [
+  {
+    id: 'standard',
+    label: 'Estándar',
+    priceClp: 25_000,
+    paymentUrl: 'https://fintoc.me/cami-escu/25000',
+    turnaround: '3 días',
+  },
+  {
+    id: 'express',
+    label: 'Express',
+    priceClp: 40_000,
+    paymentUrl: 'https://fintoc.me/cami-escu/40000',
+    turnaround: '24 horas',
+  },
+]
+
 const READY_OFFER: PrivateTeamOfferConfig = {
-  paymentUrl: 'https://fintoc.me/carpeta-equipos',
-  pricePerMatchClp: 45_000,
-  inboxEmail: 'equipos@carpeta.cl',
+  tiers: READY_TIERS,
+  inboxEmail: 'video@camilaescudero.cl',
   enabled: 'true',
 }
 
@@ -38,20 +55,48 @@ async function withInboxFlag(
   }
 }
 
-test('the shipped offer stays closed while any placeholder remains', async () => {
-  assert.equal(PRICE_PER_MATCH_CLP, PRIVATE_TEAM_OFFER_PLACEHOLDER_PRICE_CLP)
-  assert.match(FINTOC_PAYMENT_URL, /placeholder/i)
-  assert.match(TEAM_INBOX_EMAIL, /placeholder/i)
+function offerWithTier(
+  index: number,
+  patch: Partial<PrivateTeamOfferTier>,
+): PrivateTeamOfferConfig {
+  return {
+    ...READY_OFFER,
+    tiers: READY_TIERS.map((tier, tierIndex) =>
+      tierIndex === index ? { ...tier, ...patch } : tier,
+    ),
+  }
+}
+
+test('the shipped tiers and inbox address are real, and the flag still closes the offer', async () => {
+  assert.deepEqual(PRIVATE_TEAM_OFFER_TIERS, READY_TIERS)
+  assert.equal(TEAM_INBOX_EMAIL, 'video@camilaescudero.cl')
+  assert.equal(TEAM_INBOX_EMAIL.toLowerCase().includes('placeholder'), false)
 
   await withInboxFlag('true', () => {
-    assert.equal(isPrivateTeamOfferReady(), false)
+    assert.equal(isPrivateTeamOfferReady(), true)
   })
   await withInboxFlag(undefined, () => {
     assert.equal(isPrivateTeamOfferReady(), false)
   })
+  await withInboxFlag('', () => {
+    assert.equal(isPrivateTeamOfferReady(), false)
+  })
+  await withInboxFlag('TRUE', () => {
+    assert.equal(isPrivateTeamOfferReady(), false)
+  })
 })
 
-test('the offer is ready only when every value is real and the flag is true', () => {
+test('offer prices are grouped as CLP without cents', () => {
+  assert.equal(formatPricePerMatchClp(25_000), '$25.000')
+  assert.equal(formatPricePerMatchClp(40_000), '$40.000')
+  assert.equal(formatPricePerMatchClp(1), '$1')
+  assert.equal(
+    formatPricePerMatchClp(PRIVATE_TEAM_OFFER_PLACEHOLDER_PRICE_CLP),
+    '$999.999.999',
+  )
+})
+
+test('the offer is ready only when every tier is real and the flag is true', () => {
   assert.equal(isPrivateTeamOfferReady(READY_OFFER), true)
 
   assert.equal(isPrivateTeamOfferReady({ ...READY_OFFER, enabled: undefined }), false)
@@ -59,25 +104,39 @@ test('the offer is ready only when every value is real and the flag is true', ()
   assert.equal(isPrivateTeamOfferReady({ ...READY_OFFER, enabled: 'TRUE' }), false)
   assert.equal(isPrivateTeamOfferReady({ ...READY_OFFER, enabled: '1' }), false)
 
+  assert.equal(isPrivateTeamOfferReady({ ...READY_OFFER, tiers: [] }), false)
   assert.equal(
-    isPrivateTeamOfferReady({ ...READY_OFFER, paymentUrl: FINTOC_PAYMENT_URL }),
+    isPrivateTeamOfferReady(
+      offerWithTier(0, { paymentUrl: 'https://fintoc.me/PLACEHOLDER' }),
+    ),
     false,
   )
   assert.equal(
-    isPrivateTeamOfferReady({ ...READY_OFFER, pricePerMatchClp: PRICE_PER_MATCH_CLP }),
+    isPrivateTeamOfferReady(
+      offerWithTier(1, { paymentUrl: 'https://fintoc.me/PLACEHOLDER' }),
+    ),
+    false,
+  )
+  assert.equal(isPrivateTeamOfferReady(offerWithTier(0, { paymentUrl: '   ' })), false)
+  assert.equal(isPrivateTeamOfferReady(offerWithTier(0, { priceClp: 0 })), false)
+  assert.equal(isPrivateTeamOfferReady(offerWithTier(1, { priceClp: 0 })), false)
+  assert.equal(isPrivateTeamOfferReady(offerWithTier(1, { priceClp: -1 })), false)
+  assert.equal(
+    isPrivateTeamOfferReady(
+      offerWithTier(0, { priceClp: PRIVATE_TEAM_OFFER_PLACEHOLDER_PRICE_CLP }),
+    ),
     false,
   )
   assert.equal(
-    isPrivateTeamOfferReady({ ...READY_OFFER, inboxEmail: TEAM_INBOX_EMAIL }),
+    isPrivateTeamOfferReady({ ...READY_OFFER, inboxEmail: 'placeholder@example.com' }),
     false,
   )
-  assert.equal(isPrivateTeamOfferReady({ ...READY_OFFER, paymentUrl: '   ' }), false)
-  assert.equal(isPrivateTeamOfferReady({ ...READY_OFFER, pricePerMatchClp: 0 }), false)
+  assert.equal(isPrivateTeamOfferReady({ ...READY_OFFER, inboxEmail: '   ' }), false)
 })
 
-test('the team inbox route returns 503 and does not open a submission', async () => {
+test('the team inbox route returns 503 while the flag is not exactly true', async () => {
   const { POST, PUT } = await import('../app/api/team-inbox/route')
-  await withInboxFlag('true', async () => {
+  await withInboxFlag(undefined, async () => {
     const postResponse = await POST(
       new Request('https://carpeta.cl/api/team-inbox', {
         method: 'POST',

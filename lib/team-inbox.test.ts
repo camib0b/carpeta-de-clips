@@ -12,7 +12,6 @@ import {
   WORST_TEAM_INBOX_FILES,
   WORST_TEAM_INBOX_NAME,
 } from './break-ui/team-inbox-form-fixtures'
-import { PRICE_PER_MATCH_CLP, formatPricePerMatchClp } from './private-team-offer'
 import {
   CONTACT_EMAIL_MAX_LENGTH,
   EXTERNAL_LINK_MAX_LENGTH,
@@ -54,16 +53,6 @@ function submission(overrides: {
     ...overrides,
   })
 }
-
-test('price placeholder is grouped as CLP without cents', () => {
-  const formatted = formatPricePerMatchClp(PRICE_PER_MATCH_CLP)
-  assert.match(formatted, /999\.999\.999/)
-  assert.equal(formatted.includes(',00'), false)
-  assert.equal(formatted.includes('.00'), false)
-
-  const ordinary = formatPricePerMatchClp(45_000)
-  assert.match(ordinary, /45\.000/)
-})
 
 test('inbox prefix uses the Santiago calendar date and a slug', () => {
   const previousEvening = inboxCalendarDate(new Date('2026-06-15T02:00:00.000Z'))

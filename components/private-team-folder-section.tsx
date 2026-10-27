@@ -20,11 +20,11 @@ import {
   landingEntranceDelay,
 } from '@/lib/landing-entrance'
 import {
-  FINTOC_PAYMENT_URL,
-  PRICE_PER_MATCH_CLP,
+  PRIVATE_TEAM_OFFER_TIERS,
   TEAM_INBOX_EMAIL,
   formatPricePerMatchClp,
   teamInboxMailtoHref,
+  type PrivateTeamOfferTier,
 } from '@/lib/private-team-offer'
 import {
   CONTACT_EMAIL_MAX_LENGTH,
@@ -43,9 +43,42 @@ const BREAK_UI_TOGGLE_ENABLED = process.env.NODE_ENV === 'development'
 
 const STEPS = [
   'El equipo envía los archivos de video del partido.',
-  'Paga un precio fijo por partido.',
+  'Paga ese partido en Estándar o en Express.',
   'Recibe su carpeta en carpeta.cl, armada y con los videos etiquetados en el mismo formato de clips, XML y jugadas.',
 ]
+
+/**
+ * Dev-only prices and labels for the tier list. The first row is a long name
+ * and a nine-digit CLP amount; the second is a one-letter name, $1, and a
+ * turnaround long enough to wrap inside one column.
+ */
+const WORST_PRIVATE_TEAM_OFFER_TIERS: readonly PrivateTeamOfferTier[] = [
+  {
+    id: 'standard',
+    label: 'Estándar para el plantel completo de la categoría sub-16 visitante',
+    priceClp: 999_999_999,
+    paymentUrl: 'https://fintoc.me/cami-escu/25000',
+    turnaround: '3 días',
+  },
+  {
+    id: 'express',
+    label: 'E',
+    priceClp: 1,
+    paymentUrl: 'https://fintoc.me/cami-escu/40000',
+    turnaround:
+      '24 horas desde que llegan el pago y el archivo de video del partido completo',
+  },
+]
+
+function offerTiersForPreview(mode: PreviewMode): readonly PrivateTeamOfferTier[] {
+  if (process.env.NODE_ENV !== 'development' || mode === 'demo' || mode === 'error') {
+    return PRIVATE_TEAM_OFFER_TIERS
+  }
+  if (mode === 'one') {
+    return PRIVATE_TEAM_OFFER_TIERS.slice(0, 1)
+  }
+  return WORST_PRIVATE_TEAM_OFFER_TIERS
+}
 
 const fieldClassName =
   'h-9 w-full min-w-0 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors duration-200 focus-visible:border-state focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50'
@@ -237,6 +270,7 @@ export function PrivateTeamFolderSection({
   const fileInputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [previewMode, setPreviewMode] = useState<PreviewMode>('demo')
+  const offerTiers = offerTiersForPreview(previewMode)
   const [fields, setFields] = useState<InboxFields>(EMPTY_FIELDS)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [invalidField, setInvalidField] = useState<TeamInboxField | null>(null)
@@ -433,17 +467,35 @@ export function PrivateTeamFolderSection({
           </li>
         ))}
       </ol>
-      <p className="mt-8 flex min-w-0 flex-wrap gap-x-2 text-sm text-foreground">
-        <span className="text-muted-foreground">Precio por partido</span>
-        <span className="whitespace-nowrap tabular-nums">
-          {formatPricePerMatchClp(PRICE_PER_MATCH_CLP)}
-        </span>
+      <p className="mt-8 min-w-0 text-sm leading-relaxed text-foreground">
+        El plazo empieza cuando llegan el pago y el archivo de video.
       </p>
-      <div className="mt-4">
-        <Button variant="outline" asChild>
-          <a href={FINTOC_PAYMENT_URL}>Pagar</a>
-        </Button>
-      </div>
+      <ul className="mt-8 grid min-w-0 grid-cols-1 gap-8 sm:grid-cols-2">
+        {offerTiers.map((tier) => (
+          <li key={tier.id} className="min-w-0 border-t border-border pt-4">
+            <h3 className="min-w-0 text-base font-medium wrap-anywhere text-foreground">
+              {tier.label}
+            </h3>
+            <p className="mt-2 flex min-w-0 flex-wrap gap-x-2 text-sm text-foreground">
+              <span className="text-muted-foreground">Precio por partido</span>
+              <span className="whitespace-nowrap tabular-nums">
+                {formatPricePerMatchClp(tier.priceClp)}
+              </span>
+            </p>
+            <p className="mt-2 flex min-w-0 flex-wrap gap-x-2 text-sm text-foreground">
+              <span className="text-muted-foreground">Plazo</span>
+              <span className="min-w-0 wrap-anywhere">{tier.turnaround}</span>
+            </p>
+            <div className="mt-4">
+              <Button variant="outline" asChild>
+                <a href={tier.paymentUrl} aria-label={`Pagar ${tier.label}`}>
+                  Pagar
+                </a>
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
 
       <p className="mt-12 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
         Cómo enviar los videos

@@ -96,6 +96,8 @@ Production XML is read from R2 (`CLIPPED_XML` → `clipped-xml`) using `matches.
 
 When `mediaUrl()` in `lib/media-url.ts` returns a URL, the modal plays a native `<video>`; otherwise it uses the YouTube embed. Library cards and the home “último partido” row use `clips.thumb_key` when set (versioned `*.thumb.<hash>.480.webp` on `https://media.carpeta.cl`, with a matching `640.webp` sibling for `srcset`), then a real YouTube `mqdefault` poster, then a neutral placeholder (placeholder `youtube_id` values such as `pending-…` skip YouTube). Grids do not autoload MP4 metadata for posters. Objects live in the public R2 bucket `carpeta-clips`. Set `NEXT_PUBLIC_MEDIA_BASE_URL` as documented in `.env.example`. Team-inbox files use the `inbox/` prefix on that same public host: add a Cloudflare rule that blocks public access to `inbox/` on `media.carpeta.cl` before setting `TEAM_INBOX_ENABLED=true`.
 
+The home `#equipos` offer has two prices per match. Estándar is $25.000 CLP (`https://fintoc.me/cami-escu/25000`) and the private folder is ready within 3 days. Express is $40.000 CLP (`https://fintoc.me/cami-escu/40000`) and the same folder is ready within 24 hours. The clock starts when both the payment and the video file have arrived. Mail for that inbox goes to `video@camilaescudero.cl`. In production the section and `/api/team-inbox` stay closed until `TEAM_INBOX_ENABLED` is exactly `true`.
+
 **Deploy order (when this ships):** apply D1 migration `0006`, run the thumbnail backfill, then deploy the Worker/site (catalog reads `thumb_key` in `CLIP_JOIN_SELECT`).
 
 | Column | Meaning |
