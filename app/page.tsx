@@ -1,9 +1,10 @@
+import { Suspense } from 'react'
+import nextDynamic from 'next/dynamic'
 import Link from 'next/link'
 import {
   LatestUploadedMatchSection,
   latestUploadedMatchLastEntranceStepIndex,
 } from '@/components/latest-uploaded-match-section'
-import { PrivateTeamFolderSection } from '@/components/private-team-folder-section'
 import { TeamIcon } from '@/components/team-icon'
 import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
 import {
@@ -15,6 +16,12 @@ import { isPrivateTeamOfferReady } from '@/lib/private-team-offer'
 import { siteDescription, siteName } from '@/lib/site-metadata'
 
 export const dynamic = 'force-dynamic'
+
+const PrivateTeamFolderSection = nextDynamic(() =>
+  import('@/components/private-team-folder-section').then(
+    (module) => module.PrivateTeamFolderSection,
+  ),
+)
 
 const TEAM_ROW_START_STEP_INDEX = 2
 
@@ -116,17 +123,19 @@ export default async function HomePage() {
           />
         )}
         {(process.env.NODE_ENV !== 'production' || isPrivateTeamOfferReady()) && (
-          <PrivateTeamFolderSection
-            entranceStepStart={
-              latestUploadedMatch
-                ? latestUploadEntranceStepStart +
-                  latestUploadedMatchLastEntranceStepIndex(
-                    latestUploadedMatch.previews.length,
-                  ) +
-                  1
-                : latestUploadEntranceStepStart
-            }
-          />
+          <Suspense fallback={null}>
+            <PrivateTeamFolderSection
+              entranceStepStart={
+                latestUploadedMatch
+                  ? latestUploadEntranceStepStart +
+                    latestUploadedMatchLastEntranceStepIndex(
+                      latestUploadedMatch.previews.length,
+                    ) +
+                    1
+                  : latestUploadEntranceStepStart
+              }
+            />
+          </Suspense>
         )}
       </main>
 

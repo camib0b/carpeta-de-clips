@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   ChevronLeft,
   ChevronRight,
@@ -20,7 +21,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import YouTube from 'react-youtube'
 import { ShareClipButton } from '@/components/share-clip-button'
 import { cn } from '@/lib/utils'
 import {
@@ -79,6 +79,73 @@ const YOUTUBE_PLAYER_STATE = {
 } as const
 
 const EDITABLE_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
+const TEAM_HOME_LINK_SELECTOR = '[data-team-library-home]'
+
+type YouTubePlayerComponent = React.ComponentType<{
+  videoId: string
+  className?: string
+  iframeClassName?: string
+  opts?: {
+    width?: string
+    height?: string
+    playerVars?: Record<string, number | string>
+  }
+  onReady?: (event: { target: YouTubePlayer }) => void
+  onStateChange?: (event: { data: number; target?: YouTubePlayer }) => void
+}>
+
+function useYouTubePlayerComponent(shouldLoad: boolean): YouTubePlayerComponent | null {
+  const [YouTubePlayer, setYouTubePlayer] = useState<YouTubePlayerComponent | null>(null)
+
+  useEffect(() => {
+    if (!shouldLoad || YouTubePlayer != null) return
+    let cancelled = false
+    void import('react-youtube').then((youTubeModule) => {
+      if (!cancelled) {
+        setYouTubePlayer(() => youTubeModule.default)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [shouldLoad, YouTubePlayer])
+
+  return YouTubePlayer
+}
+
+function isTeamHomeLinkElement(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(TEAM_HOME_LINK_SELECTOR) != null
+}
+
+function dismissPointerEvent(event: Event): MouseEvent | null {
+  if (event instanceof MouseEvent) return event
+  if (!(event instanceof CustomEvent)) return null
+  const detail: unknown = event.detail
+  if (typeof detail !== 'object' || detail === null || !('originalEvent' in detail)) {
+    return null
+  }
+  const originalEvent = (detail as { originalEvent?: unknown }).originalEvent
+  return originalEvent instanceof MouseEvent ? originalEvent : null
+}
+
+function dismissHitsTeamHomeLink(event: Event): { targetIsLink: boolean } | null {
+  const pointerEvent = dismissPointerEvent(event)
+  const target = pointerEvent?.target ?? event.target
+  if (isTeamHomeLinkElement(target)) {
+    return { targetIsLink: true }
+  }
+  if (pointerEvent == null) return null
+  const link = document.querySelector(TEAM_HOME_LINK_SELECTOR)
+  if (!(link instanceof HTMLElement)) return null
+  const rect = link.getBoundingClientRect()
+  const hitsLink =
+    pointerEvent.clientX >= rect.left &&
+    pointerEvent.clientX <= rect.right &&
+    pointerEvent.clientY >= rect.top &&
+    pointerEvent.clientY <= rect.bottom
+  if (!hitsLink) return null
+  return { targetIsLink: false }
+}
 
 interface YouTubePlayer {
   getPlayerState: () => number
@@ -674,7 +741,11 @@ export function VideoModal({
   initialPlayOrd,
   onJugadaOrdChange,
 }: VideoModalProps) {
+  const router = useRouter()
   const [breakUiMode, selectBreakUiMode] = useModalBreakUiMode()
+  const [closedForHomeNavigation, setClosedForHomeNavigation] = useState(false)
+  const [hostedPlaybackFailed, setHostedPlaybackFailed] = useState(false)
+  const homeNavigationStartedRef = useRef(false)
   const video = useMemo(() => {
     if (!MODAL_BREAK_UI_ENABLED || breakUiMode === 'demo') return videoProp
     return modalBreakUiVideo(videoProp, breakUiMode)
@@ -719,6 +790,9 @@ export function VideoModal({
   const instances = video?.instances ?? []
   const hasInstances = instances.length > 0
   const hasSelfHostedFile = video != null && mediaUrl(video) != null
+  const useNativePlayer = hasSelfHostedFile && !hostedPlaybackFailed
+  const needsYouTubePlayer = open && video != null && !useNativePlayer
+  const YouTubePlayer = useYouTubePlayerComponent(needsYouTubePlayer)
   const instancesRef = useRef(instances)
   instancesRef.current = instances
 
@@ -750,6 +824,7 @@ export function VideoModal({
       setPenEnabled(false)
       setDrawingsVisible(true)
       setHostedDurationS(0)
+      setHostedPlaybackFailed(false)
       return
     }
     setPreferLow(shouldPreferLowMedia(readMediaConnectionSnapshot()))
@@ -773,6 +848,7 @@ export function VideoModal({
     setPenEnabled(false)
     setDrawingsVisible(true)
     setHostedDurationS(0)
+    setHostedPlaybackFailed(false)
   }, [video?.id])
 
   const dismissSwipeHint = useCallback(() => {
@@ -787,11 +863,51 @@ export function VideoModal({
   const showSwipeHint =
     isMobile && open && instances.length > 1 && !swipeHintDismissed
 
-  const preventCloseOnClipNav = useCallback((event: Event) => {
-    if (isClipNavTarget(event.target) || isBreakUiToggleTarget(event.target)) {
+  const preventCloseOnClipNav = useCallback(
+    (event: Event) => {
+      if (isClipNavTarget(event.target) || isBreakUiToggleTarget(event.target)) {
+        event.preventDefault()
+        return
+      }
+
+      const homeLinkHit = dismissHitsTeamHomeLink(event)
+      if (homeLinkHit == null) return
+
+      const pointerEvent = dismissPointerEvent(event)
+      const plainPrimaryClick =
+        pointerEvent == null ||
+        (pointerEvent.button === 0 &&
+          !pointerEvent.metaKey &&
+          !pointerEvent.ctrlKey &&
+          !pointerEvent.shiftKey &&
+          !pointerEvent.altKey)
+
       event.preventDefault()
+      if (!plainPrimaryClick) return
+
+      setClosedForHomeNavigation(true)
+      if (homeLinkHit.targetIsLink || homeNavigationStartedRef.current) return
+      homeNavigationStartedRef.current = true
+      router.push('/')
+    },
+    [router],
+  )
+
+  useEffect(() => {
+    if (open) return
+    setClosedForHomeNavigation(false)
+    homeNavigationStartedRef.current = false
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const closeDialogForHomeLink = (event: MouseEvent) => {
+      if (!isTeamHomeLinkElement(event.target)) return
+      setClosedForHomeNavigation(true)
     }
-  }, [])
+    document.addEventListener('click', closeDialogForHomeLink, true)
+    return () => document.removeEventListener('click', closeDialogForHomeLink, true)
+  }, [open])
 
   const seekToPlay = useCallback(
     (instance: ClipInstance, instanceIndex: number) => {
@@ -1275,7 +1391,7 @@ export function VideoModal({
   }, [open, navigatePlay, dismissSwipeHint])
 
   useEffect(() => {
-    if (!open || hasSelfHostedFile) {
+    if (!open || useNativePlayer) {
       return
     }
 
@@ -1365,7 +1481,7 @@ export function VideoModal({
       window.clearInterval(intervalId)
       window.clearTimeout(releaseFocusTimerId)
     }
-  }, [open, hasSelfHostedFile])
+  }, [open, useNativePlayer])
 
   useEffect(() => {
     if (!open) return
@@ -1394,7 +1510,7 @@ export function VideoModal({
         !event.altKey &&
         !event.shiftKey
       ) {
-        if (isEditableTarget(event.target) || !hasSelfHostedFile) {
+        if (isEditableTarget(event.target) || !useNativePlayer) {
           return
         }
         const stepped = stepPausedFrame(event.key === ',' ? -1 : 1)
@@ -1446,7 +1562,7 @@ export function VideoModal({
     hasInstances,
     togglePlayback,
     navigatePlay,
-    hasSelfHostedFile,
+    useNativePlayer,
     stepPausedFrame,
     seekByKeyboardStep,
     penEnabled,
@@ -1460,11 +1576,11 @@ export function VideoModal({
   const matchSummaryLine = formatClipMatchSummary(video)
   // `preferLow` still returns `r2Key` when `r2KeyLow` is null.
   const hostedUrl =
-    hasSelfHostedFile && qualityReady ? mediaUrl(video, { preferLow }) : null
+    useNativePlayer && qualityReady ? mediaUrl(video, { preferLow }) : null
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && !closedForHomeNavigation} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
           'flex w-[calc(100%-0.5rem)] max-w-none flex-col gap-0 overflow-hidden p-0',
@@ -1510,8 +1626,18 @@ export function VideoModal({
                   controls={!useHostedTouchControls}
                   autoPlay
                   crossOrigin="anonymous"
-                  preload="auto"
+                  preload="metadata"
                   onLoadedMetadata={handleHostedMetadata}
+                  onError={(event) => {
+                    const mediaError = event.currentTarget.error
+                    if (
+                      mediaError == null ||
+                      mediaError.code === MediaError.MEDIA_ERR_ABORTED
+                    ) {
+                      return
+                    }
+                    setHostedPlaybackFailed(true)
+                  }}
                   onPlay={() => setIsPlaybackPolling(true)}
                   onPlaying={() => setIsPlaybackPolling(true)}
                   onWaiting={() => setIsPlaybackPolling(true)}
@@ -1519,8 +1645,8 @@ export function VideoModal({
                   onEnded={() => setIsPlaybackPolling(false)}
                   onRateChange={handleHostedRateChange}
                 />
-              ) : hasSelfHostedFile ? null : (
-                <YouTube
+              ) : needsYouTubePlayer && YouTubePlayer ? (
+                <YouTubePlayer
                   videoId={video.youtubeId}
                   className="absolute inset-0"
                   iframeClassName="h-full w-full"
@@ -1537,7 +1663,7 @@ export function VideoModal({
                   onReady={handleYouTubeReady}
                   onStateChange={handleYouTubeStateChange}
                 />
-              )}
+              ) : null}
 
               {playOrd != null ? (
                 <VideoTelestrationOverlay
