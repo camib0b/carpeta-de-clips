@@ -27,14 +27,13 @@ export const PRIVATE_TEAM_OFFER_DETAIL_LEVELS: readonly PrivateTeamOfferDetailLe
   {
     id: 'basic',
     label: 'Básico',
-    // TODO(camila): Replace with the real Básico detail description.
-    description: 'Análisis esencial de las jugadas del partido.',
+    description: 'Salidas, goles, cortos e ingresos al área de cada equipo.',
   },
   {
     id: 'exhaustive',
     label: 'Exhaustivo',
-    // TODO(camila): Replace with the real Exhaustivo detail description.
-    description: 'Análisis ampliado con mayor cobertura del partido.',
+    description:
+      'Todo lo del básico, más transiciones ofensivas, transiciones defensivas, juego 50-yd y juego 75-yd.',
   },
 ]
 
