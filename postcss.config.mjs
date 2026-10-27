@@ -1,11 +1,12 @@
-import tailwindcss from '@tailwindcss/postcss'
-
 /**
  * Inline text links share `.link-underline` from `@camib0b/ui`.
  * `@apply` cannot see that class (it is not a utility) and cannot copy its
  * `::after` rules, so this pass adds the same selectors beside the shared
  * ones. Card rows, presses, flex and block links, and the team-home control
  * are excluded; the team-home control opts in with the class itself.
+ *
+ * Tailwind stays a string here. Importing `@tailwindcss/postcss` from this
+ * file makes Turbopack bundle lightningcss and the build fails.
  */
 const inlineTextLinkSelector =
   'a:where(:not(.group, .press, .inline-flex, .flex, .block, [data-team-library-home], [data-slot]))'
@@ -40,7 +41,7 @@ extendLinkUnderlineSelectors.postcss = true
 
 /** @type {import('postcss-load-config').Config} */
 const config = {
-  plugins: [tailwindcss(), extendLinkUnderlineSelectors()],
+  plugins: ['@tailwindcss/postcss', extendLinkUnderlineSelectors()],
 }
 
 export default config
