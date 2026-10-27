@@ -1,41 +1,52 @@
 /**
  * Private team folder offer on the home page.
  *
- * PLACEHOLDERS — Camila must replace every value below before the offer is real:
- * - FINTOC_PAYMENT_URL
- * - PRICE_PER_MATCH_CLP
- * - TEAM_INBOX_EMAIL
- *
- * The home section and `/api/team-inbox` stay closed until those values are
- * real and `TEAM_INBOX_ENABLED` is the string `true`. See `isPrivateTeamOfferReady`.
+ * The Fintoc links, the prices, and the inbox address are real.
+ * The home section and `/api/team-inbox` stay closed in production until
+ * `TEAM_INBOX_ENABLED` is the string `true`. See `isPrivateTeamOfferReady`.
  */
 
-/** PLACEHOLDER. Replace with the real fintoc.me payment link. */
-export const FINTOC_PAYMENT_URL = 'https://fintoc.me/PLACEHOLDER'
+export type PrivateTeamOfferTier = {
+  id: string
+  label: string
+  priceClp: number
+  paymentUrl: string
+  turnaround: string
+}
 
-/**
- * PLACEHOLDER. 999999999 is temporary and is not a quote.
- * Replace with the price per match in Chilean pesos.
- */
-export const PRICE_PER_MATCH_CLP = 999_999_999
+/** One match, analyzed and uploaded to a private folder on carpeta.cl. */
+export const PRIVATE_TEAM_OFFER_TIERS: readonly PrivateTeamOfferTier[] = [
+  {
+    id: 'standard',
+    label: 'Estándar',
+    priceClp: 25_000,
+    paymentUrl: 'https://fintoc.me/cami-escu/25000',
+    turnaround: '3 días',
+  },
+  {
+    id: 'express',
+    label: 'Express',
+    priceClp: 40_000,
+    paymentUrl: 'https://fintoc.me/cami-escu/40000',
+    turnaround: '24 horas',
+  },
+]
 
-/** PLACEHOLDER. Replace with the address that receives match files by email. */
-export const TEAM_INBOX_EMAIL = 'placeholder@example.com'
+/** Address that receives match files by email. */
+export const TEAM_INBOX_EMAIL = 'video@camilaescudero.cl'
 
 /** Sentinel price. A real quote must be a different positive CLP amount. */
 export const PRIVATE_TEAM_OFFER_PLACEHOLDER_PRICE_CLP = 999_999_999
 
 export type PrivateTeamOfferConfig = {
-  paymentUrl: string
-  pricePerMatchClp: number
+  tiers: readonly PrivateTeamOfferTier[]
   inboxEmail: string
   enabled: string | undefined
 }
 
 export function readPrivateTeamOfferConfig(): PrivateTeamOfferConfig {
   return {
-    paymentUrl: FINTOC_PAYMENT_URL,
-    pricePerMatchClp: PRICE_PER_MATCH_CLP,
+    tiers: PRIVATE_TEAM_OFFER_TIERS,
     inboxEmail: TEAM_INBOX_EMAIL,
     enabled: process.env.TEAM_INBOX_ENABLED,
   }
@@ -45,9 +56,23 @@ function isPlaceholderText(value: string): boolean {
   return value.toLowerCase().includes('placeholder')
 }
 
+function isRealPaymentUrl(paymentUrl: string): boolean {
+  const trimmed = paymentUrl.trim()
+  return trimmed.length > 0 && !isPlaceholderText(trimmed)
+}
+
+function isRealPrice(priceClp: number): boolean {
+  return (
+    Number.isSafeInteger(priceClp) &&
+    priceClp > 0 &&
+    priceClp !== PRIVATE_TEAM_OFFER_PLACEHOLDER_PRICE_CLP
+  )
+}
+
 /**
- * True only when the Fintoc URL, the price, and the inbox email are no longer
- * placeholders and `TEAM_INBOX_ENABLED` is exactly `true`.
+ * True only when every tier has a real payment URL and a positive price,
+ * the inbox email is no longer a placeholder, and `TEAM_INBOX_ENABLED`
+ * is exactly `true`.
  * Pass `config` from tests; the route and the home page call it with none.
  */
 export function isPrivateTeamOfferReady(
@@ -56,13 +81,13 @@ export function isPrivateTeamOfferReady(
   if (config.enabled !== 'true') {
     return false
   }
-  if (config.paymentUrl.trim().length === 0 || isPlaceholderText(config.paymentUrl)) {
+  if (config.tiers.length === 0) {
     return false
   }
   if (
-    !Number.isSafeInteger(config.pricePerMatchClp) ||
-    config.pricePerMatchClp <= 0 ||
-    config.pricePerMatchClp === PRIVATE_TEAM_OFFER_PLACEHOLDER_PRICE_CLP
+    !config.tiers.every(
+      (tier) => isRealPaymentUrl(tier.paymentUrl) && isRealPrice(tier.priceClp),
+    )
   ) {
     return false
   }
