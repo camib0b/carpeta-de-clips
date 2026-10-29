@@ -49,7 +49,7 @@ export function VideoCard({
     <button
       onClick={onClick}
       className={cn(
-        'press tap-reset group h-full w-full min-w-0 overflow-hidden rounded-md border border-border bg-card text-left shadow-elev-1 duration-color ease-color hover:border-foreground/25 hover:shadow-elev-2 motion-safe:hover:-translate-y-[2px] focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'press tap-reset group h-full w-full min-w-0 cursor-pointer overflow-hidden rounded-md border border-border bg-card text-left shadow-elev-1 duration-color ease-color hover:border-foreground/25 hover:shadow-elev-2 motion-safe:hover:-translate-y-[2px] focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         playEntranceAnimationRef.current && 'motion-safe:animate-fade-up',
       )}
     >
