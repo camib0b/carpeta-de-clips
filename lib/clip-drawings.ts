@@ -75,6 +75,42 @@ export async function resolveAuthor(_request: Request): Promise<string | null> {
 }
 
 /**
+ * Public version-1 drawings that contain at least one stroke.
+ * `?` binds `DRAWING_DOCUMENT_VERSION`. Owner rows are not included.
+ */
+const PUBLIC_NONEMPTY_DRAWING_PREDICATE = `owner_id IS NULL
+  AND json_extract(strokes_json, '$.version') = ?
+  AND json_array_length(json_extract(strokes_json, '$.strokes')) > 0`
+
+export const PUBLIC_NONEMPTY_DRAWING_PLAY_IDS_SQL = `SELECT play_id
+  FROM clip_drawings
+  WHERE ${PUBLIC_NONEMPTY_DRAWING_PREDICATE}`
+
+/**
+ * Clip ids from `clipIds` that own one of `playIds`.
+ * Play ids are `clip:{id}:play:{ord}`. Clip 4 does not match clip 40.
+ * Non-numeric clip ids and unparsable play ids are ignored.
+ */
+export function clipIdsFromDrawingPlayIds(
+  playIds: readonly string[],
+  clipIds: readonly string[],
+): Set<string> {
+  const wanted = new Set<string>()
+  for (const clipId of clipIds) {
+    if (parseClipId(clipId)) wanted.add(clipId)
+  }
+
+  const matched = new Set<string>()
+  for (const playId of playIds) {
+    const parsed = parsePlayId(playId)
+    if (parsed && wanted.has(parsed.clipId)) {
+      matched.add(parsed.clipId)
+    }
+  }
+  return matched
+}
+
+/**
  * Drawings on this play that `viewer` may see.
  * Null viewer: the anonymous public row only.
  * An account id: that owner's rows. Shared rows are not selected yet.
@@ -105,9 +141,7 @@ export async function listPlayOrdsWithDrawings(
               `SELECT play_id
                FROM clip_drawings
                WHERE play_id LIKE ? || '%'
-                 AND owner_id IS NULL
-                 AND json_extract(strokes_json, '$.version') = ?
-                 AND json_array_length(json_extract(strokes_json, '$.strokes')) > 0`,
+                 AND ${PUBLIC_NONEMPTY_DRAWING_PREDICATE}`,
             )
             .bind(playIdPrefix, DRAWING_DOCUMENT_VERSION)
         : database
@@ -133,6 +167,35 @@ export async function listPlayOrdsWithDrawings(
     return playOrds
   } catch (error) {
     rethrowDrawingStoreError(error)
+  }
+}
+
+/**
+ * Clip ids in `clipIds` that have a non-empty public drawing.
+ * Does not return stroke payloads. A failed read returns an empty set so the
+ * library grid still renders, without the drawing hint.
+ */
+export async function listClipIdsWithPublicDrawings(
+  database: D1Database,
+  clipIds: readonly string[],
+): Promise<Set<string>> {
+  if (!clipIds.some((clipId) => parseClipId(clipId))) {
+    return new Set()
+  }
+
+  try {
+    const result = await database
+      .prepare(PUBLIC_NONEMPTY_DRAWING_PLAY_IDS_SQL)
+      .bind(DRAWING_DOCUMENT_VERSION)
+      .all<{ play_id: string }>()
+    const playIds = (result.results ?? []).map((row) => row.play_id)
+    return clipIdsFromDrawingPlayIds(playIds, clipIds)
+  } catch (error) {
+    console.error(
+      'clip_drawings query failed; serving clips without drawing hints',
+      error,
+    )
+    return new Set()
   }
 }
 

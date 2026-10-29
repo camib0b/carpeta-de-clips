@@ -11,6 +11,7 @@ import {
   type LatestUploadedMatchPreviewRow,
   type LatestUploadedMatchRow,
 } from '@/lib/latest-uploaded-match'
+import { listClipIdsWithPublicDrawings } from '@/lib/clip-drawings'
 import type { ClipInstance, ClipVisibility, Team, VideoClip } from '@/lib/types'
 
 const LIBRARY_COUNTRY = 'CL'
@@ -302,10 +303,16 @@ export const getTeamLibraryClips = cache(async function getTeamLibraryClips(
   const clipIds = clips.map((clip) => Number(clip.id))
   const instancesByClipId = await fetchClipInstancesByClipIds(database, clipIds)
   const clipsWithInstances = attachClipInstances(clips, instancesByClipId)
-
-  return clipsWithInstances.map((clip) =>
-    remapGameConceptToTeamPerspective(clip, team.name),
+  const clipIdsWithDrawings = await listClipIdsWithPublicDrawings(
+    database,
+    clips.map((clip) => clip.id),
   )
+
+  return clipsWithInstances.map((clip) => {
+    const remapped = remapGameConceptToTeamPerspective(clip, team.name)
+    if (!clipIdsWithDrawings.has(clip.id)) return remapped
+    return { ...remapped, hasDrawings: true }
+  })
 })
 
 export function listRivalsFromClips(clips: VideoClip[]): string[] {

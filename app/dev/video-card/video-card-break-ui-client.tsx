@@ -22,7 +22,8 @@ export function VideoCardBreakUiClient() {
       <div className="space-y-2">
         <h1 className="text-lg font-medium tracking-tight">Video card thumbnails</h1>
         <p className="text-sm text-muted-foreground">
-          Break-ui toggle for poster sources: self-hosted thumb, YouTube, and neutral fallback.
+          Break-ui toggle for poster sources and the drawing hint: self-hosted thumb,
+          YouTube, neutral fallback, and clips with, without, or missing drawing data.
         </p>
       </div>
 

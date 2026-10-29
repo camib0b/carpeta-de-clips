@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
+import { PenLine } from 'lucide-react'
 import { formatMatchDate, formatScoreWithShootout } from '@/lib/match-display'
 import { formatHomeAwayMatchup, getTeamAbbreviation } from '@/lib/team-abbreviations'
 import { ClipThumbnailVisual } from '@/components/clip-thumbnail-visual'
@@ -75,6 +76,13 @@ export function VideoCard({
             </svg>
           </div>
         </div>
+        {video.hasDrawings ? (
+          <span className="pointer-events-none absolute bottom-1.5 left-1.5 z-10 inline-flex shrink-0 rounded-sm bg-black/50 p-0.5 text-sm leading-none text-white">
+            {/* White on black/50 is 3.95:1 over a white thumbnail. */}
+            <PenLine className="size-[1em] shrink-0" aria-hidden />
+            <span className="sr-only">Tiene dibujos</span>
+          </span>
+        ) : null}
       </div>
 
       {/* Caption sits inside the same card as the thumbnail above it. */}

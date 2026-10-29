@@ -80,6 +80,11 @@ export interface VideoClip {
    * Omitted on in-memory clips means the catalog default, `public`.
    */
   visibility?: ClipVisibility
+  /**
+   * True when this clip has a non-empty public drawing.
+   * Omitted when it has none, or when drawing rows could not be read.
+   */
+  hasDrawings?: boolean
   /** Per-play segments inside this compiled upload, when cataloged in D1. */
   instances?: ClipInstance[]
 }
