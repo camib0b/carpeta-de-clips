@@ -646,6 +646,44 @@ function InboxSubmissionNotice({
   )
 }
 
+const PRIVATE_FOLDER_PANEL_ID = 'equipos-panel'
+
+function hashIdentifier(hash: string): string | null {
+  if (!hash.startsWith('#') || hash.length < 2) {
+    return null
+  }
+  try {
+    const identifier = decodeURIComponent(hash.slice(1))
+    return identifier.length > 0 ? identifier : null
+  } catch {
+    return null
+  }
+}
+
+function transitionDurationMs(element: HTMLElement): number {
+  const raw = getComputedStyle(element).transitionDuration.split(',')[0]?.trim() ?? '0s'
+  const value = Number.parseFloat(raw)
+  if (!Number.isFinite(value)) {
+    return 0
+  }
+  return raw.endsWith('ms') ? value : value * 1000
+}
+
+function hashTargetInSection(section: HTMLElement, hash: string): HTMLElement | null {
+  const identifier = hashIdentifier(hash)
+  if (identifier == null) {
+    return null
+  }
+  if (section.id === identifier) {
+    return section
+  }
+  const target = document.getElementById(identifier)
+  if (target == null || !section.contains(target)) {
+    return null
+  }
+  return target
+}
+
 export function PrivateTeamFolderSection({
   entranceStepStart = 0,
 }: {
@@ -672,6 +710,10 @@ export function PrivateTeamFolderSection({
   const [submitting, setSubmitting] = useState(false)
   const [animateSendMethodPanels, setAnimateSendMethodPanels] = useState(false)
   const [tabIndicator, setTabIndicator] = useState<TabIndicator | null>(null)
+  const [privateFolderOpen, setPrivateFolderOpen] = useState(false)
+  const sectionRef = useRef<HTMLElement>(null)
+  const privateFolderOpenRef = useRef(false)
+  const pendingHashTargetRef = useRef<HTMLElement | null>(null)
   const sendMethodTabListRef = useRef<HTMLDivElement>(null)
   const [emailPanel, setEmailPanel] = useState<HTMLDivElement | null>(null)
   const [uploadPanel, setUploadPanel] = useState<HTMLFormElement | null>(null)
@@ -690,6 +732,117 @@ export function PrivateTeamFolderSection({
     setPreviewMode(mode)
     applyPreview(mode)
   }, [])
+
+  useLayoutEffect(() => {
+    privateFolderOpenRef.current = privateFolderOpen
+  }, [privateFolderOpen])
+
+  useLayoutEffect(() => {
+    const section = sectionRef.current
+    if (section == null) {
+      return
+    }
+
+    const revealHash = (hash: string) => {
+      const target = hashTargetInSection(section, hash)
+      if (target == null) {
+        return
+      }
+      if (privateFolderOpenRef.current) {
+        target.scrollIntoView()
+        return
+      }
+      pendingHashTargetRef.current = target
+      setPrivateFolderOpen(true)
+    }
+
+    const revealCurrentHash = () => {
+      revealHash(window.location.hash)
+    }
+
+    const revealSamePageHashClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return
+      }
+      const anchor = (event.target as Element | null)?.closest?.('a[href]')
+      if (!(anchor instanceof HTMLAnchorElement)) {
+        return
+      }
+      let url: URL
+      try {
+        url = new URL(anchor.href)
+      } catch {
+        return
+      }
+      if (url.origin !== window.location.origin || url.pathname !== window.location.pathname) {
+        return
+      }
+      if (url.hash === window.location.hash) {
+        revealHash(url.hash)
+      }
+    }
+
+    revealCurrentHash()
+    window.addEventListener('hashchange', revealCurrentHash)
+    document.addEventListener('click', revealSamePageHashClick)
+    return () => {
+      window.removeEventListener('hashchange', revealCurrentHash)
+      document.removeEventListener('click', revealSamePageHashClick)
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!privateFolderOpen) {
+      return
+    }
+    const target = pendingHashTargetRef.current
+    const panel = document.getElementById(PRIVATE_FOLDER_PANEL_ID)
+    if (target == null || panel == null) {
+      return
+    }
+
+    let fallbackId = 0
+    let cancelled = false
+
+    const finishScroll = () => {
+      if (cancelled) {
+        return
+      }
+      cancelled = true
+      pendingHashTargetRef.current = null
+      window.clearTimeout(fallbackId)
+      panel.removeEventListener('transitionend', handleTransitionEnd)
+      target.scrollIntoView()
+    }
+
+    const handleTransitionEnd = (event: TransitionEvent) => {
+      if (event.target !== panel || event.propertyName !== 'grid-template-rows') {
+        return
+      }
+      finishScroll()
+    }
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduceMotion) {
+      finishScroll()
+      return
+    }
+
+    panel.addEventListener('transitionend', handleTransitionEnd)
+    fallbackId = window.setTimeout(finishScroll, transitionDurationMs(panel) + 40)
+    return () => {
+      cancelled = true
+      window.clearTimeout(fallbackId)
+      panel.removeEventListener('transitionend', handleTransitionEnd)
+    }
+  }, [privateFolderOpen])
 
   useEffect(() => {
     if (!BREAK_UI_TOGGLE_ENABLED || previewMode !== 'worst') {
@@ -929,6 +1082,7 @@ export function PrivateTeamFolderSection({
 
   return (
     <section
+      ref={sectionRef}
       id="equipos"
       aria-labelledby="equipos-heading"
       className={`landing-enter min-w-0 scroll-mt-8${BREAK_UI_TOGGLE_ENABLED ? ' pb-20' : ''}`}
@@ -944,359 +1098,386 @@ export function PrivateTeamFolderSection({
         id="equipos-heading"
         className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
       >
-        Carpeta privada para equipos
-      </h2>
-      <p className="min-w-0 text-base leading-relaxed text-foreground">
-        Encarga tu propia carpeta con los recortes de los partidos que te interesen.
-      </p>
-      <ol className="mt-6 min-w-0 space-y-2 text-sm leading-relaxed text-foreground">
-        {STEPS.map((step, stepIndex) => (
-          <li key={step} className="flex min-w-0 items-start gap-3">
-            <span className="shrink-0 tabular-nums text-muted-foreground">
-              {stepIndex + 1}
-            </span>
-            <span className="min-w-0">{step}</span>
-          </li>
-        ))}
-      </ol>
-      <div className="mt-8 min-w-0 space-y-6 border-t border-border pt-8">
-        <OfferSegmentGroup
-          groupId={offerDetailGroupId}
-          label="Nivel de detalle"
-          options={PRIVATE_TEAM_OFFER_DETAIL_LEVELS.map((level) => ({
-            id: level.id,
-            label: level.label,
-          }))}
-          value={selectedDetailId}
-          disabled={offerTogglesLocked}
-          onChange={setDetailId}
-        />
-        <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
-          {selectedDetail.description}
-        </p>
-        <OfferSegmentGroup
-          groupId={offerTurnaroundGroupId}
-          label="Plazo"
-          options={PRIVATE_TEAM_OFFER_TURNAROUNDS.map((turnaround) => ({
-            id: turnaround.id,
-            label: turnaround.label,
-          }))}
-          value={selectedTurnaroundId}
-          disabled={offerTogglesLocked}
-          onChange={setTurnaroundId}
-        />
-        <p className="flex min-w-0 flex-wrap gap-x-2 text-sm text-foreground">
-          <span className="text-muted-foreground">Plazo</span>
-          <span className="min-w-0">{selectedTurnaround.turnaround}</span>
-        </p>
-        <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-sm text-foreground">
-          <span className="text-muted-foreground">Precio por partido</span>
-          <OfferPrice amountLabel={formatPricePerMatchClp(selectedPriceClp)} />
-        </p>
-        <div>
-          <Button variant="default" asChild>
-            <a
-              href={selectedPaymentUrl}
-              aria-label={`Pagar ${selectedDetail.label} ${selectedTurnaround.label}`}
-            >
-              Pagar
-            </a>
-          </Button>
-        </div>
-      </div>
-      <p className="mt-8 min-w-0 text-sm leading-relaxed text-muted-foreground">
-        El plazo empieza a correr cuando llega el pago y el video del partido.
-      </p>
-
-      <p
-        id="equipos-send-label"
-        className="mt-12 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
-      >
-        Cómo enviar los videos
-      </p>
-      <div
-        ref={sendMethodTabListRef}
-        role="tablist"
-        aria-labelledby="equipos-send-label"
-        className="relative mt-4 flex min-w-0 flex-wrap gap-x-6 border-b border-border"
-      >
-        {SEND_METHODS.map((method, index) => {
-          const selected = sendMethod === method.id
-          return (
-            <button
-              key={method.id}
-              ref={(node) => {
-                sendMethodTabRefs.current[index] = node
-              }}
-              type="button"
-              role="tab"
-              id={`${sendMethodBaseId}-${method.id}-tab`}
-              aria-controls={`${sendMethodBaseId}-${method.id}-panel`}
-              aria-selected={selected}
-              tabIndex={selected ? 0 : -1}
-              className={sendMethodTabClassName(selected)}
-              onClick={() => selectSendMethod(method.id)}
-              onKeyDown={(event) => {
-                if (
-                  event.key !== 'ArrowRight' &&
-                  event.key !== 'ArrowLeft' &&
-                  event.key !== 'Home' &&
-                  event.key !== 'End'
-                ) {
-                  return
-                }
-                event.preventDefault()
-                moveSendMethod(index, event.key)
-              }}
-            >
-              {method.label}
-            </button>
-          )
-        })}
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute h-0.5 bg-foreground motion-safe:transition-[transform,width] motion-safe:duration-color motion-safe:ease-out-strong"
-          style={{
-            width: tabIndicator?.width ?? 0,
-            transform:
-              tabIndicator == null
-                ? undefined
-                : `translate(${tabIndicator.left}px, ${tabIndicator.top}px)`,
-            opacity: tabIndicator == null ? 0 : 1,
+        <button
+          type="button"
+          aria-expanded={privateFolderOpen}
+          aria-controls={PRIVATE_FOLDER_PANEL_ID}
+          onClick={() => {
+            setPrivateFolderOpen((open) => !open)
           }}
-        />
-      </div>
-      <div
-        className="relative overflow-hidden motion-safe:transition-[height] motion-safe:duration-color motion-safe:ease-out-strong"
-        style={sendPanelHeight != null ? { height: sendPanelHeight } : undefined}
-      >
-        <div
-          ref={setEmailPanel}
-          role="tabpanel"
-          id={`${sendMethodBaseId}-email-panel`}
-          aria-labelledby={`${sendMethodBaseId}-email-tab`}
-          inert={sendMethod !== 'email'}
-          aria-hidden={sendMethod === 'email' ? undefined : true}
-          data-state={
-            animateSendMethodPanels && sendMethod === 'email' ? 'open' : undefined
-          }
-          className={sendMethodPanelClassName(
-            sendMethod === 'email',
-            animateSendMethodPanels,
-          )}
+          className="flex w-full min-w-0 items-start gap-1.5 text-left text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          <div className="min-w-0 py-8">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 16 16"
+            data-state={privateFolderOpen ? 'open' : 'closed'}
+            className="equipos-disclosure-chevron mt-0.5 size-2.5 shrink-0"
+          >
+            <path fill="currentColor" d="M5.5 3.5 11 8 5.5 12.5Z" />
+          </svg>
+          <span className="min-w-0">Carpeta privada para equipos</span>
+        </button>
+      </h2>
+      <div
+        id={PRIVATE_FOLDER_PANEL_ID}
+        data-state={privateFolderOpen ? 'open' : 'closed'}
+        inert={!privateFolderOpen}
+        className="equipos-disclosure"
+      >
+        <div className="equipos-disclosure-inner">
+          <p className="min-w-0 text-base leading-relaxed text-foreground">
+            Encarga tu propia carpeta con los recortes de los partidos que te interesen.
+          </p>
+          <ol className="mt-6 min-w-0 space-y-2 text-sm leading-relaxed text-foreground">
+            {STEPS.map((step, stepIndex) => (
+              <li key={step} className="flex min-w-0 items-start gap-3">
+                <span className="shrink-0 tabular-nums text-muted-foreground">
+                  {stepIndex + 1}
+                </span>
+                <span className="min-w-0">{step}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-8 min-w-0 space-y-6 border-t border-border pt-8">
+            <OfferSegmentGroup
+              groupId={offerDetailGroupId}
+              label="Nivel de detalle"
+              options={PRIVATE_TEAM_OFFER_DETAIL_LEVELS.map((level) => ({
+                id: level.id,
+                label: level.label,
+              }))}
+              value={selectedDetailId}
+              disabled={offerTogglesLocked}
+              onChange={setDetailId}
+            />
             <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
-              Indicar nombre del equipo en el asunto.
+              {selectedDetail.description}
             </p>
-            <a
-              href={teamInboxMailtoHref(TEAM_INBOX_EMAIL)}
-              className="mt-4 block min-w-0 wrap-anywhere text-sm text-foreground underline underline-offset-4"
+            <OfferSegmentGroup
+              groupId={offerTurnaroundGroupId}
+              label="Plazo"
+              options={PRIVATE_TEAM_OFFER_TURNAROUNDS.map((turnaround) => ({
+                id: turnaround.id,
+                label: turnaround.label,
+              }))}
+              value={selectedTurnaroundId}
+              disabled={offerTogglesLocked}
+              onChange={setTurnaroundId}
+            />
+            <p className="flex min-w-0 flex-wrap gap-x-2 text-sm text-foreground">
+              <span className="text-muted-foreground">Plazo</span>
+              <span className="min-w-0">{selectedTurnaround.turnaround}</span>
+            </p>
+            <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-sm text-foreground">
+              <span className="text-muted-foreground">Precio por partido</span>
+              <OfferPrice amountLabel={formatPricePerMatchClp(selectedPriceClp)} />
+            </p>
+            <div>
+              <Button variant="default" asChild>
+                <a
+                  href={selectedPaymentUrl}
+                  aria-label={`Pagar ${selectedDetail.label} ${selectedTurnaround.label}`}
+                >
+                  Pagar
+                </a>
+              </Button>
+            </div>
+          </div>
+          <p className="mt-8 min-w-0 text-sm leading-relaxed text-muted-foreground">
+            El plazo empieza a correr cuando llega el pago y el video del partido.
+          </p>
+
+          <p
+            id="equipos-send-label"
+            className="mt-12 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
+          >
+            Cómo enviar los videos
+          </p>
+          <div
+            ref={sendMethodTabListRef}
+            role="tablist"
+            aria-labelledby="equipos-send-label"
+            className="relative mt-4 flex min-w-0 flex-wrap gap-x-6 border-b border-border"
+          >
+            {SEND_METHODS.map((method, index) => {
+              const selected = sendMethod === method.id
+              return (
+                <button
+                  key={method.id}
+                  ref={(node) => {
+                    sendMethodTabRefs.current[index] = node
+                  }}
+                  type="button"
+                  role="tab"
+                  id={`${sendMethodBaseId}-${method.id}-tab`}
+                  aria-controls={`${sendMethodBaseId}-${method.id}-panel`}
+                  aria-selected={selected}
+                  tabIndex={selected ? 0 : -1}
+                  className={sendMethodTabClassName(selected)}
+                  onClick={() => selectSendMethod(method.id)}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key !== 'ArrowRight' &&
+                      event.key !== 'ArrowLeft' &&
+                      event.key !== 'Home' &&
+                      event.key !== 'End'
+                    ) {
+                      return
+                    }
+                    event.preventDefault()
+                    moveSendMethod(index, event.key)
+                  }}
+                >
+                  {method.label}
+                </button>
+              )
+            })}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute h-0.5 bg-foreground motion-safe:transition-[transform,width] motion-safe:duration-color motion-safe:ease-out-strong"
+              style={{
+                width: tabIndicator?.width ?? 0,
+                transform:
+                  tabIndicator == null
+                    ? undefined
+                    : `translate(${tabIndicator.left}px, ${tabIndicator.top}px)`,
+                opacity: tabIndicator == null ? 0 : 1,
+              }}
+            />
+          </div>
+          <div
+            className="relative overflow-hidden motion-safe:transition-[height] motion-safe:duration-color motion-safe:ease-out-strong"
+            style={sendPanelHeight != null ? { height: sendPanelHeight } : undefined}
+          >
+            <div
+              ref={setEmailPanel}
+              role="tabpanel"
+              id={`${sendMethodBaseId}-email-panel`}
+              aria-labelledby={`${sendMethodBaseId}-email-tab`}
+              inert={sendMethod !== 'email'}
+              aria-hidden={sendMethod === 'email' ? undefined : true}
+              data-state={
+                animateSendMethodPanels && sendMethod === 'email' ? 'open' : undefined
+              }
+              className={sendMethodPanelClassName(
+                sendMethod === 'email',
+                animateSendMethodPanels,
+              )}
             >
-              {TEAM_INBOX_EMAIL}
-            </a>
+              <div className="min-w-0 py-8">
+                <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
+                  Indicar nombre del equipo en el asunto.
+                </p>
+                <a
+                  href={teamInboxMailtoHref(TEAM_INBOX_EMAIL)}
+                  className="mt-4 block min-w-0 wrap-anywhere text-sm text-foreground underline underline-offset-4"
+                >
+                  {TEAM_INBOX_EMAIL}
+                </a>
+              </div>
+            </div>
+            <form
+              ref={setUploadPanel}
+              noValidate
+              role="tabpanel"
+              id={`${sendMethodBaseId}-upload-panel`}
+              aria-labelledby={`${sendMethodBaseId}-upload-tab`}
+              inert={sendMethod !== 'upload'}
+              aria-hidden={sendMethod === 'upload' ? undefined : true}
+              data-state={
+                animateSendMethodPanels && sendMethod === 'upload' ? 'open' : undefined
+              }
+              className={sendMethodPanelClassName(
+                sendMethod === 'upload',
+                animateSendMethodPanels,
+              )}
+              onSubmit={handleSubmit}
+            >
+              <div className="min-w-0 pt-8">
+                <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
+                  Carga el partido en este formulario. Quedará guardado para armar la carpeta.
+                </p>
+                <div className="mt-6 space-y-5">
+                  <TeamContactFields
+                    idPrefix="team-inbox-upload"
+                    teamName={fields.teamName}
+                    contactEmail={fields.contactEmail}
+                    previewLocked={previewLocked}
+                    submitting={submitting}
+                    invalidField={invalidField}
+                    describedBy={describedBy}
+                    onTeamNameChange={(value) => {
+                      setFields((current) => ({ ...current, teamName: value }))
+                    }}
+                    onContactEmailChange={(value) => {
+                      setFields((current) => ({ ...current, contactEmail: value }))
+                    }}
+                  />
+                  <div className="min-w-0 space-y-2">
+                    <span id="team-inbox-files-label" className={labelClassName}>
+                      Archivos
+                    </span>
+                    <input
+                      ref={fileInputRef}
+                      id={fileInputId}
+                      type="file"
+                      accept="video/*"
+                      multiple
+                      tabIndex={-1}
+                      disabled={previewLocked || submitting}
+                      aria-labelledby="team-inbox-files-label"
+                      className="sr-only"
+                      onChange={(event) => {
+                        chooseFiles(event.target.files)
+                        event.target.value = ''
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={previewLocked || submitting}
+                      aria-describedby={describedBy(
+                        'files',
+                        'team-inbox-files-hint',
+                        'team-inbox-upload-error',
+                      )}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Elegir archivos
+                    </Button>
+                    <p
+                      id="team-inbox-files-hint"
+                      className="min-w-0 text-sm leading-relaxed text-muted-foreground"
+                    >
+                      {formatInboxLimitSummary()} Los archivos grandes se envían por partes. No
+                      cierres la página hasta que termine.
+                    </p>
+                    <p className="min-w-0 text-sm text-muted-foreground">
+                      {fields.files.length === 0
+                        ? 'Ningún archivo elegido.'
+                        : formatSelectedFileSummary(fields.files)}
+                    </p>
+                    {fields.files.length > 0 && (
+                      <ul className="min-w-0 divide-y divide-border">
+                        {fields.files.map((file, fileIndex) => (
+                          <li
+                            key={`${file.name}-${file.sizeBytes}-${fileIndex}`}
+                            className="flex min-w-0 items-start gap-3 py-3"
+                          >
+                            <span
+                              dir="auto"
+                              title={file.name}
+                              className="min-w-0 flex-1 wrap-anywhere text-sm text-foreground"
+                            >
+                              {file.name}
+                            </span>
+                            <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                              {formatByteSize(file.sizeBytes)}
+                            </span>
+                            <button
+                              type="button"
+                              className="shrink-0 text-sm text-muted-foreground transition-colors duration-color ease-color hover:text-foreground"
+                              onClick={() => removeFile(fileIndex)}
+                              disabled={submitting}
+                            >
+                              Quitar
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+                <InboxSubmissionNotice
+                  progressLabel={sendMethod === 'upload' ? progressLabel : null}
+                  errorMessage={sendMethod === 'upload' ? errorMessage : null}
+                  errorElementId="team-inbox-upload-error"
+                  successTeamName={sendMethod === 'upload' ? successTeamName : null}
+                  successEmail={sendMethod === 'upload' ? successEmail : null}
+                  submitting={submitting}
+                  previewLocked={previewLocked}
+                />
+              </div>
+            </form>
+            <form
+              ref={setLinkPanel}
+              noValidate
+              role="tabpanel"
+              id={`${sendMethodBaseId}-link-panel`}
+              aria-labelledby={`${sendMethodBaseId}-link-tab`}
+              inert={sendMethod !== 'link'}
+              aria-hidden={sendMethod === 'link' ? undefined : true}
+              data-state={
+                animateSendMethodPanels && sendMethod === 'link' ? 'open' : undefined
+              }
+              className={sendMethodPanelClassName(
+                sendMethod === 'link',
+                animateSendMethodPanels,
+              )}
+              onSubmit={handleSubmit}
+            >
+              <div className="min-w-0 pt-8">
+                <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
+                  Enlace de YouTube, Google Drive, WeTransfer u otro.
+                </p>
+                <div className="mt-6 space-y-5">
+                  <TeamContactFields
+                    idPrefix="team-inbox-link"
+                    teamName={fields.teamName}
+                    contactEmail={fields.contactEmail}
+                    previewLocked={previewLocked}
+                    submitting={submitting}
+                    invalidField={invalidField}
+                    describedBy={describedBy}
+                    onTeamNameChange={(value) => {
+                      setFields((current) => ({ ...current, teamName: value }))
+                    }}
+                    onContactEmailChange={(value) => {
+                      setFields((current) => ({ ...current, contactEmail: value }))
+                    }}
+                  />
+                  <div className="min-w-0 space-y-2">
+                    <FieldLabel htmlFor="team-inbox-link">Enlace</FieldLabel>
+                    <input
+                      id="team-inbox-link"
+                      name="externalLink"
+                      type="url"
+                      inputMode="url"
+                      spellCheck={false}
+                      maxLength={EXTERNAL_LINK_MAX_LENGTH}
+                      value={fields.externalLink}
+                      readOnly={previewLocked}
+                      disabled={submitting}
+                      aria-invalid={invalidField === 'externalLink'}
+                      aria-describedby={describedBy(
+                        'externalLink',
+                        undefined,
+                        'team-inbox-link-error',
+                      )}
+                      onChange={(event) => {
+                        setFields((current) => ({
+                          ...current,
+                          externalLink: event.target.value,
+                        }))
+                      }}
+                      className={fieldClassName}
+                    />
+                  </div>
+                </div>
+                <InboxSubmissionNotice
+                  note="Esto envía el enlace. El correo no pasa por este formulario."
+                  progressLabel={sendMethod === 'link' ? progressLabel : null}
+                  errorMessage={sendMethod === 'link' ? errorMessage : null}
+                  errorElementId="team-inbox-link-error"
+                  successTeamName={sendMethod === 'link' ? successTeamName : null}
+                  successEmail={sendMethod === 'link' ? successEmail : null}
+                  submitting={submitting}
+                  previewLocked={previewLocked}
+                />
+              </div>
+            </form>
           </div>
         </div>
-        <form
-          ref={setUploadPanel}
-          noValidate
-          role="tabpanel"
-          id={`${sendMethodBaseId}-upload-panel`}
-          aria-labelledby={`${sendMethodBaseId}-upload-tab`}
-          inert={sendMethod !== 'upload'}
-          aria-hidden={sendMethod === 'upload' ? undefined : true}
-          data-state={
-            animateSendMethodPanels && sendMethod === 'upload' ? 'open' : undefined
-          }
-          className={sendMethodPanelClassName(
-            sendMethod === 'upload',
-            animateSendMethodPanels,
-          )}
-          onSubmit={handleSubmit}
-        >
-          <div className="min-w-0 pt-8">
-            <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
-              Carga el partido en este formulario. Quedará guardado para armar la carpeta.
-            </p>
-            <div className="mt-6 space-y-5">
-              <TeamContactFields
-                idPrefix="team-inbox-upload"
-                teamName={fields.teamName}
-                contactEmail={fields.contactEmail}
-                previewLocked={previewLocked}
-                submitting={submitting}
-                invalidField={invalidField}
-                describedBy={describedBy}
-                onTeamNameChange={(value) => {
-                  setFields((current) => ({ ...current, teamName: value }))
-                }}
-                onContactEmailChange={(value) => {
-                  setFields((current) => ({ ...current, contactEmail: value }))
-                }}
-              />
-              <div className="min-w-0 space-y-2">
-                <span id="team-inbox-files-label" className={labelClassName}>
-                  Archivos
-                </span>
-                <input
-                  ref={fileInputRef}
-                  id={fileInputId}
-                  type="file"
-                  accept="video/*"
-                  multiple
-                  tabIndex={-1}
-                  disabled={previewLocked || submitting}
-                  aria-labelledby="team-inbox-files-label"
-                  className="sr-only"
-                  onChange={(event) => {
-                    chooseFiles(event.target.files)
-                    event.target.value = ''
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={previewLocked || submitting}
-                  aria-describedby={describedBy(
-                    'files',
-                    'team-inbox-files-hint',
-                    'team-inbox-upload-error',
-                  )}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Elegir archivos
-                </Button>
-                <p
-                  id="team-inbox-files-hint"
-                  className="min-w-0 text-sm leading-relaxed text-muted-foreground"
-                >
-                  {formatInboxLimitSummary()} Los archivos grandes se envían por partes. No
-                  cierres la página hasta que termine.
-                </p>
-                <p className="min-w-0 text-sm text-muted-foreground">
-                  {fields.files.length === 0
-                    ? 'Ningún archivo elegido.'
-                    : formatSelectedFileSummary(fields.files)}
-                </p>
-                {fields.files.length > 0 && (
-                  <ul className="min-w-0 divide-y divide-border">
-                    {fields.files.map((file, fileIndex) => (
-                      <li
-                        key={`${file.name}-${file.sizeBytes}-${fileIndex}`}
-                        className="flex min-w-0 items-start gap-3 py-3"
-                      >
-                        <span
-                          dir="auto"
-                          title={file.name}
-                          className="min-w-0 flex-1 wrap-anywhere text-sm text-foreground"
-                        >
-                          {file.name}
-                        </span>
-                        <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                          {formatByteSize(file.sizeBytes)}
-                        </span>
-                        <button
-                          type="button"
-                          className="shrink-0 text-sm text-muted-foreground transition-colors duration-color ease-color hover:text-foreground"
-                          onClick={() => removeFile(fileIndex)}
-                          disabled={submitting}
-                        >
-                          Quitar
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-            <InboxSubmissionNotice
-              progressLabel={sendMethod === 'upload' ? progressLabel : null}
-              errorMessage={sendMethod === 'upload' ? errorMessage : null}
-              errorElementId="team-inbox-upload-error"
-              successTeamName={sendMethod === 'upload' ? successTeamName : null}
-              successEmail={sendMethod === 'upload' ? successEmail : null}
-              submitting={submitting}
-              previewLocked={previewLocked}
-            />
-          </div>
-        </form>
-        <form
-          ref={setLinkPanel}
-          noValidate
-          role="tabpanel"
-          id={`${sendMethodBaseId}-link-panel`}
-          aria-labelledby={`${sendMethodBaseId}-link-tab`}
-          inert={sendMethod !== 'link'}
-          aria-hidden={sendMethod === 'link' ? undefined : true}
-          data-state={
-            animateSendMethodPanels && sendMethod === 'link' ? 'open' : undefined
-          }
-          className={sendMethodPanelClassName(
-            sendMethod === 'link',
-            animateSendMethodPanels,
-          )}
-          onSubmit={handleSubmit}
-        >
-          <div className="min-w-0 pt-8">
-            <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
-              Enlace de YouTube, Google Drive, WeTransfer u otro.
-            </p>
-            <div className="mt-6 space-y-5">
-              <TeamContactFields
-                idPrefix="team-inbox-link"
-                teamName={fields.teamName}
-                contactEmail={fields.contactEmail}
-                previewLocked={previewLocked}
-                submitting={submitting}
-                invalidField={invalidField}
-                describedBy={describedBy}
-                onTeamNameChange={(value) => {
-                  setFields((current) => ({ ...current, teamName: value }))
-                }}
-                onContactEmailChange={(value) => {
-                  setFields((current) => ({ ...current, contactEmail: value }))
-                }}
-              />
-              <div className="min-w-0 space-y-2">
-                <FieldLabel htmlFor="team-inbox-link">Enlace</FieldLabel>
-                <input
-                  id="team-inbox-link"
-                  name="externalLink"
-                  type="url"
-                  inputMode="url"
-                  spellCheck={false}
-                  maxLength={EXTERNAL_LINK_MAX_LENGTH}
-                  value={fields.externalLink}
-                  readOnly={previewLocked}
-                  disabled={submitting}
-                  aria-invalid={invalidField === 'externalLink'}
-                  aria-describedby={describedBy(
-                    'externalLink',
-                    undefined,
-                    'team-inbox-link-error',
-                  )}
-                  onChange={(event) => {
-                    setFields((current) => ({
-                      ...current,
-                      externalLink: event.target.value,
-                    }))
-                  }}
-                  className={fieldClassName}
-                />
-              </div>
-            </div>
-            <InboxSubmissionNotice
-              note="Esto envía el enlace. El correo no pasa por este formulario."
-              progressLabel={sendMethod === 'link' ? progressLabel : null}
-              errorMessage={sendMethod === 'link' ? errorMessage : null}
-              errorElementId="team-inbox-link-error"
-              successTeamName={sendMethod === 'link' ? successTeamName : null}
-              successEmail={sendMethod === 'link' ? successEmail : null}
-              submitting={submitting}
-              previewLocked={previewLocked}
-            />
-          </div>
-        </form>
       </div>
       {BREAK_UI_TOGGLE_ENABLED ? (
         <BreakUiDataToggle mode={previewMode} onModeChange={selectPreviewMode} />
