@@ -108,6 +108,38 @@
 }
 
 /*
+  Private-folder disclosure. Closed in the stylesheet so the panel cannot
+  paint before hydration. Height and the chevron use the shared row timing.
+*/
+.equipos-disclosure {
+  display: grid;
+  grid-template-rows: 0fr;
+}
+
+.equipos-disclosure[data-state='open'] {
+  grid-template-rows: 1fr;
+}
+
+.equipos-disclosure-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.equipos-disclosure-chevron[data-state='open'] {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .equipos-disclosure {
+    transition: grid-template-rows var(--duration-row) var(--ease-out-strong);
+  }
+
+  .equipos-disclosure-chevron {
+    transition: transform var(--duration-row) var(--ease-out-strong);
+  }
+}
+
+/*
   Clip grid curtain. The shared fall staggers by --curtain-stagger (80ms).
   Cap that delay at the 12th card so a long page does not keep rising.
   The shared clip-path also clips hit testing; this grid keeps the fall
@@ -293,6 +325,32 @@
   p,
   li {
     text-wrap: pretty;
+  }
+
+  /*
+    Enabled controls take the pointer. Disabled ones stay not-allowed.
+    Unlayered rules (segmented) and utilities (crosshair) still override this.
+  */
+  button:not(:disabled):not([aria-disabled='true']),
+  [role='button']:not(:disabled):not([aria-disabled='true']),
+  [role='tab']:not(:disabled):not([aria-disabled='true']),
+  a[href]:not([aria-disabled='true']),
+  label[for],
+  summary,
+  select:not(:disabled):not([aria-disabled='true']),
+  input[type='file']:not(:disabled):not([aria-disabled='true']),
+  input[type='submit']:not(:disabled):not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+
+  button:is(:disabled, [aria-disabled='true']),
+  [role='button']:is(:disabled, [aria-disabled='true']),
+  [role='tab']:is(:disabled, [aria-disabled='true']),
+  a[href][aria-disabled='true'],
+  select:is(:disabled, [aria-disabled='true']),
+  input[type='file']:is(:disabled, [aria-disabled='true']),
+  input[type='submit']:is(:disabled, [aria-disabled='true']) {
+    cursor: not-allowed;
   }
 }
 
