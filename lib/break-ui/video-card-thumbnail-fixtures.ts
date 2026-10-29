@@ -62,18 +62,26 @@ export function videoCardThumbnailClips(
   mode: VideoCardThumbnailFixtureMode,
 ): VideoClip[] {
   if (mode === 'demo') {
-    return [demoThumbnailClip]
+    return [
+      { ...demoThumbnailClip, hasDrawings: true },
+      {
+        ...demoThumbnailClip,
+        id: 'demo-without-drawings',
+        title: 'MQA ingreso al área',
+      },
+    ]
   }
   return [
-    pendingYoutubeWithThumbClip,
+    { ...pendingYoutubeWithThumbClip, hasDrawings: true },
     pendingYoutubeNoThumbClip,
-    brokenThumbUrlClip,
-    restrictedThumbClip,
+    { ...brokenThumbUrlClip, hasDrawings: true },
+    { ...restrictedThumbClip, hasDrawings: false },
     {
       ...demoThumbnailClip,
       id: 'demo-youtube-worst-row',
       title:
         'Aleksandra Wiśniewska-Kowalczyk Benachrichtigungseinstellungen en salida',
+      hasDrawings: true,
     },
   ]
 }

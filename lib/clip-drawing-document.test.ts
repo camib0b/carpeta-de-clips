@@ -6,6 +6,7 @@ import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
 import {
+  DRAWING_DOCUMENT_VERSION,
   WHOLE_CLIP_PLAY_ORD,
   buildPlayId,
   emptyDrawingDocument,
@@ -14,6 +15,10 @@ import {
   parsePlayOrd,
   readDrawingResponse,
 } from './clip-drawing-document'
+import {
+  PUBLIC_NONEMPTY_DRAWING_PLAY_IDS_SQL,
+  clipIdsFromDrawingPlayIds,
+} from './clip-drawings'
 
 const MIGRATION_PATH = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -140,5 +145,91 @@ describe('clip_drawings migration', () => {
         { id: 'public-1', owner_id: null },
       ],
     )
+  })
+})
+
+describe('library drawing hint', () => {
+  it('keeps clip 4 distinct from clip 40 and ignores ids that are not plays', () => {
+    const matched = clipIdsFromDrawingPlayIds(
+      ['clip:4:play:1', 'clip:40:play:2', 'clip:4:play:0', 'not-a-play'],
+      ['4', '40', 'demo-youtube', '0'],
+    )
+    assert.deepEqual([...matched].sort(), ['4', '40'])
+  })
+
+  it('marks a clip only when a public version-1 drawing has strokes', () => {
+    const database = new DatabaseSync(':memory:')
+    database.exec(fs.readFileSync(MIGRATION_PATH, 'utf8'))
+
+    const insert = database.prepare(
+      `INSERT INTO clip_drawings (
+         id, play_id, owner_id, strokes_json, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    const timestamp = '2026-10-26T00:00:00.000Z'
+    const versionTwoStroke = {
+      version: 2,
+      strokes: [{ points: [{ x: 0.2, y: 0.3 }] }],
+    }
+
+    insert.run(
+      'public-strokes',
+      'clip:4:play:1',
+      null,
+      JSON.stringify(versionOneStroke),
+      timestamp,
+      timestamp,
+    )
+    insert.run(
+      'public-second-play',
+      'clip:4:play:2',
+      null,
+      JSON.stringify(versionOneStroke),
+      timestamp,
+      timestamp,
+    )
+    insert.run(
+      'public-other-clip',
+      'clip:40:play:1',
+      null,
+      JSON.stringify(versionOneStroke),
+      timestamp,
+      timestamp,
+    )
+    insert.run(
+      'public-empty',
+      'clip:5:play:1',
+      null,
+      JSON.stringify(emptyDrawingDocument()),
+      timestamp,
+      timestamp,
+    )
+    insert.run(
+      'public-version-two',
+      'clip:6:play:1',
+      null,
+      JSON.stringify(versionTwoStroke),
+      timestamp,
+      timestamp,
+    )
+    insert.run(
+      'owner-strokes',
+      'clip:7:play:1',
+      'account-camila',
+      JSON.stringify(versionOneStroke),
+      timestamp,
+      timestamp,
+    )
+
+    const playIds = database
+      .prepare(PUBLIC_NONEMPTY_DRAWING_PLAY_IDS_SQL)
+      .all(DRAWING_DOCUMENT_VERSION) as Array<{ play_id: string }>
+
+    const matched = clipIdsFromDrawingPlayIds(
+      playIds.map((row) => row.play_id),
+      ['4', '5', '6', '7', '40', 'demo-youtube'],
+    )
+
+    assert.deepEqual([...matched].sort(), ['4', '40'])
   })
 })
