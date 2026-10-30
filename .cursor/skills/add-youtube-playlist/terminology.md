@@ -14,7 +14,8 @@ Use this to interpret YouTube clip titles (Spanish or English) into `GAME_CONCEP
 | Defensa de área | Circle defense / defending the circle | `Defensa de área` | UC defending |
 | Juego 50 yd / 50-yds / posesión 50 | Midfield / 50-yard possession | `Juego 50-yds` | From **rival** → UC B **Presiones** |
 | Juego 75 yd / 75-yds | Attacking-third / 75-yard possession | `Juego 75-yds` | From **rival** → UC B **Presiones** |
-| Shoot outs / penales / PS | Penalty shoot-out | `Shoot Outs` | |
+| Shoot outs / S.O. | Penalty shoot-out | `Shoot Outs` | |
+| Penal / PS (in-game penalty stroke) | Penalty stroke | `Penales` | |
 | Partido completo | Full match | `Partido Completo` | |
 | Flicks | Aerials / flicks | `Flicks` | |
 | Pérdidas | Turnovers / losses of possession | `Pérdidas` | |
