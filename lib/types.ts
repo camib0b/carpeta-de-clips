@@ -120,6 +120,7 @@ export const GAME_CONCEPTS = [
   'Goles',
   'Corner Cortos',
   'Shoot Outs',
+  'Penales',
   'Pérdidas',
   'Ingresos al área',
   'Defensa de área',
