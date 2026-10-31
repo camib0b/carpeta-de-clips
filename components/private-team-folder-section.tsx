@@ -614,8 +614,8 @@ function InboxSubmissionNotice({
               className="mt-2 h-1 w-full overflow-hidden bg-muted"
             >
               <div
-                className="h-full bg-foreground motion-safe:transition-[width] motion-safe:duration-color motion-safe:ease-out-strong"
-                style={{ width: `${progressPercent}%` }}
+                className="h-full w-full origin-left bg-foreground motion-safe:transition-transform motion-safe:duration-color motion-safe:ease-out-strong"
+                style={{ transform: `scaleX(${progressPercent / 100})` }}
               />
             </div>
           ) : null}
