@@ -385,33 +385,40 @@ a[data-team-library-home].link-underline {
   the sweep.
 */
 .skeleton-mark {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-mark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   background-image: linear-gradient(
     100deg,
     transparent 0%,
     hsl(var(--foreground) / 0.06) 45%,
     transparent 80%
   );
-  background-repeat: no-repeat;
-  background-size: 220% 100%;
-  background-position: 120% 0;
+  transform: translateX(-100%);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .skeleton-mark {
+  .skeleton-mark::after {
     animation: skeleton-shimmer 1.8s infinite;
   }
 }
 
+/* Same sweep and rest, on transform so it composites instead of repainting. */
 @keyframes skeleton-shimmer {
   0% {
-    background-position: 120% 0;
+    transform: translateX(-100%);
     animation-timing-function: var(--ease-out-strong);
   }
   62% {
-    background-position: -120% 0;
+    transform: translateX(100%);
   }
   100% {
-    background-position: -120% 0;
+    transform: translateX(100%);
   }
 }
 
@@ -466,8 +473,8 @@ a[data-team-library-home].link-underline {
     animation-fill-mode: both !important;
   }
 
-  .skeleton-mark {
+  .skeleton-mark::after {
     animation: none !important;
-    background-image: none;
+    content: none;
   }
 }
