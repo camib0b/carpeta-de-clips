@@ -5,6 +5,23 @@
 /* PatternedBackground keeps its utility classes in the package script. */
 @source '../node_modules/@camib0b/ui/dist/patterned-background.js';
 
+/* Pointer hover only, so a touch tap does not stick these states. */
+@custom-variant fine-hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+
+@custom-variant fine-group-hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:is(:where(.group):hover *) {
+      @slot;
+    }
+  }
+}
+
 /*
   Color, radius, shadow, duration, and easing tokens come from @camib0b/ui.
   This site follows prefers-color-scheme, and the package ships dark values on
@@ -15,6 +32,34 @@
   color-scheme: light;
   --state: hsl(172 50% 26%);
   --state-foreground: hsl(0 0% 100%);
+
+  /* motion-tokens:start
+     Single source of truth for motion. Shared durations and easings
+     (--duration-press, --duration-color, --duration-button, --duration-row,
+     --duration-drop, --duration-toast, --ease-out-strong, --ease-hero,
+     --color-ease, and the package curtain) live in @camib0b/ui.
+     Properties below are the carpeta-only timings. Call sites reference
+     these names and do not retype a duration or easing.
+  */
+  --ease-in-out: ease-in-out;
+  --duration-enter: 250ms;
+  --duration-hero: 600ms;
+  --duration-curtain-stagger: 30ms;
+  --curtain-stagger-cap: 12;
+  --duration-curtain-settle-buffer: 40ms;
+  --duration-overlay-in: 150ms;
+  --duration-overlay-out: 100ms;
+  --duration-hint-fade: 400ms;
+  --duration-hint-delay: 3s;
+  --duration-hint-pulse: 1.5s;
+  --duration-seek-in: var(--duration-press);
+  --duration-seek-hold: 500ms;
+  --duration-seek-out: 200ms;
+  --duration-shimmer: 1.8s;
+  --duration-motion-cutoff: 0.01ms;
+  --duration-landing-step: 50ms;
+  --duration-landing-cap: 300ms;
+  /* motion-tokens:end */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -77,34 +122,40 @@
   --text-2xl--line-height: 1.2;
   --text-3xl: 1.875rem;
   --text-3xl--line-height: 1.15;
-  --animate-fade-up: fade-up 420ms var(--ease-hero) both;
-}
-
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  --ease-in-out: var(--ease-in-out);
+  --transition-duration-overlay-in: var(--duration-overlay-in);
+  --transition-duration-overlay-out: var(--duration-overlay-out);
 }
 
 /*
-  Home entrance. 250ms, 8px rise, ease-out-strong. Delay is inline on each
-  element. The class does not set pointer-events, so a row can be clicked
-  while it fades. Hero and team titles use the same keyframe at 600ms,
-  12px, and ease-hero.
+  Home entrance. Rows use --duration-enter and --ease-out-strong.
+  The landing hero uses --duration-hero and --ease-hero, with a taller rise.
+  Delay is --landing-index times --duration-landing-step, capped by
+  --duration-landing-cap. The class does not set pointer-events, so a row
+  can be clicked while it fades.
 */
 .landing-enter {
   --landing-enter-rise: 8px;
-  animation: landing-enter 250ms var(--ease-out-strong) both;
+  animation-name: landing-enter;
+  animation-duration: var(--duration-enter);
+  animation-timing-function: var(--ease-out-strong);
+  animation-fill-mode: both;
 }
 
 .hero-enter {
   --landing-enter-rise: 12px;
-  animation: landing-enter 600ms var(--ease-hero) both;
+  animation-name: landing-enter;
+  animation-duration: var(--duration-hero);
+  animation-timing-function: var(--ease-hero);
+  animation-fill-mode: both;
+}
+
+.landing-enter,
+.hero-enter {
+  animation-delay: min(
+    calc(var(--landing-index, 0) * var(--duration-landing-step)),
+    var(--duration-landing-cap)
+  );
 }
 
 /*
@@ -139,14 +190,23 @@
   }
 }
 
+/* Library grid and home team rows: short entrance, site stagger. */
+.library-clip-results,
+.home-team-list {
+  --curtain-duration: var(--duration-enter);
+  --curtain-stagger: var(--duration-curtain-stagger);
+}
+
 /*
-  Clip grid curtain. The shared fall staggers by --curtain-stagger (80ms).
-  Cap that delay at the 12th card so a long page does not keep rising.
+  Clip grid curtain. The fall staggers by --curtain-stagger.
+  Cap that delay with --curtain-stagger-cap so a long page does not keep rising.
   The shared clip-path also clips hit testing; this grid keeps the fall
   and leaves the whole card clickable for the entire animation.
 */
 .library-clip-results[data-curtain-live] .curtain-reveal-item[data-curtain='playing'] {
-  animation-delay: calc(min(var(--curtain-index, 0), 11) * var(--curtain-stagger));
+  animation-delay: calc(
+    min(var(--curtain-index, 0), var(--curtain-stagger-cap) - 1) * var(--curtain-stagger)
+  );
   clip-path: none !important;
 }
 
@@ -214,7 +274,7 @@
   }
 }
 
-/* 80ms fade in, 500ms hold, 200ms fade out. Linear timeline so each segment keeps its duration. */
+/* Seek badge. Stops are the running share of the seek-in, hold, and seek-out tokens. Linear timeline so each segment keeps its duration. */
 @keyframes keyboard-seek-badge {
   0% {
     opacity: 0;
@@ -244,11 +304,18 @@
 }
 
 .swipe-navigation-hint {
-  animation: swipe-navigation-hint-fade 400ms var(--ease-out-strong) 3s forwards;
+  animation-name: swipe-navigation-hint-fade;
+  animation-duration: var(--duration-hint-fade);
+  animation-timing-function: var(--ease-out-strong);
+  animation-delay: var(--duration-hint-delay);
+  animation-fill-mode: forwards;
 }
 
 .swipe-navigation-hint-icon {
-  animation: swipe-navigation-hint-pulse 1.5s var(--ease-out-strong) 2;
+  animation-name: swipe-navigation-hint-pulse;
+  animation-duration: var(--duration-hint-pulse);
+  animation-timing-function: var(--ease-in-out);
+  animation-iteration-count: 2;
 }
 
 @keyframes swipe-navigation-hint-pulse {
@@ -262,10 +329,15 @@
 }
 
 .keyboard-seek-badge {
-  animation: keyboard-seek-badge 780ms linear both;
+  animation-name: keyboard-seek-badge;
+  animation-duration: calc(
+    var(--duration-seek-in) + var(--duration-seek-hold) + var(--duration-seek-out)
+  );
+  animation-timing-function: linear;
+  animation-fill-mode: both;
 }
 
-/* This modal only: opacity, no zoom. Open 150ms, close 100ms. */
+/* This modal only: opacity, no zoom. Open and close use the overlay tokens. */
 .video-modal-motion {
   --tw-enter-scale: 1;
   --tw-exit-scale: 1;
@@ -273,30 +345,30 @@
 }
 
 .video-modal-motion[data-state='open'] {
-  --tw-duration: 150ms;
-  --tw-animation-duration: 150ms;
+  --tw-duration: var(--duration-overlay-in);
+  --tw-animation-duration: var(--duration-overlay-in);
 }
 
 .video-modal-motion[data-state='closed'] {
-  --tw-duration: 100ms;
-  --tw-animation-duration: 100ms;
+  --tw-duration: var(--duration-overlay-out);
+  --tw-animation-duration: var(--duration-overlay-out);
 }
 
-/* Filter popover: zoom from 0.97, open 150ms, close 100ms. */
+/* Filter popover: zoom from 0.97. Open and close use the overlay tokens. */
 [data-slot='popover-content'] {
   --tw-ease: var(--ease-out-strong);
 }
 
 [data-slot='popover-content'][data-state='open'] {
   --tw-enter-scale: 0.97;
-  --tw-duration: 150ms;
-  --tw-animation-duration: 150ms;
+  --tw-duration: var(--duration-overlay-in);
+  --tw-animation-duration: var(--duration-overlay-in);
 }
 
 [data-slot='popover-content'][data-state='closed'] {
   --tw-exit-scale: 0.97;
-  --tw-duration: 100ms;
-  --tw-animation-duration: 100ms;
+  --tw-duration: var(--duration-overlay-out);
+  --tw-animation-duration: var(--duration-overlay-out);
 }
 
 @layer base {
@@ -385,38 +457,45 @@ a[data-team-library-home].link-underline {
 
 /*
   Route skeletons. The fill is muted at low opacity, close to the page
-  background. A highlight sweeps once per 1.8s on ease-out-strong, then rests,
+  background. A highlight sweeps once per --duration-shimmer on ease-out-strong, then rests,
   so the loop does not snap. Reduced motion keeps the soft fill and skips
   the sweep.
 */
 .skeleton-mark {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-mark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   background-image: linear-gradient(
     100deg,
     transparent 0%,
     hsl(var(--foreground) / 0.06) 45%,
     transparent 80%
   );
-  background-repeat: no-repeat;
-  background-size: 220% 100%;
-  background-position: 120% 0;
+  transform: translateX(-100%);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .skeleton-mark {
-    animation: skeleton-shimmer 1.8s infinite;
+  .skeleton-mark::after {
+    animation: skeleton-shimmer var(--duration-shimmer) infinite;
   }
 }
 
+/* Same sweep and rest, on transform so it composites instead of repainting. */
 @keyframes skeleton-shimmer {
   0% {
-    background-position: 120% 0;
+    transform: translateX(-100%);
     animation-timing-function: var(--ease-out-strong);
   }
   62% {
-    background-position: -120% 0;
+    transform: translateX(100%);
   }
   100% {
-    background-position: -120% 0;
+    transform: translateX(100%);
   }
 }
 
@@ -435,15 +514,11 @@ a[data-team-library-home].link-underline {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: var(--duration-motion-cutoff) !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-property: opacity, color, background-color, border-color, outline-color,
       text-decoration-color, fill, stroke, box-shadow, visibility !important;
-  }
-
-  .animate-fade-up {
-    animation: none !important;
   }
 
   .swipe-navigation-hint,
@@ -453,30 +528,30 @@ a[data-team-library-home].link-underline {
   }
 
   .keyboard-seek-badge {
-    animation: keyboard-seek-badge-reduced 500ms linear both !important;
+    animation: keyboard-seek-badge-reduced var(--duration-seek-hold) linear both !important;
   }
 
   /*
     The universal animation reset would skip the home fade entirely.
-    Keep an opacity change and drop the rise: 250ms for rows, 600ms for
-    the hero and team title.
+    Keep an opacity change and drop the rise. Rows use --duration-enter.
+    The landing hero uses --duration-hero.
   */
   .landing-enter {
     animation-name: landing-enter-opacity !important;
-    animation-duration: 250ms !important;
+    animation-duration: var(--duration-enter) !important;
     animation-timing-function: var(--ease-out-strong) !important;
     animation-fill-mode: both !important;
   }
 
   .hero-enter {
     animation-name: landing-enter-opacity !important;
-    animation-duration: 600ms !important;
+    animation-duration: var(--duration-hero) !important;
     animation-timing-function: var(--ease-hero) !important;
     animation-fill-mode: both !important;
   }
 
-  .skeleton-mark {
+  .skeleton-mark::after {
     animation: none !important;
-    background-image: none;
+    content: none;
   }
 }

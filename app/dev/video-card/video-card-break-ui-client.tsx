@@ -55,7 +55,6 @@ export function VideoCardBreakUiClient() {
           <VideoCard
             key={video.id}
             video={video}
-            playEntranceAnimation={false}
             onClick={() => undefined}
           />
         ))}

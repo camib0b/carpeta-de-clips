@@ -1,18 +1,10 @@
-/**
- * Landing-page entrance delays. The 250ms fade itself lives on `.landing-enter`
- * in `app/globals.css`. Delays stay inline so each row can stagger without
- * a stylesheet rule per index.
- */
-export const LANDING_ENTRANCE_DELAY_CAP_MS = 300
-export const LANDING_ENTRANCE_STEP_MS = 50
+import type { CSSProperties } from 'react'
 
-export function landingEntranceDelay(
-  stepIndex: number,
-  stepMilliseconds: number,
-): string {
-  const delayMilliseconds = Math.min(
-    stepIndex * stepMilliseconds,
-    LANDING_ENTRANCE_DELAY_CAP_MS,
-  )
-  return `${delayMilliseconds}ms`
+/**
+ * Landing entrance delay is owned by the motion tokens in app/globals.css
+ * (--duration-landing-step and --duration-landing-cap). Callers only pass
+ * the step index.
+ */
+export function landingEntranceStyle(stepIndex: number): CSSProperties {
+  return { '--landing-index': String(stepIndex) } as CSSProperties
 }

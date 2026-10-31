@@ -9,10 +9,7 @@ import {
 import { TeamIcon } from '@/components/team-icon'
 import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
 import type { TeamLibraryWithClipCount } from '@/lib/catalog'
-import {
-  LANDING_ENTRANCE_STEP_MS,
-  landingEntranceDelay,
-} from '@/lib/landing-entrance'
+import { landingEntranceStyle } from '@/lib/landing-entrance'
 import { landingTeamRowLabel } from '@/lib/landing-team-row-label'
 import { isPrivateTeamOfferReady } from '@/lib/private-team-offer'
 import { siteDescription, siteName } from '@/lib/site-metadata'
@@ -260,7 +257,7 @@ export default async function HomePage({
       <header className="border-b border-border">
         <div
           className="hero-enter mx-auto max-w-2xl px-6 py-16 md:py-24"
-          style={{ animationDelay: landingEntranceDelay(0, LANDING_ENTRANCE_STEP_MS) }}
+          style={landingEntranceStyle(0)}
         >
           <h1 className="text-2xl font-medium tracking-tight text-foreground md:text-3xl">
             {siteName}
@@ -275,7 +272,7 @@ export default async function HomePage({
       <main className="mx-auto max-w-2xl bg-background px-6 py-12">
         <p
           className="landing-enter mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
-          style={{ animationDelay: landingEntranceDelay(1, LANDING_ENTRANCE_STEP_MS) }}
+          style={landingEntranceStyle(1)}
         >
           Carpetas públicas
         </p>
@@ -298,7 +295,7 @@ export default async function HomePage({
                   <li key={team.id}>
                     <Link
                       href={`/${team.slug}`}
-                      className="press tap-reset duration-color group flex min-w-0 items-center justify-between gap-3 py-6 transition-colors duration-200 hover:bg-muted/30"
+                      className="press tap-reset duration-color group flex min-w-0 items-center justify-between gap-3 py-6 hover:bg-muted/30"
                     >
                       <div className="flex min-w-0 items-center gap-4">
                         <TeamIcon slug={team.slug} name={team.name} size="sm" />
@@ -311,7 +308,7 @@ export default async function HomePage({
                           {team.clipCount} {team.clipCount === 1 ? 'clip' : 'clips'}
                         </span>
                         <svg
-                          className="h-4 w-4 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-1"
+                          className="h-4 w-4 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-row motion-safe:ease-out-strong motion-safe:group-hover:translate-x-1"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
