@@ -70,9 +70,7 @@ interface VideoGridProps {
  * Displays videos in a responsive grid with client-side filtering
  */
 export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: VideoGridProps) {
-  const resultsMotionRef = useRef<HTMLDivElement>(null)
   const [curtainLive, setCurtainLive] = useState(true)
-  const skipResultsFadeRef = useRef(true)
 
   const {
     selectedConcepts,
@@ -141,20 +139,6 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
     return () => window.clearTimeout(timeoutId)
   }, [])
 
-  useEffect(() => {
-    if (skipResultsFadeRef.current) {
-      skipResultsFadeRef.current = false
-      return
-    }
-    const results = resultsMotionRef.current
-    if (results == null) {
-      return
-    }
-    results.classList.remove('animate-fade-up')
-    void results.offsetWidth
-    results.classList.add('animate-fade-up')
-  }, [filteredClipIdentity])
-
   const shouldShowMatchBanner = selectedRivals.length > 0
 
   const visibleMatchSummaries = useMemo(() => {
@@ -217,7 +201,6 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
       {/* Video Grid */}
       {filteredVideos.length > 0 ? (
         <div
-          ref={resultsMotionRef}
           data-curtain-live={curtainLive ? '' : undefined}
           className="library-clip-results"
         >
@@ -226,7 +209,6 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
               <div key={video.id} className="relative flex min-w-0 hover:z-10">
                 <VideoCard
                   video={video}
-                  playEntranceAnimation={false}
                   onClick={() => openClip(video)}
                   thumbnailLoading={index < 3 ? 'eager' : 'lazy'}
                   thumbnailFetchPriority={index === 0 ? 'high' : undefined}

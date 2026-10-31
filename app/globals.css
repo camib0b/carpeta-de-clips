@@ -77,18 +77,6 @@
   --text-2xl--line-height: 1.2;
   --text-3xl: 1.875rem;
   --text-3xl--line-height: 1.15;
-  --animate-fade-up: fade-up 420ms var(--ease-hero) both;
-}
-
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /*
@@ -440,10 +428,6 @@ a[data-team-library-home].link-underline {
     scroll-behavior: auto !important;
     transition-property: opacity, color, background-color, border-color, outline-color,
       text-decoration-color, fill, stroke, box-shadow, visibility !important;
-  }
-
-  .animate-fade-up {
-    animation: none !important;
   }
 
   .swipe-navigation-hint,

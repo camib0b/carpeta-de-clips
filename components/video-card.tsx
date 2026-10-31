@@ -1,6 +1,5 @@
 'use client'
 
-import { useRef } from 'react'
 import { PenLine } from 'lucide-react'
 import { formatMatchDate, formatScoreWithShootout } from '@/lib/match-display'
 import { formatHomeAwayMatchup, getTeamAbbreviation } from '@/lib/team-abbreviations'
@@ -11,7 +10,6 @@ import { cn } from '@/lib/utils'
 interface VideoCardProps {
   video: VideoClip
   onClick: () => void
-  playEntranceAnimation: boolean
   thumbnailLoading?: 'eager' | 'lazy'
   thumbnailFetchPriority?: 'high' | 'low' | 'auto'
 }
@@ -24,13 +22,9 @@ interface VideoCardProps {
 export function VideoCard({
   video,
   onClick,
-  playEntranceAnimation,
   thumbnailLoading = 'lazy',
   thumbnailFetchPriority,
 }: VideoCardProps) {
-  // Keep the class that was chosen on this card's first mount. A later grid
-  // render must not strip an entrance that is already running.
-  const playEntranceAnimationRef = useRef(playEntranceAnimation)
   const formattedDate = formatMatchDate(video.date)
   const scoreDisplay =
     video.homeGoals !== undefined && video.awayGoals !== undefined
@@ -50,7 +44,6 @@ export function VideoCard({
       onClick={onClick}
       className={cn(
         'press tap-reset group h-full w-full min-w-0 cursor-pointer overflow-hidden rounded-md border border-border bg-card text-left shadow-elev-1 duration-color ease-color hover:border-foreground/25 hover:shadow-elev-2 motion-safe:hover:-translate-y-[2px] focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-        playEntranceAnimationRef.current && 'motion-safe:animate-fade-up',
       )}
     >
       {/* Thumbnail */}
