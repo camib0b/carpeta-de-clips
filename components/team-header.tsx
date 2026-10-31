@@ -23,7 +23,7 @@ export function TeamHeader({ team }: TeamHeaderProps) {
         <a
           href={TEAM_LIBRARY_HOME_HREF}
           data-team-library-home=""
-          className="link-underline pointer-events-auto relative z-[60] mb-8 inline-flex items-center gap-2 bg-background text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="link-underline pointer-events-auto relative z-[60] mb-8 inline-flex items-center gap-2 bg-background text-sm text-muted-foreground transition-colors duration-color ease-color hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Todos los Equipos</span>

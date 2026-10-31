@@ -42,8 +42,9 @@ export function VideoCard({
   return (
     <button
       onClick={onClick}
+      // Hover border is foreground/50: 3.35:1 on the light card, 4.69:1 on the dark card.
       className={cn(
-        'press tap-reset group h-full w-full min-w-0 cursor-pointer overflow-hidden rounded-md border border-border bg-card text-left shadow-elev-1 duration-color ease-color hover:border-foreground/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'press tap-reset group h-full w-full min-w-0 cursor-pointer overflow-hidden rounded-md border border-border bg-card text-left shadow-elev-1 duration-color ease-color fine-hover:border-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       )}
     >
       {/* Thumbnail */}
@@ -53,12 +54,12 @@ export function VideoCard({
           thumbKey={video.thumbKey}
           visibility={video.visibility}
           alt={video.title}
-          className="group-hover:opacity-80"
+          className="fine-group-hover:opacity-80"
           loading={thumbnailLoading}
           fetchPriority={thumbnailFetchPriority}
         />
         {/* Play indicator on hover */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-color ease-color group-hover:opacity-100">
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-color ease-color fine-group-hover:opacity-100">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-foreground/90">
             <svg
               className="ml-1 h-5 w-5 text-background"

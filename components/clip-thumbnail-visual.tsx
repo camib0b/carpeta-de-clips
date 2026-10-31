@@ -130,7 +130,7 @@ export function ClipThumbnailVisual({
   )
 
   const imageClassName = cn(
-    'h-full w-full object-cover transition-opacity duration-200 ease-out-strong',
+    'h-full w-full object-cover transition-opacity duration-color ease-color',
     imageIsLoaded ? cn('opacity-100', className) : 'opacity-0',
   )
 

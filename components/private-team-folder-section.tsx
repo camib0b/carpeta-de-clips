@@ -17,10 +17,8 @@ import {
   WORST_TEAM_INBOX_NAME,
   type TeamInboxFileFixture,
 } from '@/lib/break-ui/team-inbox-form-fixtures'
-import {
-  LANDING_ENTRANCE_STEP_MS,
-  landingEntranceDelay,
-} from '@/lib/landing-entrance'
+import { cssTimeToMilliseconds } from '@/lib/css-time'
+import { landingEntranceStyle } from '@/lib/landing-entrance'
 import {
   PRIVATE_TEAM_OFFER_DETAIL_LEVELS,
   PRIVATE_TEAM_OFFER_TURNAROUNDS,
@@ -661,12 +659,7 @@ function hashIdentifier(hash: string): string | null {
 }
 
 function transitionDurationMs(element: HTMLElement): number {
-  const raw = getComputedStyle(element).transitionDuration.split(',')[0]?.trim() ?? '0s'
-  const value = Number.parseFloat(raw)
-  if (!Number.isFinite(value)) {
-    return 0
-  }
-  return raw.endsWith('ms') ? value : value * 1000
+  return cssTimeToMilliseconds(getComputedStyle(element).transitionDuration)
 }
 
 function hashTargetInSection(section: HTMLElement, hash: string): HTMLElement | null {
@@ -1086,12 +1079,7 @@ export function PrivateTeamFolderSection({
       id="equipos"
       aria-labelledby="equipos-heading"
       className={`landing-enter min-w-0 scroll-mt-8${BREAK_UI_TOGGLE_ENABLED ? ' pb-20' : ''}`}
-      style={{
-        animationDelay: landingEntranceDelay(
-          entranceStepStart,
-          LANDING_ENTRANCE_STEP_MS,
-        ),
-      }}
+      style={landingEntranceStyle(entranceStepStart)}
     >
       <div aria-hidden="true" className="border-t border-border mb-28" />
       <h2

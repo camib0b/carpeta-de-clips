@@ -12,17 +12,13 @@ import { VideoFilters } from './video-filters'
 import { clipLibraryEmptyState } from '@/lib/break-ui/clip-library-empty-state'
 import { listUniqueMatchSummaries } from '@/lib/match-display'
 import { storageSlugFromClip } from '@/lib/match-keys'
+import { readCssNumber, readCssTimeMilliseconds } from '@/lib/css-time'
 import { cn } from '@/lib/utils'
 
 const VideoModal = dynamic(
   () => import('./video-modal').then((module) => module.VideoModal),
   { ssr: false },
 )
-
-/** Curtain stagger is 30ms here (see globals.css). Only the first 12 cards get their own step. */
-const CURTAIN_STAGGER_CARD_CAP = 12
-const CURTAIN_STAGGER_MS = 30
-const CURTAIN_FALL_MS = 250
 
 function filteredClipKey(videos: VideoClip[]): string {
   return videos.map((video) => video.id).join('\n')
@@ -50,7 +46,7 @@ function LibraryEmptyState({
       {emptyState.offerClearFilters ? (
         <button
           onClick={onClearFilters}
-          className="mt-4 text-sm text-foreground underline underline-offset-4 transition-colors duration-200 hover:no-underline"
+          className="mt-4 text-sm text-foreground underline underline-offset-4 transition-colors duration-color ease-color hover:no-underline"
         >
           Limpiar filtros
         </button>
@@ -131,11 +127,21 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
   }
 
   useEffect(() => {
-    const settleDelayMs =
-      (CURTAIN_STAGGER_CARD_CAP - 1) * CURTAIN_STAGGER_MS + CURTAIN_FALL_MS + 40
+    const root = document.documentElement
+    const staggerMilliseconds = readCssTimeMilliseconds(root, '--duration-curtain-stagger')
+    const fallMilliseconds = readCssTimeMilliseconds(root, '--duration-enter')
+    const staggerCardCap = readCssNumber(root, '--curtain-stagger-cap')
+    const settleBufferMilliseconds = readCssTimeMilliseconds(
+      root,
+      '--duration-curtain-settle-buffer',
+    )
+    const settleDelayMilliseconds =
+      Math.max(0, staggerCardCap - 1) * staggerMilliseconds +
+      fallMilliseconds +
+      settleBufferMilliseconds
     const timeoutId = window.setTimeout(() => {
       setCurtainLive(false)
-    }, settleDelayMs)
+    }, settleDelayMilliseconds)
     return () => window.clearTimeout(timeoutId)
   }, [])
 
@@ -206,7 +212,7 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
         >
           <CurtainReveal className="library-clip-grid grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filteredVideos.map((video, index) => (
-              <div key={video.id} className="relative flex min-w-0 hover:z-10">
+              <div key={video.id} className="relative flex min-w-0 fine-hover:z-10">
                 <VideoCard
                   video={video}
                   onClick={() => openClip(video)}

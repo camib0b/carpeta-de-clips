@@ -474,7 +474,7 @@ function JugadasList({
               aria-label={ariaLabel}
               aria-current={isActive ? 'true' : undefined}
               className={cn(
-                'grid w-full min-w-0 grid-cols-[auto_auto_minmax(0,max-content)_minmax(0,1fr)_auto] items-center gap-x-2 border-b border-border px-3 py-2 text-left font-mono text-xs tabular-nums transition-[background-color] duration-[120ms] ease-out-strong',
+                'grid w-full min-w-0 grid-cols-[auto_auto_minmax(0,max-content)_minmax(0,1fr)_auto] items-center gap-x-2 border-b border-border px-3 py-2 text-left font-mono text-xs tabular-nums transition-[background-color] duration-color ease-color',
                 isActive
                   ? 'bg-state font-medium text-state-foreground hover:bg-state'
                   : 'hover:bg-muted/60',
@@ -1639,7 +1639,7 @@ export function VideoModal({
           'flex w-[calc(100%-0.5rem)] max-w-none flex-col gap-0 overflow-hidden p-0',
           'max-h-[calc(100dvh-0.5rem)] sm:max-w-none',
           'video-modal-motion zoom-in-100! zoom-out-100! ease-out-strong',
-          'data-[state=open]:duration-150 data-[state=closed]:duration-100',
+          'data-[state=open]:duration-overlay-in data-[state=closed]:duration-overlay-out',
         )}
         onOpenAutoFocus={handleOpenAutoFocus}
         onPointerDownOutside={preventCloseOnClipNav}

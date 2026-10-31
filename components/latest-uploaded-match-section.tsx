@@ -1,8 +1,5 @@
 import Link from 'next/link'
-import {
-  LANDING_ENTRANCE_STEP_MS,
-  landingEntranceDelay,
-} from '@/lib/landing-entrance'
+import { landingEntranceStyle } from '@/lib/landing-entrance'
 import { toLibraryHref } from '@/lib/library-filters/clip-params'
 import { serializeLibraryFilters } from '@/lib/library-filters/params'
 import {
@@ -21,16 +18,8 @@ export function latestUploadedMatchLastEntranceStepIndex(previewCount: number): 
     : 2
 }
 
-function entranceStyle(
-  stepIndex: number,
-  entranceStepStart: number,
-): { animationDelay: string } {
-  return {
-    animationDelay: landingEntranceDelay(
-      entranceStepStart + stepIndex,
-      LANDING_ENTRANCE_STEP_MS,
-    ),
-  }
+function entranceStyle(stepIndex: number, entranceStepStart: number) {
+  return landingEntranceStyle(entranceStepStart + stepIndex)
 }
 
 export function LatestUploadedMatchSection({
@@ -72,7 +61,7 @@ export function LatestUploadedMatchSection({
       </p>
       <Link
         href={matchHref}
-        className="group block min-w-0 rounded-md py-4 transition-colors duration-200 hover:bg-muted/30"
+        className="group block min-w-0 rounded-md py-4 transition-colors duration-color ease-color hover:bg-muted/30"
       >
         <span
           className="landing-enter flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
@@ -91,7 +80,7 @@ export function LatestUploadedMatchSection({
               {match.libraryName}
             </span>
             <svg
-              className="h-4 w-4 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-1"
+              className="h-4 w-4 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-row motion-safe:ease-out-strong motion-safe:group-hover:translate-x-1"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
