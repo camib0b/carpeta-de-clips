@@ -29,7 +29,7 @@ export function TeamHeader({ team }: TeamHeaderProps) {
           <span>Todos los Equipos</span>
         </a>
 
-        <div className="hero-enter flex min-w-0 items-center gap-4">
+        <div className="landing-enter flex min-w-0 items-center gap-4">
           <TeamIcon slug={team.slug} name={team.name} size="lg" />
           <h1 className="min-w-0 wrap-anywhere text-2xl font-medium tracking-tight text-foreground">
             {landingTeamRowLabel(team)}
