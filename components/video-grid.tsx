@@ -19,10 +19,10 @@ const VideoModal = dynamic(
   { ssr: false },
 )
 
-/** Shared curtain stagger is 80ms. Only the first 12 cards get their own step. */
+/** Curtain stagger is 30ms here (see globals.css). Only the first 12 cards get their own step. */
 const CURTAIN_STAGGER_CARD_CAP = 12
-const CURTAIN_STAGGER_MS = 80
-const CURTAIN_FALL_MS = 480
+const CURTAIN_STAGGER_MS = 30
+const CURTAIN_FALL_MS = 250
 
 function filteredClipKey(videos: VideoClip[]): string {
   return videos.map((video) => video.id).join('\n')

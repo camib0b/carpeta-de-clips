@@ -127,6 +127,13 @@
   }
 }
 
+/* Library grid and home team rows: shorter fall, 30ms stagger. */
+.library-clip-results,
+.home-team-list {
+  --curtain-duration: 250ms;
+  --curtain-stagger: 30ms;
+}
+
 /*
   Clip grid curtain. The shared fall staggers by --curtain-stagger (80ms).
   Cap that delay at the 12th card so a long page does not keep rising.
