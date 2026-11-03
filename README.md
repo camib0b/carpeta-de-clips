@@ -198,4 +198,4 @@ Worker config is `wrangler.jsonc`:
 
 Home and team library pages are `force-dynamic` so they read D1 at request time.
 
-For Cloudflare Workers Builds, use `pnpm exec opennextjs-cloudflare build` (not `pnpm run build`, which is Next.js only).
+For Cloudflare Workers Builds, run `pnpm run typecheck` then `pnpm exec opennextjs-cloudflare build` (not `pnpm run build`, which is Next.js only).

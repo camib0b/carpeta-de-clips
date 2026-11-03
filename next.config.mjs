@@ -11,6 +11,7 @@ const nextConfig = {
     root: projectRoot,
   },
   typescript: {
+    // Types are enforced via `pnpm run typecheck` (also runs at the start of `pnpm run build`).
     ignoreBuildErrors: true,
   },
   images: {
