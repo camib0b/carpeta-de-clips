@@ -57,6 +57,10 @@ export interface ClipDrawing {
   updatedAt: string
 }
 
+const POSITIVE_INTEGER_TEXT = /^[1-9]\d*$/
+const MISSING_DRAWINGS_TABLE = /no such table:\s*clip_drawings/i
+const UNIQUE_CONSTRAINT_FAILED = /UNIQUE constraint failed/i
+
 type DrawingRow = {
   id: string
   play_id: string
@@ -200,7 +204,7 @@ export async function listClipIdsWithPublicDrawings(
 }
 
 function parseClipId(raw: string): string | null {
-  if (!/^[1-9]\d*$/.test(raw)) return null
+  if (!POSITIVE_INTEGER_TEXT.test(raw)) return null
   return raw
 }
 
@@ -503,11 +507,11 @@ function errorText(error: unknown): string {
 }
 
 function isMissingDrawingsTable(error: unknown): boolean {
-  return /no such table:\s*clip_drawings/i.test(errorText(error))
+  return MISSING_DRAWINGS_TABLE.test(errorText(error))
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
-  return /UNIQUE constraint failed/i.test(errorText(error))
+  return UNIQUE_CONSTRAINT_FAILED.test(errorText(error))
 }
 
 function rethrowDrawingStoreError(error: unknown): never {

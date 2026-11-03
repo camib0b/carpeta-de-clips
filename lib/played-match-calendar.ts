@@ -453,8 +453,11 @@ function cellKey(teamSlug: string, weekStart: string): string {
   return `${teamSlug}\u0000${weekStart}`
 }
 
+const VERSUS_LABEL = /\svs\s/i
+const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/
+
 function formatOpponentLabel(rivalLabel: string): string {
-  if (/\svs\s/i.test(rivalLabel)) return rivalLabel
+  if (VERSUS_LABEL.test(rivalLabel)) return rivalLabel
   return `vs ${rivalLabel}`
 }
 
@@ -466,7 +469,7 @@ function formatMatchGoals(homeGoals: number | null, awayGoals: number | null): s
 
 function parseUploadedAt(value: string | null): number | null {
   if (!value) return null
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+  if (CALENDAR_DATE.test(value)) {
     return parseCalendarDate(value)?.getTime() ?? null
   }
   const parsed = Date.parse(value)

@@ -44,13 +44,15 @@ export type DrawingLoadState =
   | { state: 'unavailable' }
 
 const PLAY_ID_PATTERN = /^clip:([1-9]\d*):play:(0|[1-9]\d*)$/
+const POSITIVE_INTEGER_TEXT = /^[1-9]\d*$/
+const NON_NEGATIVE_INTEGER_TEXT = /^(0|[1-9]\d*)$/
 
 export function emptyDrawingDocument(): DrawingDocument {
   return { version: DRAWING_DOCUMENT_VERSION, strokes: [] }
 }
 
 export function buildPlayId(clipId: string, playOrd: number): string | null {
-  if (!/^[1-9]\d*$/.test(clipId)) return null
+  if (!POSITIVE_INTEGER_TEXT.test(clipId)) return null
   if (!Number.isInteger(playOrd) || playOrd < 0 || !Number.isSafeInteger(playOrd)) {
     return null
   }
@@ -68,7 +70,7 @@ export function parsePlayId(
 }
 
 export function parsePlayOrd(raw: string | null | undefined): number | null {
-  if (raw == null || !/^(0|[1-9]\d*)$/.test(raw)) return null
+  if (raw == null || !NON_NEGATIVE_INTEGER_TEXT.test(raw)) return null
   const playOrd = Number(raw)
   if (!Number.isSafeInteger(playOrd)) return null
   return playOrd

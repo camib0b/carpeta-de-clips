@@ -18,6 +18,7 @@ import {
   type TeamInboxFileFixture,
 } from '@/lib/break-ui/team-inbox-form-fixtures'
 import { cssTimeToMilliseconds } from '@/lib/css-time'
+import { hrefWithSearchParam } from '@/lib/request-url'
 import { landingEntranceStyle } from '@/lib/landing-entrance'
 import {
   PRIVATE_TEAM_OFFER_DETAIL_LEVELS,
@@ -162,13 +163,12 @@ function readPreviewMode(): PreviewMode {
 }
 
 function writePreviewMode(mode: PreviewMode) {
-  const url = new URL(window.location.href)
-  if (mode === 'demo') {
-    url.searchParams.delete('data')
-  } else {
-    url.searchParams.set('data', mode)
-  }
-  window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+  const href = hrefWithSearchParam(
+    window.location,
+    'data',
+    mode === 'demo' ? null : mode,
+  )
+  window.history.replaceState(null, '', href)
 }
 
 function BreakUiDataToggle({
@@ -768,17 +768,14 @@ export function PrivateTeamFolderSection({
       if (!(anchor instanceof HTMLAnchorElement)) {
         return
       }
-      let url: URL
-      try {
-        url = new URL(anchor.href)
-      } catch {
+      if (
+        anchor.origin !== window.location.origin ||
+        anchor.pathname !== window.location.pathname
+      ) {
         return
       }
-      if (url.origin !== window.location.origin || url.pathname !== window.location.pathname) {
-        return
-      }
-      if (url.hash === window.location.hash) {
-        revealHash(url.hash)
+      if (anchor.hash === window.location.hash) {
+        revealHash(anchor.hash)
       }
     }
 

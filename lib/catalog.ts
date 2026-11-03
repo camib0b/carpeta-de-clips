@@ -19,7 +19,6 @@ const LIBRARY_COUNTRY = 'CL'
 type LibraryRow = {
   id: string
   name: string
-  sort_order: number
 }
 
 type LibraryCountRow = LibraryRow & {
@@ -51,7 +50,6 @@ type ClipJoinRow = {
   place: string | null
   division: string | null
   library_id: string
-  library_name: string
   rival_label: string
   r2_xml_object_key: string | null
   r2_key: string | null
@@ -214,7 +212,6 @@ const CLIP_JOIN_SELECT = `
     matches.place,
     matches.division,
     matches.library_id,
-    libraries.name AS library_name,
     matches.rival_label,
     matches.r2_xml_object_key,
     clips.r2_key,
@@ -228,36 +225,35 @@ const CLIP_JOIN_SELECT = `
   INNER JOIN libraries ON libraries.id = matches.library_id
 `
 
+export const LIST_TEAM_LIBRARIES_SQL = `SELECT id, name
+       FROM libraries
+       ORDER BY sort_order ASC, name ASC`
+
 export async function listTeamLibraries(): Promise<Team[]> {
   const database = await getCatalogDatabase()
   const result = await database
-    .prepare(
-      `SELECT id, name, sort_order
-       FROM libraries
-       ORDER BY sort_order ASC, name ASC`,
-    )
+    .prepare(LIST_TEAM_LIBRARIES_SQL)
     .all<LibraryRow>()
 
   return (result.results ?? []).map(libraryRowToTeam)
 }
+
+export const LIST_TEAM_LIBRARIES_WITH_CLIP_COUNTS_SQL = `SELECT
+         libraries.id,
+         libraries.name,
+         COUNT(clips.id) AS clip_count
+       FROM libraries
+       LEFT JOIN matches ON matches.library_id = libraries.id
+       LEFT JOIN clips ON clips.match_id = matches.id
+       GROUP BY libraries.id
+       ORDER BY libraries.sort_order ASC, libraries.name ASC`
 
 export async function listTeamLibrariesWithClipCounts(): Promise<
   TeamLibraryWithClipCount[]
 > {
   const database = await getCatalogDatabase()
   const result = await database
-    .prepare(
-      `SELECT
-         libraries.id,
-         libraries.name,
-         libraries.sort_order,
-         COUNT(clips.id) AS clip_count
-       FROM libraries
-       LEFT JOIN matches ON matches.library_id = libraries.id
-       LEFT JOIN clips ON clips.match_id = matches.id
-       GROUP BY libraries.id
-       ORDER BY libraries.sort_order ASC, libraries.name ASC`,
-    )
+    .prepare(LIST_TEAM_LIBRARIES_WITH_CLIP_COUNTS_SQL)
     .all<LibraryCountRow>()
 
   return (result.results ?? []).map((row) => ({
@@ -266,17 +262,17 @@ export async function listTeamLibrariesWithClipCounts(): Promise<
   }))
 }
 
+export const TEAM_BY_SLUG_SQL = `SELECT id, name
+       FROM libraries
+       WHERE id = ?
+       LIMIT 1`
+
 async function readTeamBySlug(
   database: D1Database,
   slug: string,
 ): Promise<Team | undefined> {
   const row = await database
-    .prepare(
-      `SELECT id, name, sort_order
-       FROM libraries
-       WHERE id = ?
-       LIMIT 1`,
-    )
+    .prepare(TEAM_BY_SLUG_SQL)
     .bind(slug)
     .first<LibraryRow>()
 
@@ -290,7 +286,7 @@ export const getTeamBySlug = cache(async function getTeamBySlug(
   return readTeamBySlug(database, slug)
 })
 
-const TEAM_LIBRARY_CLIPS_SQL = `${CLIP_JOIN_SELECT}
+export const TEAM_LIBRARY_CLIPS_SQL = `${CLIP_JOIN_SELECT}
        WHERE matches.library_id = ?
        ORDER BY clips.uploaded_at DESC`
 
@@ -418,7 +414,6 @@ export async function getLatestUploadedMatch(): Promise<LatestUploadedMatch | nu
     libraryDisplayName({
       id: row.library_id,
       name: row.library_name,
-      sort_order: 0,
     }),
     previews,
   )

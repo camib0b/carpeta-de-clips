@@ -8,6 +8,8 @@ const TEAM_TOKEN_TO_XML_PREFIX: Record<string, string> = {
   UCB: 'UCB',
 }
 
+const COMPILED_MP4_SUFFIX = /\.mp4$/i
+
 const OVERLAY_TO_CODE_SUFFIX: Record<string, string> = {
   '16-yd': '16YD+',
   'Corto': 'SPC+',
@@ -20,7 +22,7 @@ export function parseCompiledMp4Stem(filename: string): {
   overlayLabel: string
   teamToken: string
 } {
-  const stem = filename.replace(/\.mp4$/i, '')
+  const stem = filename.replace(COMPILED_MP4_SUFFIX, '')
   const separatorIndex = stem.lastIndexOf(' - ')
   if (separatorIndex === -1) {
     throw new Error(`Cannot parse AVA filename (missing " - "): ${filename}`)

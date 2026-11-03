@@ -50,8 +50,10 @@ export function estimatedLineWidthPx(text: string, fontSizePx: number): number {
   return Math.ceil(text.length * fontSizePx * AVERAGE_GLYPH_EM)
 }
 
+const WHITESPACE_RUN = /\s+/
+
 export function longestToken(text: string): string {
-  const tokens = text.split(/\s+/).filter((token) => token.length > 0)
+  const tokens = text.split(WHITESPACE_RUN).filter((token) => token.length > 0)
   return tokens.reduce(
     (longest, token) => (token.length > longest.length ? token : longest),
     '',

@@ -11,6 +11,7 @@ import {
   PenLine,
   Undo2,
 } from 'lucide-react'
+import { hrefWithSearchParam } from '@/lib/request-url'
 import type { ClipInstance, VideoClip } from '@/lib/types'
 import {
   Dialog,
@@ -542,13 +543,12 @@ function readModalBreakUiMode(): ModalBreakUiMode {
 }
 
 function writeModalBreakUiMode(mode: ModalBreakUiMode) {
-  const url = new URL(window.location.href)
-  if (mode === 'demo') {
-    url.searchParams.delete('modalData')
-  } else {
-    url.searchParams.set('modalData', mode)
-  }
-  window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+  const href = hrefWithSearchParam(
+    window.location,
+    'modalData',
+    mode === 'demo' ? null : mode,
+  )
+  window.history.replaceState(null, '', href)
 }
 
 function useModalBreakUiMode(): [ModalBreakUiMode, (mode: ModalBreakUiMode) => void] {

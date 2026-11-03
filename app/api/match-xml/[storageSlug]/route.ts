@@ -2,18 +2,22 @@ import { NextResponse } from 'next/server'
 
 import { isValidMatchXmlStorageSlug } from '@/lib/match-keys'
 import { readMatchXmlBytes } from '@/lib/match-xml.server'
+import { searchParamsFromAbsoluteUrl } from '@/lib/request-url'
 
 interface MatchXmlRouteContext {
   params: Promise<{ storageSlug: string }>
 }
 
+const DOWNLOAD_FILENAME_SLASHES = /[/\\]/g
+const DOWNLOAD_FILENAME_PATTERN = /^[\w\s().áéíóúÁÉÍÓÚñÑ,-]+\.xml$/u
+
 function sanitizeDownloadFilename(raw: string | null): string | null {
   if (!raw) return null
-  const trimmed = raw.trim().replace(/[/\\]/g, '-')
+  const trimmed = raw.trim().replace(DOWNLOAD_FILENAME_SLASHES, '-')
   if (!trimmed.endsWith('.xml')) {
     return null
   }
-  if (trimmed.length > 200 || !/^[\w\s().áéíóúÁÉÍÓÚñÑ,-]+\.xml$/u.test(trimmed)) {
+  if (trimmed.length > 200 || !DOWNLOAD_FILENAME_PATTERN.test(trimmed)) {
     return null
   }
   return trimmed
@@ -32,7 +36,7 @@ export async function GET(request: Request, context: MatchXmlRouteContext) {
   }
 
   const requestedName = sanitizeDownloadFilename(
-    new URL(request.url).searchParams.get('filename'),
+    searchParamsFromAbsoluteUrl(request.url).get('filename'),
   )
   const downloadName = requestedName ?? `${storageSlug}.xml`
 

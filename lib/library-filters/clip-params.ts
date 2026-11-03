@@ -7,6 +7,7 @@ export const CLIP_PARAM = 'clip'
 export const JUGADA_PARAM = 'jugada'
 
 const LIBRARY_FILTER_PARAM_NAMES = ['concept', 'rival'] as const
+const POSITIVE_INTEGER_TEXT = /^[1-9]\d*$/
 
 type SearchParamsLike = {
   get: (name: string) => string | null
@@ -18,7 +19,7 @@ type SearchParamsLike = {
  * so a malformed share link does not open a clip.
  */
 export function parseClipId(raw: string | null): string | undefined {
-  if (!raw || !/^[1-9]\d*$/.test(raw)) return undefined
+  if (!raw || !POSITIVE_INTEGER_TEXT.test(raw)) return undefined
   return raw
 }
 

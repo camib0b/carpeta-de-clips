@@ -1,5 +1,8 @@
 import type { VideoClip } from '@/lib/types'
 
+const WHITESPACE_RUN = /\s+/g
+const UNSAFE_STORAGE_SLUG_CHARACTERS = /[^a-zA-Z0-9._-]/g
+
 /**
  * Stable identifier for a match (one XML file per key).
  * Shape: date|homeTeam|awayTeam|rivalTeam[|libraryName]
@@ -24,8 +27,8 @@ export function matchKeyToStorageSlug(matchKey: string): string {
     .map((segment) =>
       segment
         .trim()
-        .replace(/\s+/g, '_')
-        .replace(/[^a-zA-Z0-9._-]/g, '')
+        .replace(WHITESPACE_RUN, '_')
+        .replace(UNSAFE_STORAGE_SLUG_CHARACTERS, '')
     )
     .filter(Boolean)
     .join('--')

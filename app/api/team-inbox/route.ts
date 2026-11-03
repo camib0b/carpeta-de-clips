@@ -9,6 +9,7 @@ import {
 } from '@/lib/team-inbox.server'
 import { teamInboxMessages } from '@/lib/team-inbox'
 import { isPrivateTeamOfferReady } from '@/lib/private-team-offer'
+import { searchParamsFromAbsoluteUrl } from '@/lib/request-url'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,7 +46,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!isPrivateTeamOfferReady()) {
     return offerClosedResponse()
   }
-  const action = new URL(request.url).searchParams.get('action') ?? 'create'
+  const action = searchParamsFromAbsoluteUrl(request.url).get('action') ?? 'create'
   try {
     if (action === 'create') {
       const body = await readJsonBody(request)

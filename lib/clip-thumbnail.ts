@@ -36,6 +36,10 @@ export type SelfHostedThumbnailImage = {
 }
 
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/
+const VERSIONED_THUMB_480_SUFFIX = /\.480\.webp$/i
+const LEADING_SLASHES = /^\/+/
+const RESOLUTION_MP4_SUFFIX = /\.(\d{3,4}\.)?mp4$/i
+const MP4_SUFFIX = /\.mp4$/i
 
 /**
  * True for canonical YouTube video ids (11 characters). Placeholder ids such as
@@ -67,7 +71,7 @@ export function thumbKeyForWidth(primaryThumbKey: string, width: 480 | 640): str
   if (width === 480) {
     return primaryThumbKey
   }
-  return primaryThumbKey.replace(/\.480\.webp$/i, '.640.webp')
+  return primaryThumbKey.replace(VERSIONED_THUMB_480_SUFFIX, '.640.webp')
 }
 
 /**
@@ -82,7 +86,7 @@ export function selfHostedThumbnailImage(
     return null
   }
 
-  if (/\.480\.webp$/i.test(thumbKey)) {
+  if (VERSIONED_THUMB_480_SUFFIX.test(thumbKey)) {
     const url640 = publicMediaObjectUrl(thumbKeyForWidth(thumbKey, 640))
     if (url640 != null) {
       return {
@@ -129,10 +133,10 @@ export function resolveClipThumbnail(
  * Base path (no version suffix) for generated thumbs next to the clip MP4.
  */
 export function thumbKeyBaseFromR2Key(r2Key: string): string {
-  const trimmed = r2Key.trim().replace(/^\/+/, '')
+  const trimmed = r2Key.trim().replace(LEADING_SLASHES, '')
   const withoutVideo = trimmed
-    .replace(/\.(\d{3,4}\.)?mp4$/i, '')
-    .replace(/\.mp4$/i, '')
+    .replace(RESOLUTION_MP4_SUFFIX, '')
+    .replace(MP4_SUFFIX, '')
   return withoutVideo
 }
 

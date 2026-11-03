@@ -122,13 +122,26 @@ const SUBMISSION_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const DIACRITIC_MARKS = /[\u0300-\u036f]/g
+const CONTROL_CHARACTER = /[\u0000-\u001F\u007F]/
+const CONTROL_CHARACTERS = /[\u0000-\u001F\u007F]/g
+const PATH_SEPARATOR = /[/\\]/
+const NON_SLUG_CHARACTERS = /[^a-z0-9]+/g
+const LEADING_OR_TRAILING_HYPHENS = /^-+|-+$/g
+const TRAILING_HYPHENS = /-+$/g
+const NON_ALNUM_CHARACTERS = /[^a-z0-9]/g
+const WHITESPACE = /\s/
+const WHITESPACE_RUN = /\s+/g
+const INBOX_PREFIX_PATTERN = /^inbox\/\d{4}-\d{2}-\d{2}-[a-z0-9-]{1,48}-[a-z0-9]{4,8}\/$/
+const PART_ETAG_PATTERN = /^"?[A-Fa-f0-9]{16,64}"?$/
+const MULTIPART_ETAG_PATTERN = /^"?[A-Fa-f0-9]{16,64}-\d{1,5}"?$/
 
 function withoutDiacritics(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return value.normalize('NFD').replace(DIACRITIC_MARKS, '')
 }
 
 function hasControlCharacter(value: string): boolean {
-  return /[\u0000-\u001F\u007F]/.test(value)
+  return CONTROL_CHARACTER.test(value)
 }
 
 export function videoExtension(fileName: string): string | null {
@@ -141,8 +154,8 @@ export function videoExtension(fileName: string): string | null {
 }
 
 export function clampDisplayedFileName(rawName: string): string {
-  const baseName = rawName.split(/[/\\]/).pop() ?? ''
-  const cleaned = baseName.replace(/[\u0000-\u001F\u007F]/g, '').trim()
+  const baseName = rawName.split(PATH_SEPARATOR).pop() ?? ''
+  const cleaned = baseName.replace(CONTROL_CHARACTERS, '').trim()
   if (cleaned.length <= FILE_NAME_MAX_LENGTH) {
     return cleaned
   }
@@ -165,10 +178,10 @@ export function inboxObjectFileName(originalFileName: string): string | null {
   }
   const asciiStem = withoutDiacritics(stem)
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(NON_SLUG_CHARACTERS, '-')
+    .replace(LEADING_OR_TRAILING_HYPHENS, '')
     .slice(0, 80)
-    .replace(/-+$/g, '')
+    .replace(TRAILING_HYPHENS, '')
   const safeStem = asciiStem.length > 0 ? asciiStem : 'video'
   return `${safeStem}.${extension}`
 }
@@ -213,10 +226,10 @@ export function inboxCalendarDate(now: Date): string {
 export function inboxTeamSlug(teamName: string): string {
   const slug = withoutDiacritics(teamName)
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(NON_SLUG_CHARACTERS, '-')
+    .replace(LEADING_OR_TRAILING_HYPHENS, '')
     .slice(0, 48)
-    .replace(/-+$/g, '')
+    .replace(TRAILING_HYPHENS, '')
   return slug.length > 0 ? slug : 'equipo'
 }
 
@@ -225,7 +238,7 @@ export function buildInboxObjectPrefix(
   now: Date,
   suffix: string,
 ): string {
-  const safeSuffix = suffix.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8)
+  const safeSuffix = suffix.toLowerCase().replace(NON_ALNUM_CHARACTERS, '').slice(0, 8)
   if (safeSuffix.length < 4) {
     throw new Error('Inbox suffix is too short.')
   }
@@ -314,7 +327,7 @@ function parseExternalLink(
   if (trimmed.length > EXTERNAL_LINK_MAX_LENGTH) {
     return { ok: false, error: teamInboxMessages.linkTooLong }
   }
-  if (/\s/.test(trimmed) || hasControlCharacter(trimmed)) {
+  if (WHITESPACE.test(trimmed) || hasControlCharacter(trimmed)) {
     return { ok: false, error: teamInboxMessages.linkInvalid }
   }
   try {
@@ -337,7 +350,7 @@ export function validateTeamInboxSubmission(input: {
   if (typeof input.teamName !== 'string') {
     return { ok: false, error: teamInboxMessages.teamNameRequired, field: 'teamName' }
   }
-  const teamName = input.teamName.trim().replace(/\s+/g, ' ')
+  const teamName = input.teamName.trim().replace(WHITESPACE_RUN, ' ')
   if (teamName.length === 0) {
     return { ok: false, error: teamInboxMessages.teamNameRequired, field: 'teamName' }
   }
@@ -461,7 +474,7 @@ export function validateTeamInboxSubmission(input: {
 }
 
 export function isSafeInboxPrefix(objectPrefix: string): boolean {
-  return /^inbox\/\d{4}-\d{2}-\d{2}-[a-z0-9-]{1,48}-[a-z0-9]{4,8}\/$/.test(objectPrefix)
+  return INBOX_PREFIX_PATTERN.test(objectPrefix)
 }
 
 export function parseStoredInboxFiles(json: string): StoredInboxFile[] | null {
@@ -509,8 +522,8 @@ export function parseStoredInboxFiles(json: string): StoredInboxFile[] | null {
 function normalizePartEtag(rawEtag: string): string | null {
   const trimmed = rawEtag.trim()
   if (
-    !/^"?[A-Fa-f0-9]{16,64}"?$/.test(trimmed) &&
-    !/^"?[A-Fa-f0-9]{16,64}-\d{1,5}"?$/.test(trimmed)
+    !PART_ETAG_PATTERN.test(trimmed) &&
+    !MULTIPART_ETAG_PATTERN.test(trimmed)
   ) {
     return null
   }
