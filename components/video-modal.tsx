@@ -87,18 +87,7 @@ const YOUTUBE_PLAYER_STATE = {
 const EDITABLE_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 const TEAM_HOME_LINK_SELECTOR = '[data-team-library-home]'
 
-type YouTubePlayerComponent = React.ComponentType<{
-  videoId: string
-  className?: string
-  iframeClassName?: string
-  opts?: {
-    width?: string
-    height?: string
-    playerVars?: Record<string, number | string>
-  }
-  onReady?: (event: { target: YouTubePlayer }) => void
-  onStateChange?: (event: { data: number; target?: YouTubePlayer }) => void
-}>
+type YouTubePlayerComponent = typeof import('react-youtube').default
 
 function useYouTubePlayerComponent(shouldLoad: boolean): YouTubePlayerComponent | null {
   const [YouTubePlayer, setYouTubePlayer] = useState<YouTubePlayerComponent | null>(null)

@@ -236,14 +236,41 @@ async function loadLegacyClips(): Promise<VideoClip[] | null> {
   return null
 }
 
+const MATCH_XML_CATALOG_SPECIFIER = '../lib/match-xml-catalog'
+
+function isXmlObjectKeyCatalog(
+  value: unknown,
+): value is Record<string, { objectKey: string }> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false
+  }
+  for (const entry of Object.values(value)) {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      return false
+    }
+    if (!('objectKey' in entry) || typeof entry.objectKey !== 'string') {
+      return false
+    }
+  }
+  return true
+}
+
 async function loadXmlObjectKeyCatalog(): Promise<
   Record<string, { objectKey: string }>
 > {
   try {
-    const catalogModule = (await import('../lib/match-xml-catalog')) as {
-      MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG?: Record<string, { objectKey: string }>
+    // The historical catalog module was removed when clips moved to D1.
+    // A non-literal specifier keeps that optional import from being a compile-time dependency.
+    const loaded: unknown = await import(MATCH_XML_CATALOG_SPECIFIER)
+    if (
+      typeof loaded !== 'object' ||
+      loaded === null ||
+      !('MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG' in loaded) ||
+      !isXmlObjectKeyCatalog(loaded.MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG)
+    ) {
+      return {}
     }
-    return catalogModule.MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG ?? {}
+    return loaded.MATCH_XML_R2_OBJECT_BY_STORAGE_SLUG
   } catch {
     return {}
   }
