@@ -90,15 +90,13 @@ export async function generateMetadata({
   searchParams,
 }: TeamPageProps): Promise<Metadata> {
   const { teamSlug } = await params
-  const team = await getTeamBySlug(teamSlug)
+  const [team, query] = await Promise.all([getTeamBySlug(teamSlug), searchParams])
 
   if (!team) {
     return {
       title: 'Equipo no encontrado',
     }
   }
-
-  const query = await searchParams
   const clipId = parseClipId(readQueryValue(query.clip))
   if (!clipId) {
     return teamPageMetadata(team)
@@ -132,13 +130,21 @@ export async function generateMetadata({
  */
 export default async function TeamPage({ params }: TeamPageProps) {
   const { teamSlug } = await params
-  const team = await getTeamBySlug(teamSlug)
+  const teamPromise = getTeamBySlug(teamSlug)
+  const clipsPromise = getTeamLibraryClips(teamSlug)
+  // Settle the library read so notFound(), or a failed team lookup, does not
+  // leave that promise rejected without a handler.
+  void clipsPromise.then(
+    () => undefined,
+    () => undefined,
+  )
+  const team = await teamPromise
 
   if (!team) {
     notFound()
   }
 
-  const clips = await getTeamLibraryClips(teamSlug)
+  const clips = await clipsPromise
   const availableRivals = listRivalsFromClips(clips)
   const matchXmlAvailability = getMatchXmlAvailabilityByStorageSlug(clips)
 

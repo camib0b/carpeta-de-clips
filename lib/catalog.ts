@@ -266,8 +266,10 @@ export async function listTeamLibrariesWithClipCounts(): Promise<
   }))
 }
 
-export async function getTeamBySlug(slug: string): Promise<Team | undefined> {
-  const database = await getCatalogDatabase()
+async function readTeamBySlug(
+  database: D1Database,
+  slug: string,
+): Promise<Team | undefined> {
   const row = await database
     .prepare(
       `SELECT id, name, sort_order
@@ -281,38 +283,71 @@ export async function getTeamBySlug(slug: string): Promise<Team | undefined> {
   return row ? libraryRowToTeam(row) : undefined
 }
 
-export const getTeamLibraryClips = cache(async function getTeamLibraryClips(
+export const getTeamBySlug = cache(async function getTeamBySlug(
+  slug: string,
+): Promise<Team | undefined> {
+  const database = await getCatalogDatabase()
+  return readTeamBySlug(database, slug)
+})
+
+const TEAM_LIBRARY_CLIPS_SQL = `${CLIP_JOIN_SELECT}
+       WHERE matches.library_id = ?
+       ORDER BY clips.uploaded_at DESC`
+
+/**
+ * Team row, clip rows, play segments, and drawing hints for one library.
+ * The team lookup and the clip query do not use each other's results.
+ * Play segments and drawing hints only need the clip ids, so those reads
+ * run together. Each read still degrades on its own if its table is missing.
+ * An unknown library returns [] and does not surface a clip-query failure.
+ */
+export async function loadTeamLibraryClipsFromDatabase(
+  database: D1Database,
   teamSlug: string,
+  teamLookup?: Promise<Team | undefined>,
 ): Promise<VideoClip[]> {
-  const team = await getTeamBySlug(teamSlug)
+  const teamPromise = teamLookup ?? readTeamBySlug(database, teamSlug)
+  const clipsQuery = database
+    .prepare(TEAM_LIBRARY_CLIPS_SQL)
+    .bind(teamSlug)
+    .all<ClipJoinRow>()
+  // The clip query is in flight beside the team lookup. Settle it so a missing
+  // library, or a failed lookup, does not leave that query as an unhandled rejection.
+  void clipsQuery.then(
+    () => undefined,
+    () => undefined,
+  )
+
+  const team = await teamPromise
   if (!team) {
     return []
   }
 
-  const database = await getCatalogDatabase()
-  const result = await database
-    .prepare(
-      `${CLIP_JOIN_SELECT}
-       WHERE matches.library_id = ?
-       ORDER BY clips.uploaded_at DESC`,
-    )
-    .bind(teamSlug)
-    .all<ClipJoinRow>()
-
+  const result = await clipsQuery
   const clips = (result.results ?? []).map(clipJoinRowToVideoClip)
   const clipIds = clips.map((clip) => Number(clip.id))
-  const instancesByClipId = await fetchClipInstancesByClipIds(database, clipIds)
+  const [instancesByClipId, clipIdsWithDrawings] = await Promise.all([
+    fetchClipInstancesByClipIds(database, clipIds),
+    listClipIdsWithPublicDrawings(
+      database,
+      clips.map((clip) => clip.id),
+    ),
+  ])
   const clipsWithInstances = attachClipInstances(clips, instancesByClipId)
-  const clipIdsWithDrawings = await listClipIdsWithPublicDrawings(
-    database,
-    clips.map((clip) => clip.id),
-  )
 
   return clipsWithInstances.map((clip) => {
     const remapped = remapGameConceptToTeamPerspective(clip, team.name)
     if (!clipIdsWithDrawings.has(clip.id)) return remapped
     return { ...remapped, hasDrawings: true }
   })
+}
+
+export const getTeamLibraryClips = cache(async function getTeamLibraryClips(
+  teamSlug: string,
+): Promise<VideoClip[]> {
+  const teamPromise = getTeamBySlug(teamSlug)
+  const database = await getCatalogDatabase()
+  return loadTeamLibraryClipsFromDatabase(database, teamSlug, teamPromise)
 })
 
 export function listRivalsFromClips(clips: VideoClip[]): string[] {

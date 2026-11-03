@@ -130,7 +130,16 @@ ${instanceSql}
 `
 }
 
-function parseArgs(argv: string[]) {
+type WranglerTarget = '--local' | '--remote'
+
+type UpsertCliOptions = {
+  jsonPath: string
+  wranglerTarget: WranglerTarget
+  dryRun: boolean
+  skipThumbnails: boolean
+}
+
+function parseArgs(argv: string[]): UpsertCliOptions {
   const applyRemote = argv.includes('--remote')
   const jsonPath = argv.find((arg) => !arg.startsWith('--'))
   if (!jsonPath) {

@@ -16,6 +16,7 @@ import {
   validateTeamInboxSubmission,
   type CompletedInboxPart,
   type StoredInboxFile,
+  type ValidTeamInboxFile,
   type ValidTeamInboxSubmission,
 } from '@/lib/team-inbox'
 
@@ -130,33 +131,82 @@ function readStoredFiles(row: SubmissionRow): StoredInboxFile[] {
   return files
 }
 
-async function abortMultipartUploads(
+export async function abortMultipartUploads(
   bucket: R2Bucket,
   files: StoredInboxFile[],
   objectPrefix: string | null,
 ): Promise<void> {
-  for (const file of files) {
-    if (objectPrefix == null || !isSafeInboxObjectKey(file.objectKey, objectPrefix)) {
-      continue
-    }
-    if (file.completed) {
-      try {
-        await bucket.delete(file.objectKey)
-      } catch (error) {
-        console.error('team inbox delete failed', file.objectKey, error)
+  await Promise.all(
+    files.map(async (file) => {
+      if (objectPrefix == null || !isSafeInboxObjectKey(file.objectKey, objectPrefix)) {
+        return
       }
-      continue
-    }
-    if (file.uploadId.length === 0) {
-      continue
-    }
-    try {
-      const upload = bucket.resumeMultipartUpload(file.objectKey, file.uploadId)
-      await upload.abort()
-    } catch (error) {
-      console.error('team inbox abort failed', file.objectKey, error)
-    }
+      if (file.completed) {
+        try {
+          await bucket.delete(file.objectKey)
+        } catch (error) {
+          console.error('team inbox delete failed', file.objectKey, error)
+        }
+        return
+      }
+      if (file.uploadId.length === 0) {
+        return
+      }
+      try {
+        const upload = bucket.resumeMultipartUpload(file.objectKey, file.uploadId)
+        await upload.abort()
+      } catch (error) {
+        console.error('team inbox abort failed', file.objectKey, error)
+      }
+    }),
+  )
+}
+
+/**
+ * Opens one multipart upload per file. The uploads do not depend on each
+ * other. On any failure, uploads that were already opened are aborted and
+ * the first failure in file order is thrown.
+ */
+export async function openInboxMultipartUploads(
+  bucket: R2Bucket,
+  objectPrefix: string,
+  files: readonly ValidTeamInboxFile[],
+): Promise<StoredInboxFile[]> {
+  const createdFiles: Array<StoredInboxFile | undefined> = new Array(files.length)
+  const settled = await Promise.allSettled(
+    files.map(async (file, index) => {
+      const objectKey = `${objectPrefix}${file.objectFileName}`
+      if (!isSafeInboxObjectKey(objectKey, objectPrefix)) {
+        throw new TeamInboxRequestError(teamInboxMessages.fileNameInvalid, 400)
+      }
+      const multipartUpload = await bucket.createMultipartUpload(objectKey, {
+        httpMetadata: { contentType: file.contentType },
+      })
+      const storedFile: StoredInboxFile = {
+        originalFileName: file.originalFileName,
+        objectKey,
+        sizeBytes: file.sizeBytes,
+        contentType: file.contentType,
+        uploadId: multipartUpload.uploadId,
+        partCount: file.partCount,
+        completed: false,
+      }
+      createdFiles[index] = storedFile
+      return storedFile
+    }),
+  )
+
+  const firstFailure = settled.find((result) => result.status === 'rejected')
+  if (firstFailure && firstFailure.status === 'rejected') {
+    await abortMultipartUploads(
+      bucket,
+      createdFiles.filter((file): file is StoredInboxFile => file != null),
+      objectPrefix,
+    )
+    throw firstFailure.reason
   }
+
+  return createdFiles.filter((file): file is StoredInboxFile => file != null)
 }
 
 function planFromFiles(submissionId: string, files: StoredInboxFile[]): TeamInboxUploadPlan {
@@ -262,26 +312,9 @@ export async function createTeamInboxSubmission(
     submissionId.replace(/-/g, '').slice(0, 8),
   )
   const bucket = await getMediaBucket()
-  const storedFiles: StoredInboxFile[] = []
+  let storedFiles: StoredInboxFile[] = []
   try {
-    for (const file of submission.files) {
-      const objectKey = `${objectPrefix}${file.objectFileName}`
-      if (!isSafeInboxObjectKey(objectKey, objectPrefix)) {
-        throw new TeamInboxRequestError(teamInboxMessages.fileNameInvalid, 400)
-      }
-      const multipartUpload = await bucket.createMultipartUpload(objectKey, {
-        httpMetadata: { contentType: file.contentType },
-      })
-      storedFiles.push({
-        originalFileName: file.originalFileName,
-        objectKey,
-        sizeBytes: file.sizeBytes,
-        contentType: file.contentType,
-        uploadId: multipartUpload.uploadId,
-        partCount: file.partCount,
-        completed: false,
-      })
-    }
+    storedFiles = await openInboxMultipartUploads(bucket, objectPrefix, submission.files)
     await insertSubmission(
       database,
       submission,
