@@ -354,8 +354,10 @@ function renderedMediaRect(media: HTMLElement, stage: HTMLElement): PlacedRect {
   return intersectRects(fitted, elementRect)
 }
 
+const OBJECT_POSITION_WHITESPACE = /\s+/
+
 function readObjectPosition(position: string): { x: number; y: number } {
-  const tokens = position.trim().split(/\s+/).filter(Boolean)
+  const tokens = position.trim().split(OBJECT_POSITION_WHITESPACE).filter(Boolean)
   if (tokens.length === 0) return { x: 0.5, y: 0.5 }
   if (tokens.length === 1) {
     const token = tokens[0]

@@ -57,6 +57,14 @@ test('legacy jugada without a clip id still parses', () => {
   assert.equal(parseJugadaOrd(current.get('jugada')), 7)
 })
 
+function searchParamsFromHref(href: string): URLSearchParams {
+  const queryStart = href.indexOf('?')
+  if (queryStart === -1) {
+    return new URLSearchParams()
+  }
+  return new URLSearchParams(href.slice(queryStart + 1))
+}
+
 test('buildClipShareHref sets the clip and the selected jugada', () => {
   const href = buildClipShareHref({
     pathname: '/uc-primera-b',
@@ -65,7 +73,7 @@ test('buildClipShareHref sets the clip and the selected jugada', () => {
     jugadaOrd: 7,
   })
 
-  const params = new URL(href, 'https://carpeta.cl').searchParams
+  const params = searchParamsFromHref(href)
   assert.equal(params.get('clip'), '42')
   assert.equal(params.get('jugada'), '7')
   assert.equal(params.get('rival'), 'old-reds')
@@ -81,7 +89,7 @@ test('buildClipShareHref omits jugada when the whole clip is shared', () => {
     clipId: '42',
   })
 
-  const params = new URL(href, 'https://carpeta.cl').searchParams
+  const params = searchParamsFromHref(href)
   assert.equal(params.get('clip'), '42')
   assert.equal(params.get('jugada'), null)
 })

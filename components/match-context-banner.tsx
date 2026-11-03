@@ -10,6 +10,7 @@ import {
   formatMatchScore,
   type MatchSummary,
 } from '@/lib/match-display'
+import { hrefWithSearchParam } from '@/lib/request-url'
 import { cn } from '@/lib/utils'
 
 interface MatchContextBannerProps {
@@ -148,13 +149,12 @@ function readBreakUiDataModeFromLocation(): BreakUiDataMode {
 }
 
 function writeBreakUiDataModeToLocation(mode: BreakUiDataMode) {
-  const url = new URL(window.location.href)
-  if (mode === 'worst') {
-    url.searchParams.set('data', 'worst')
-  } else {
-    url.searchParams.delete('data')
-  }
-  window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+  const href = hrefWithSearchParam(
+    window.location,
+    'data',
+    mode === 'worst' ? 'worst' : null,
+  )
+  window.history.replaceState(null, '', href)
 }
 
 function BreakUiDataToggle({

@@ -24,6 +24,9 @@ const SEED_MIGRATION_PATH = path.join(
   '0002_seed_catalog.sql',
 )
 
+const PLAYLIST_ID_LINE = /Playlist:\s*(PL[A-Za-z0-9_-]+)/
+const YOUTUBE_ID_LINE = /youtubeId:\s*'([^']+)'/
+
 const LIBRARIES = [
   { id: 'uc-sub-16-a', name: 'UC Sub-16 A', sortOrder: 1 },
   { id: 'uc-primera-b', name: 'UC 1°B', sortOrder: 2 },
@@ -89,12 +92,12 @@ function parsePlaylistIdsByYoutubeId(source: string): Map<string, string> {
   let currentPlaylistId: string | null = null
 
   for (const line of source.split('\n')) {
-    const playlistMatch = line.match(/Playlist:\s*(PL[A-Za-z0-9_-]+)/)
+    const playlistMatch = line.match(PLAYLIST_ID_LINE)
     if (playlistMatch) {
       currentPlaylistId = playlistMatch[1]
     }
 
-    const youtubeMatch = line.match(/youtubeId:\s*'([^']+)'/)
+    const youtubeMatch = line.match(YOUTUBE_ID_LINE)
     if (youtubeMatch && currentPlaylistId) {
       playlistByYoutubeId.set(youtubeMatch[1], currentPlaylistId)
     }

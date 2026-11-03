@@ -48,6 +48,10 @@ export function listUniqueMatchSummaries(clips: VideoClip[]): MatchSummary[] {
   )
 }
 
+const ISO_DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})/
+const UNSAFE_FILENAME_CHARACTERS = /[/\\?%*:|"<>]/g
+const WHITESPACE_RUN = /\s+/g
+
 const COMPACT_MONTH_LABELS = [
   'ene',
   'feb',
@@ -78,7 +82,7 @@ export function formatClipMatchSummary(clip: VideoClip): string {
  * Reads the `YYYY-MM-DD` prefix so the day does not shift with timezone.
  */
 export function formatMatchDate(date: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(date)
+  const match = ISO_DATE_PREFIX.exec(date)
   if (!match) return date
 
   const year = Number(match[1])
@@ -101,8 +105,8 @@ export function formatUploadedAndPlayedLine(uploadedAt: string, playedOn: string
 export function buildMatchXmlDownloadFilename(match: MatchSummary): string {
   const datePart = match.date
   const teamsPart = `${match.homeTeam} vs ${match.awayTeam}`
-    .replace(/[/\\?%*:|"<>]/g, '-')
-    .replace(/\s+/g, ' ')
+    .replace(UNSAFE_FILENAME_CHARACTERS, '-')
+    .replace(WHITESPACE_RUN, ' ')
     .trim()
 
   return `${teamsPart} ${datePart}.xml`

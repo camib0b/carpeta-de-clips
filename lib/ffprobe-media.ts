@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process'
 
+const TRAILING_COMMA = /,$/
+
 export type VideoProbe = {
   durationS: number
   fps: number
@@ -69,7 +71,7 @@ export function probeVideoWithFfprobe(filePath: string): VideoProbe {
 
   const keyframeTimesS = keyframeCsv
     .split('\n')
-    .map((line) => line.replace(/,$/, '').trim())
+    .map((line) => line.replace(TRAILING_COMMA, '').trim())
     .filter(Boolean)
     .map(Number)
     .filter((value) => Number.isFinite(value))

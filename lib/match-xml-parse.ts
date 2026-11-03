@@ -10,11 +10,31 @@ export type MatchXmlInstance = {
   labels: Record<string, string>
 }
 
+const INSTANCE_BLOCK_PATTERN = /<instance>([\s\S]*?)<\/instance>/g
+const LABEL_BLOCK_PATTERN =
+  /<label>\s*<group>([^<]*)<\/group>\s*<text>([^<]*)<\/text>\s*<\/label>/g
+
+const TAG_VALUE_PATTERNS = {
+  ID: /<ID>([^<]*)<\/ID>/,
+  start: /<start>([^<]*)<\/start>/,
+  end: /<end>([^<]*)<\/end>/,
+  code: /<code>([^<]*)<\/code>/,
+} as const
+
+type MatchXmlTag = keyof typeof TAG_VALUE_PATTERNS
+
+function matchesFromStart(
+  text: string,
+  pattern: RegExp,
+): RegExpStringIterator<RegExpExecArray> {
+  pattern.lastIndex = 0
+  return text.matchAll(pattern)
+}
+
 export function parseMatchXmlInstances(xmlText: string): MatchXmlInstance[] {
   const instances: MatchXmlInstance[] = []
-  const instancePattern = /<instance>([\s\S]*?)<\/instance>/g
 
-  for (const match of xmlText.matchAll(instancePattern)) {
+  for (const match of matchesFromStart(xmlText, INSTANCE_BLOCK_PATTERN)) {
     const block = match[1]
     const id = readTag(block, 'ID')
     const start = readTag(block, 'start')
@@ -25,9 +45,7 @@ export function parseMatchXmlInstances(xmlText: string): MatchXmlInstance[] {
     }
 
     const labels: Record<string, string> = {}
-    const labelPattern =
-      /<label>\s*<group>([^<]*)<\/group>\s*<text>([^<]*)<\/text>\s*<\/label>/g
-    for (const labelMatch of block.matchAll(labelPattern)) {
+    for (const labelMatch of matchesFromStart(block, LABEL_BLOCK_PATTERN)) {
       labels[labelMatch[1].trim()] = labelMatch[2].trim()
     }
 
@@ -43,9 +61,8 @@ export function parseMatchXmlInstances(xmlText: string): MatchXmlInstance[] {
   return instances
 }
 
-function readTag(block: string, tag: string): string | null {
-  const pattern = new RegExp(`<${tag}>([^<]*)</${tag}>`)
-  const found = block.match(pattern)
+function readTag(block: string, tag: MatchXmlTag): string | null {
+  const found = block.match(TAG_VALUE_PATTERNS[tag])
   return found ? found[1].trim() : null
 }
 

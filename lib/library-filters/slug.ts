@@ -1,15 +1,19 @@
 import { ALL_RIVALS_FILTER_LABEL, GAME_CONCEPTS } from '@/lib/types'
 
+const DIACRITIC_MARKS = /[\u0300-\u036f]/g
+const NON_SLUG_CHARACTERS = /[^a-z0-9]+/g
+const LEADING_OR_TRAILING_HYPHENS = /^-+|-+$/g
+
 /**
  * Normalize a display value into a URL-safe slug.
  */
 export function slugify(value: string): string {
   return value
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(DIACRITIC_MARKS, '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(NON_SLUG_CHARACTERS, '-')
+    .replace(LEADING_OR_TRAILING_HYPHENS, '')
 }
 
 const CONCEPT_SLUG_TO_LABEL = new Map<string, string>()

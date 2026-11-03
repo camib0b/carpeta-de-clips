@@ -19,6 +19,9 @@ import {
   type ValidTeamInboxFile,
   type ValidTeamInboxSubmission,
 } from '@/lib/team-inbox'
+import { searchParamsFromAbsoluteUrl } from '@/lib/request-url'
+
+const SUBMISSION_ID_HYPHENS = /-/g
 
 export class TeamInboxRequestError extends Error {
   readonly status: number
@@ -309,7 +312,7 @@ export async function createTeamInboxSubmission(
   const objectPrefix = buildInboxObjectPrefix(
     submission.teamName,
     now,
-    submissionId.replace(/-/g, '').slice(0, 8),
+    submissionId.replace(SUBMISSION_ID_HYPHENS, '').slice(0, 8),
   )
   const bucket = await getMediaBucket()
   let storedFiles: StoredInboxFile[] = []
@@ -336,10 +339,10 @@ export async function createTeamInboxSubmission(
 export async function uploadTeamInboxPart(
   request: Request,
 ): Promise<CompletedInboxPart> {
-  const url = new URL(request.url)
-  const submissionId = url.searchParams.get('submissionId')
-  const uploadId = url.searchParams.get('uploadId')
-  const partNumber = Number(url.searchParams.get('partNumber'))
+  const searchParams = searchParamsFromAbsoluteUrl(request.url)
+  const submissionId = searchParams.get('submissionId')
+  const uploadId = searchParams.get('uploadId')
+  const partNumber = Number(searchParams.get('partNumber'))
   if (!uploadId || !Number.isSafeInteger(partNumber)) {
     throw new TeamInboxRequestError(teamInboxMessages.partInvalid, 400)
   }

@@ -17,6 +17,9 @@ import {
   validateClipsSidecar,
 } from '../lib/clip-instances'
 
+const CLIPS_JSON_SUFFIX = /\.clips\.json$/i
+const MP4_SUFFIX = /\.mp4$/i
+
 type UpsertPayload = {
   match: { id: string }
   clips: CatalogClipInsert[]
@@ -47,7 +50,7 @@ function readSidecars(folder: string): ClipsSidecar[] {
   return sidecarPaths.map((filePath) => {
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf8')) as ClipsSidecar
     if (raw.video == null || raw.video === '') {
-      const stem = path.basename(filePath).replace(/\.clips\.json$/i, '')
+      const stem = path.basename(filePath).replace(CLIPS_JSON_SUFFIX, '')
       raw.video = `${stem}.mp4`
     }
     return raw
@@ -66,7 +69,7 @@ function findClipForSidecar(
   sidecar: ClipsSidecar,
 ): CatalogClipInsert | undefined {
   const sidecarBasename = basenameFromVideoPath(sidecar.video)
-  const sidecarStem = sidecarBasename.replace(/\.mp4$/i, '')
+  const sidecarStem = sidecarBasename.replace(MP4_SUFFIX, '')
 
   const bySourceVideo = clips.find((clip) => {
     const clipBasename = sourceVideoBasename(clip)

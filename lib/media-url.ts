@@ -26,13 +26,16 @@ export type MediaUrlOptions = {
  * not inlined into the client bundle. When this is missing, `mediaUrl` returns
  * null and playback stays on YouTube.
  */
+const TRAILING_SLASHES = /\/+$/
+const LEADING_SLASHES = /^\/+/
+
 function configuredMediaBaseUrl(): string | null {
   const raw = process.env.NEXT_PUBLIC_MEDIA_BASE_URL
   if (typeof raw !== 'string') {
     return null
   }
 
-  const trimmed = raw.trim().replace(/\/+$/, '')
+  const trimmed = raw.trim().replace(TRAILING_SLASHES, '')
   if (trimmed.length === 0) {
     return null
   }
@@ -54,7 +57,7 @@ function objectKeyPath(objectKey: string | null | undefined): string | null {
     return null
   }
 
-  const trimmed = objectKey.trim().replace(/^\/+/, '')
+  const trimmed = objectKey.trim().replace(LEADING_SLASHES, '')
   if (trimmed.length === 0) {
     return null
   }
