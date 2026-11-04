@@ -2,17 +2,27 @@ import { Suspense } from 'react'
 import nextDynamic from 'next/dynamic'
 import Link from 'next/link'
 import { CurtainReveal } from '@/components/curtain-reveal-client'
+import { FehochPlaceholderMark } from '@/components/fehoch-placeholder-mark'
 import {
   LatestUploadedMatchSection,
   latestUploadedMatchLastEntranceStepIndex,
 } from '@/components/latest-uploaded-match-section'
 import { TeamIcon } from '@/components/team-icon'
+import {
+  LONG_OPPONENT_NAME,
+  LONG_TEAM_NAME,
+  UNBREAKABLE_LABEL,
+} from '@/lib/break-ui/worst-case-fixtures'
 import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
 import type { TeamLibraryWithClipCount } from '@/lib/catalog'
 import { landingEntranceStyle } from '@/lib/landing-entrance'
-import { landingTeamRowLabel } from '@/lib/landing-team-row-label'
+import {
+  landingFolderUsesFehochMark,
+  landingTeamRowLabel,
+} from '@/lib/landing-team-row-label'
+import type { LatestUploadedMatch } from '@/lib/latest-uploaded-match'
 import { isPrivateTeamOfferReady } from '@/lib/private-team-offer'
-import { siteDescription, siteName } from '@/lib/site-metadata'
+import { siteName } from '@/lib/site-metadata'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,8 +31,6 @@ const PrivateTeamFolderSection = nextDynamic(() =>
     (module) => module.PrivateTeamFolderSection,
   ),
 )
-
-const TEAM_ROW_START_STEP_INDEX = 2
 
 type HomeTeamPreviewMode = 'demo' | 'worst' | 'empty' | 'one' | 'many'
 
@@ -51,6 +59,20 @@ function homeTeamPreviewMode(value: string | undefined): HomeTeamPreviewMode {
 
 function worstCasePublicTeams(): TeamLibraryWithClipCount[] {
   return [
+    {
+      id: 'others',
+      name: 'Otros',
+      slug: 'others',
+      country: 'Chile',
+      clipCount: 0,
+    },
+    {
+      id: 'others-torneo',
+      name: 'Otros - Torneo Metropolitano Femenino de Hockey Césped Benachrichtigungseinstellungen',
+      slug: 'others-torneo',
+      country: 'Chile',
+      clipCount: 1,
+    },
     {
       id: 'worst-aleksandra',
       name: 'Aleksandra Wiśniewska-Kowalczyk',
@@ -169,6 +191,71 @@ function homeTeamPreviewTeams(
   })
 }
 
+function previewLatestMatch(
+  mode: Exclude<HomeTeamPreviewMode, 'demo' | 'empty'>,
+): LatestUploadedMatch {
+  if (mode === 'one') {
+    return {
+      matchId: 'one-match',
+      librarySlug: 'one-jo',
+      libraryName: 'Jo',
+      rivalLabel: 'J',
+      playedOn: '2026-10-25',
+      uploadedAt: '2026-10-26T12:00:00Z',
+      homeTeam: 'Jo',
+      awayTeam: 'J',
+      previews: [
+        {
+          clipId: 'one-goal',
+          title: 'Goles',
+          youtubeId: 'pending-one-goal',
+        },
+      ],
+    }
+  }
+  if (mode === 'many') {
+    return {
+      matchId: 'many-match',
+      librarySlug: 'many-1',
+      libraryName: 'Equipo 1',
+      rivalLabel: 'Equipo 2',
+      playedOn: '2026-10-25',
+      uploadedAt: '2026-10-26T12:00:00Z',
+      homeTeam: 'Equipo 1',
+      awayTeam: 'Equipo 2',
+      previews: [
+        {
+          clipId: 'many-goal',
+          title: 'Goles',
+          youtubeId: 'pending-many-goal',
+        },
+      ],
+    }
+  }
+  return {
+    matchId: 'worst-match',
+    librarySlug: 'worst-aleksandra',
+    libraryName: LONG_TEAM_NAME,
+    rivalLabel: UNBREAKABLE_LABEL,
+    playedOn: '2026-10-25',
+    uploadedAt: '2026-10-26T12:00:00Z',
+    homeTeam: LONG_TEAM_NAME,
+    awayTeam: `${LONG_OPPONENT_NAME} ${UNBREAKABLE_LABEL}`,
+    previews: [
+      {
+        clipId: 'worst-full',
+        title: 'Partido Completo',
+        youtubeId: 'pending-worst-full',
+      },
+      {
+        clipId: 'worst-goal',
+        title: 'Goles',
+        youtubeId: 'pending-worst-goal',
+      },
+    ],
+  }
+}
+
 function HomeTeamPreviewToggle({ mode }: { mode: HomeTeamPreviewMode }) {
   if (process.env.NODE_ENV !== 'development') return null
 
@@ -200,7 +287,7 @@ function HomeTeamPreviewToggle({ mode }: { mode: HomeTeamPreviewMode }) {
             href={segment.href}
             role="radio"
             aria-checked={selected}
-            className="inline-flex"
+            className="inline-flex cursor-pointer"
             style={{
               border: 'none',
               borderRadius: '9999px',
@@ -242,10 +329,15 @@ export default async function HomePage({
     previewMode === 'demo'
       ? teamsWithClipCounts
       : homeTeamPreviewTeams(previewMode)
-
-  const afterTeamsEntranceStepIndex =
-    TEAM_ROW_START_STEP_INDEX + teamsWithClipCounts.length
-  const latestUploadEntranceStepStart = afterTeamsEntranceStepIndex
+  const displayedMatch =
+    previewMode === 'demo'
+      ? latestUploadedMatch
+      : previewMode === 'empty'
+        ? null
+        : previewLatestMatch(previewMode)
+  const folderEntranceStep = displayedMatch
+    ? 1 + latestUploadedMatchLastEntranceStepIndex() + 1
+    : 1
 
   return (
     <div
@@ -263,20 +355,26 @@ export default async function HomePage({
             {siteName}
           </h1>
           <p className="mt-4 text-base leading-relaxed text-foreground">
-            {siteDescription}
+            Carpetas de clips de hockey césped, filtradas por concepto, para jugadoras y cuerpos técnicos.
           </p>
         </div>
       </header>
 
       {/* Team List */}
       <main className="mx-auto max-w-2xl bg-background px-6 py-12">
+        {displayedMatch ? (
+          <LatestUploadedMatchSection
+            match={displayedMatch}
+            entranceStepStart={1}
+          />
+        ) : null}
         <p
-          className="landing-enter mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
-          style={landingEntranceStyle(1)}
+          className={`landing-enter mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground${displayedMatch ? ' mt-6' : ''}`}
+          style={landingEntranceStyle(folderEntranceStep)}
         >
           Carpetas públicas
         </p>
-        <nav className="mb-28">
+        <nav>
           {publicTeams.length === 0 ? (
             <p className="py-6 text-sm text-muted-foreground">
               Todavía no hay equipos públicos.
@@ -295,11 +393,18 @@ export default async function HomePage({
                   <li key={team.id}>
                     <Link
                       href={`/${team.slug}`}
-                      className="press tap-reset duration-color group flex min-w-0 items-center justify-between gap-3 py-6 hover:bg-muted/30"
+                      className="press tap-reset duration-color group flex min-w-0 w-full cursor-pointer items-center justify-between gap-3 py-6 outline-none hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                       <div className="flex min-w-0 items-center gap-4">
-                        <TeamIcon slug={team.slug} name={team.name} size="sm" />
-                        <span className="min-w-0 wrap-anywhere text-base font-medium text-foreground">
+                        {landingFolderUsesFehochMark(team) ? (
+                          <FehochPlaceholderMark />
+                        ) : (
+                          <TeamIcon slug={team.slug} name={team.name} size="sm" />
+                        )}
+                        <span
+                          dir="auto"
+                          className="min-w-0 wrap-anywhere text-base font-medium text-foreground"
+                        >
                           {landingTeamRowLabel(team)}
                         </span>
                       </div>
@@ -328,25 +433,9 @@ export default async function HomePage({
             </div>
           )}
         </nav>
-        {latestUploadedMatch && (
-          <LatestUploadedMatchSection
-            match={latestUploadedMatch}
-            entranceStepStart={latestUploadEntranceStepStart}
-          />
-        )}
         {(process.env.NODE_ENV !== 'production' || isPrivateTeamOfferReady()) && (
           <Suspense fallback={null}>
-            <PrivateTeamFolderSection
-              entranceStepStart={
-                latestUploadedMatch
-                  ? latestUploadEntranceStepStart +
-                    latestUploadedMatchLastEntranceStepIndex(
-                      latestUploadedMatch.previews.length,
-                    ) +
-                    1
-                  : latestUploadEntranceStepStart
-              }
-            />
+            <PrivateTeamFolderSection entranceStepStart={folderEntranceStep + 1} />
           </Suspense>
         )}
       </main>

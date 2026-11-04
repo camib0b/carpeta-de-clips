@@ -113,7 +113,7 @@ test('cards, banners, and the latest-upload row wrap instead of overflowing', ()
   assert.match(banner, /min-w-0 flex-1/)
   assert.match(banner, /wrap-anywhere/)
   assert.match(latest, /wrap-anywhere/)
-  assert.match(latest, /grid min-w-0 grid-cols-4/)
+  assert.match(latest, /aspect-video w-full min-w-0 shrink-0/)
   assert.match(latest, /shrink-0/)
 })
 
