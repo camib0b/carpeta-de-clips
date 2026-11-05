@@ -1078,7 +1078,6 @@ export function PrivateTeamFolderSection({
       className={`landing-enter min-w-0 scroll-mt-8${BREAK_UI_TOGGLE_ENABLED ? ' pb-20' : ''}`}
       style={landingEntranceStyle(entranceStepStart)}
     >
-      <div aria-hidden="true" className="border-t border-border mb-28" />
       <h2
         id="equipos-heading"
         className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"

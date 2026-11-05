@@ -2,7 +2,7 @@ const skeletonMarkClassName = 'skeleton-mark bg-muted/40'
 
 /**
  * Shown while the home page server render is still in flight.
- * Marks mirror the hero and the public team rows. They stay close to the
+ * Marks mirror the latest-match preview and the public team rows. They stay close to the
  * page background. The sweep lives on `.skeleton-mark` and is still under
  * prefers-reduced-motion.
  */
@@ -25,7 +25,15 @@ export default function HomeLoading() {
       <main className="mx-auto max-w-2xl px-6 py-12">
         <div
           aria-hidden="true"
-          className={`mb-2 h-3 w-36 rounded ${skeletonMarkClassName}`}
+          className={`aspect-video w-full rounded-md ${skeletonMarkClassName}`}
+        />
+        <div
+          aria-hidden="true"
+          className={`mt-2 h-3 w-28 rounded ${skeletonMarkClassName}`}
+        />
+        <div
+          aria-hidden="true"
+          className={`mt-6 mb-2 h-3 w-36 rounded ${skeletonMarkClassName}`}
         />
         <ul aria-hidden="true">
           {Array.from({ length: 3 }, (_, index) => (
