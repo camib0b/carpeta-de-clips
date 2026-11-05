@@ -197,6 +197,8 @@ test('poster selection stops at four and skips posters that cannot be shown', ()
       clip_id: 1,
       title: 'Uno',
       youtube_id: 'J9UmilJC89Q',
+      r2_key: 'matches/uno.mp4',
+      r2_key_low: null,
       thumb_key: null,
       visibility: 'public',
     },
@@ -204,6 +206,8 @@ test('poster selection stops at four and skips posters that cannot be shown', ()
       clip_id: 2,
       title: 'Dos',
       youtube_id: '4Xndr1EF0fk',
+      r2_key: 'matches/dos.mp4',
+      r2_key_low: null,
       thumb_key: 'two.thumb.jpg',
       visibility: 'restricted',
     },
@@ -211,6 +215,8 @@ test('poster selection stops at four and skips posters that cannot be shown', ()
       clip_id: 3,
       title: 'Tres',
       youtube_id: 'Mu_kV47bhpA',
+      r2_key: null,
+      r2_key_low: 'matches/tres-low.mp4',
       thumb_key: 'three.thumb.abc.480.webp',
       visibility: 'public',
     },
@@ -218,6 +224,8 @@ test('poster selection stops at four and skips posters that cannot be shown', ()
       clip_id: 4,
       title: 'Cuatro',
       youtube_id: 'KMw-aUzQO-8',
+      r2_key: '   ',
+      r2_key_low: null,
       thumb_key: null,
       visibility: 'public',
     },
@@ -225,6 +233,8 @@ test('poster selection stops at four and skips posters that cannot be shown', ()
       clip_id: 5,
       title: 'Cinco',
       youtube_id: 'pending-2026-10-25',
+      r2_key: null,
+      r2_key_low: null,
       thumb_key: null,
       visibility: 'public',
     },
@@ -232,6 +242,8 @@ test('poster selection stops at four and skips posters that cannot be shown', ()
       clip_id: 6,
       title: 'Seis',
       youtube_id: 'dQw4w9WgXcQ',
+      r2_key: null,
+      r2_key_low: null,
       thumb_key: null,
       visibility: 'public',
     },
@@ -246,7 +258,44 @@ test('poster selection stops at four and skips posters that cannot be shown', ()
       ['Uno', 'Tres', 'Cuatro', 'Seis'],
     )
     assert.equal(previews[0]?.youtubeId, 'J9UmilJC89Q')
+    assert.equal(previews[0]?.r2Key, 'matches/uno.mp4')
     assert.equal(previews[1]?.thumbKey, 'three.thumb.abc.480.webp')
+    assert.equal(previews[1]?.r2Key, undefined)
+    assert.equal(previews[2]?.r2Key, undefined)
+  } finally {
+    if (previousMediaBaseUrl == null) {
+      delete process.env.NEXT_PUBLIC_MEDIA_BASE_URL
+    } else {
+      process.env.NEXT_PUBLIC_MEDIA_BASE_URL = previousMediaBaseUrl
+    }
+  }
+})
+
+test('a self-hosted clip with no still and no YouTube id stays in the preview list', () => {
+  const previousMediaBaseUrl = process.env.NEXT_PUBLIC_MEDIA_BASE_URL
+  process.env.NEXT_PUBLIC_MEDIA_BASE_URL = 'https://media.carpeta.cl'
+
+  try {
+    const previews = selectLatestUploadedMatchPreviews([
+      {
+        clip_id: 9,
+        title: 'Goles',
+        youtube_id: 'pending-2026-10-25-uc-s16a-mq-01',
+        r2_key: '2026-10-25--UC_Sub_16_A--Manquehue/184-mqa-salida.720.mp4',
+        r2_key_low: '  ',
+        thumb_key: null,
+        visibility: 'public',
+      },
+    ])
+
+    assert.equal(previews.length, 1)
+    assert.equal(previews[0]?.clipId, '9')
+    assert.equal(
+      previews[0]?.r2Key,
+      '2026-10-25--UC_Sub_16_A--Manquehue/184-mqa-salida.720.mp4',
+    )
+    assert.equal(previews[0]?.r2KeyLow, undefined)
+    assert.equal(previews[0]?.thumbKey, undefined)
   } finally {
     if (previousMediaBaseUrl == null) {
       delete process.env.NEXT_PUBLIC_MEDIA_BASE_URL

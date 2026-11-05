@@ -29,11 +29,32 @@ test('extra spaces still match the two tournament folders', () => {
   )
 })
 
-test('a bare Otros library keeps its catalog name and does not use the FEHOCH mark', () => {
-  const team = { id: 'others', name: 'Otros' }
+test('the others library stored as plain Otros is Torneo Nacional Primera A', () => {
+  const team = { id: 'others', slug: 'others', name: 'Otros' }
+  assert.equal(landingTeamRowLabel(team), 'Torneo Nacional Primera A')
+  assert.equal(landingFolderUsesFehochMark(team), true)
+  assert.equal(landingTeamRowLabel(team).includes('pendiente'), false)
+})
+
+test('plain Otros still maps with extra spaces or only the others slug', () => {
+  assert.equal(
+    landingTeamRowLabel({ id: 'others', name: '  Otros  ' }),
+    'Torneo Nacional Primera A',
+  )
+  assert.equal(
+    landingTeamRowLabel({ id: 'library-row', slug: 'others', name: 'otros' }),
+    'Torneo Nacional Primera A',
+  )
+  assert.equal(
+    landingFolderUsesFehochMark({ id: 'library-row', slug: 'others', name: 'otros' }),
+    true,
+  )
+})
+
+test('a different library named Otros keeps its catalog name', () => {
+  const team = { id: 'otro-club', slug: 'otro-club', name: 'Otros' }
   assert.equal(landingTeamRowLabel(team), 'Otros')
   assert.equal(landingFolderUsesFehochMark(team), false)
-  assert.equal(landingTeamRowLabel(team).includes('pendiente'), false)
 })
 
 test('an unmapped Otros title is left unchanged', () => {

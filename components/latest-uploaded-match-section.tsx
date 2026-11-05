@@ -3,11 +3,10 @@ import { LatestMatchPlayPreview } from '@/components/latest-match-play-preview'
 import { landingEntranceStyle } from '@/lib/landing-entrance'
 import {
   formatPlayedOnCaption,
+  latestMatchCardHref,
   matchupLabel,
   selectBestPlayPreview,
 } from '@/lib/home-latest-match'
-import { toLibraryHref } from '@/lib/library-filters/clip-params'
-import { serializeLibraryFilters } from '@/lib/library-filters/params'
 import type { LatestUploadedMatch } from '@/lib/latest-uploaded-match'
 
 /** Last relative entrance step inside this section (matchup, preview, date). */
@@ -26,14 +25,12 @@ export function LatestUploadedMatchSection({
   match: LatestUploadedMatch
   entranceStepStart?: number
 }) {
-  const matchHref = toLibraryHref(
-    `/${match.librarySlug}`,
-    serializeLibraryFilters({
-      concepts: [],
-      rivals: [match.rivalLabel],
-    }),
-  )
   const bestPlay = selectBestPlayPreview(match.previews)
+  const matchHref = latestMatchCardHref({
+    librarySlug: match.librarySlug,
+    rivalLabel: match.rivalLabel,
+    clipId: bestPlay?.clipId,
+  })
   const playedOnCaption = formatPlayedOnCaption(match.playedOn)
   const teamsLabel = matchupLabel(match.homeTeam, match.awayTeam)
 

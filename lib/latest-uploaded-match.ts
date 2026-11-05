@@ -43,6 +43,8 @@ export const LATEST_UPLOADED_MATCH_PREVIEW_SQL = `
     clips.id AS clip_id,
     clips.title,
     clips.youtube_id,
+    clips.r2_key,
+    clips.r2_key_low,
     clips.thumb_key,
     clips.visibility
   FROM clips
@@ -70,6 +72,8 @@ export type LatestUploadedMatchPreviewRow = {
   clip_id: number
   title: string
   youtube_id: string
+  r2_key: string | null
+  r2_key_low: string | null
   thumb_key: string | null
   visibility: string | null
 }
@@ -78,6 +82,8 @@ export type LatestUploadedMatchPreview = {
   clipId: string
   title: string
   youtubeId: string
+  r2Key?: string
+  r2KeyLow?: string
   thumbKey?: string
   visibility?: ClipVisibility
 }
@@ -98,11 +104,18 @@ export type LatestUploadedMatch = {
   previews: LatestUploadedMatchPreview[]
 }
 
-function emptyToUndefined(value: string | null): string | undefined {
+function emptyToUndefined(value: string | null | undefined): string | undefined {
   if (value == null || value === '') {
     return undefined
   }
   return value
+}
+
+function mediaKeyToUndefined(value: string | null | undefined): string | undefined {
+  if (value == null || value.trim() === '') {
+    return undefined
+  }
+  return value.trim()
 }
 
 function clipVisibilityFromDatabase(
@@ -140,7 +153,9 @@ export function toLatestUploadedMatch(
 }
 
 /**
- * Keep the first posters that have a thumb or a real YouTube still, at most four.
+ * Keep the first clips that can be shown, at most four.
+ * A public R2 file counts even when the still and the YouTube id are missing,
+ * so the home preview can play the self-hosted video.
  */
 export function selectLatestUploadedMatchPreviews(
   rows: LatestUploadedMatchPreviewRow[],
@@ -163,9 +178,11 @@ export function selectLatestUploadedMatchPreviews(
       publicMediaObjectUrl(row.thumb_key) == null
         ? undefined
         : row.thumb_key
+    const r2Key = mediaKeyToUndefined(row.r2_key)
+    const r2KeyLow = mediaKeyToUndefined(row.r2_key_low)
     const hasYoutube = isRealYouTubeVideoId(row.youtube_id)
 
-    if (thumbKey == null && !hasYoutube) {
+    if (thumbKey == null && r2Key == null && !hasYoutube) {
       continue
     }
 
@@ -173,6 +190,8 @@ export function selectLatestUploadedMatchPreviews(
       clipId: String(row.clip_id),
       title: row.title,
       youtubeId: row.youtube_id,
+      r2Key,
+      r2KeyLow,
       thumbKey,
       visibility,
     })
