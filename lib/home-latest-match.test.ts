@@ -66,4 +66,7 @@ test('the home page leads with the latest match, the audience, and no section ca
   assert.equal(privateFolder.includes('mb-28'), false)
   assert.match(latest, /formatPlayedOnCaption/)
   assert.match(latest, /cursor-pointer/)
+  assert.match(page, /\/teams\/fehoch\.webp/)
+  assert.match(page, /rounded-full bg-white/)
+  assert.equal(page.includes('FehochPlaceholderMark'), false)
 })

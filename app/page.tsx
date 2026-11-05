@@ -1,8 +1,8 @@
 import { Suspense } from 'react'
 import nextDynamic from 'next/dynamic'
 import Link from 'next/link'
+import Image from 'next/image'
 import { CurtainReveal } from '@/components/curtain-reveal-client'
-import { FehochPlaceholderMark } from '@/components/fehoch-placeholder-mark'
 import {
   LatestUploadedMatchSection,
   latestUploadedMatchLastEntranceStepIndex,
@@ -397,7 +397,15 @@ export default async function HomePage({
                     >
                       <div className="flex min-w-0 items-center gap-4">
                         {landingFolderUsesFehochMark(team) ? (
-                          <FehochPlaceholderMark />
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white">
+                            <Image
+                              src="/teams/fehoch.webp"
+                              alt="FEHOCH"
+                              width={64}
+                              height={64}
+                              className="h-7 w-7"
+                            />
+                          </span>
                         ) : (
                           <TeamIcon slug={team.slug} name={team.name} size="sm" />
                         )}
