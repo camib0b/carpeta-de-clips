@@ -5,6 +5,8 @@ import test from 'node:test'
 
 import {
   formatPlayedOnCaption,
+  homePreviewPlayback,
+  latestMatchCardHref,
   matchupLabel,
   selectBestPlayPreview,
 } from './home-latest-match'
@@ -69,4 +71,100 @@ test('the home page leads with the latest match, the audience, and no section ca
   assert.match(page, /\/teams\/fehoch\.webp/)
   assert.match(page, /rounded-full bg-white/)
   assert.equal(page.includes('FehochPlaceholderMark'), false)
+
+  const preview = readFileSync(
+    path.join(repoRoot, 'components/latest-match-play-preview.tsx'),
+    'utf8',
+  )
+  const section = readFileSync(
+    path.join(repoRoot, 'components/latest-uploaded-match-section.tsx'),
+    'utf8',
+  )
+  assert.match(preview, /<video/)
+  assert.match(preview, /\bmuted\b/)
+  assert.match(preview, /playsInline/)
+  assert.match(preview, /\bloop\b/)
+  assert.match(preview, /autoPlay/)
+  assert.match(preview, /poster=/)
+  assert.match(preview, /homePreviewPlayback/)
+  assert.match(section, /latestMatchCardHref/)
+  assert.equal(section.includes('youtube.com'), false)
+  assert.equal(section.includes('youtu.be'), false)
+  assert.equal(preview.includes('youtube.com'), false)
+  assert.equal(preview.includes('youtu.be'), false)
+})
+
+test('the home preview plays the self-hosted file and keeps YouTube as a last resort', () => {
+  const previousMediaBaseUrl = process.env.NEXT_PUBLIC_MEDIA_BASE_URL
+  process.env.NEXT_PUBLIC_MEDIA_BASE_URL = 'https://media.carpeta.cl'
+  const hosted = {
+    youtubeId: 'J9UmilJC89Q',
+    r2Key: '2026-10-25--UC_Sub_16_A--Manquehue/goles.720.mp4',
+    r2KeyLow: '2026-10-25--UC_Sub_16_A--Manquehue/goles.480.mp4',
+    thumbKey: '2026-10-25--UC_Sub_16_A--Manquehue/goles.thumb.abc.480.webp',
+    visibility: 'public' as const,
+  }
+
+  try {
+    const playing = homePreviewPlayback(hosted, true)
+    assert.equal(playing.kind, 'hosted')
+    if (playing.kind === 'hosted') {
+      assert.equal(
+        playing.src,
+        'https://media.carpeta.cl/2026-10-25--UC_Sub_16_A--Manquehue/goles.720.mp4',
+      )
+      assert.equal(
+        playing.poster,
+        'https://media.carpeta.cl/2026-10-25--UC_Sub_16_A--Manquehue/goles.thumb.abc.480.webp',
+      )
+    }
+    assert.deepEqual(homePreviewPlayback(hosted, false), { kind: 'still' })
+
+    assert.deepEqual(
+      homePreviewPlayback(
+        { youtubeId: 'J9UmilJC89Q', visibility: 'public' },
+        true,
+      ),
+      { kind: 'youtube', youtubeId: 'J9UmilJC89Q' },
+    )
+    assert.deepEqual(
+      homePreviewPlayback(
+        { youtubeId: 'pending-2026-10-25', visibility: 'public' },
+        true,
+      ),
+      { kind: 'still' },
+    )
+    assert.deepEqual(
+      homePreviewPlayback({ ...hosted, visibility: 'restricted' }, true),
+      { kind: 'still' },
+    )
+
+    delete process.env.NEXT_PUBLIC_MEDIA_BASE_URL
+    assert.deepEqual(homePreviewPlayback(hosted, true), { kind: 'still' })
+  } finally {
+    if (previousMediaBaseUrl == null) {
+      delete process.env.NEXT_PUBLIC_MEDIA_BASE_URL
+    } else {
+      process.env.NEXT_PUBLIC_MEDIA_BASE_URL = previousMediaBaseUrl
+    }
+  }
+})
+
+test('the latest-match card opens the carpeta clip page', () => {
+  const href = latestMatchCardHref({
+    librarySlug: 'others',
+    rivalLabel: 'PWCC vs COGS',
+    clipId: '42',
+  })
+  assert.equal(href, '/others?rival=pwcc-vs-cogs&clip=42')
+  assert.equal(href.includes('youtube.com'), false)
+  assert.equal(href.includes('youtu.be'), false)
+  assert.equal(
+    latestMatchCardHref({
+      librarySlug: 'uc-primera-b',
+      rivalLabel: 'COGS',
+      clipId: 'one-goal',
+    }),
+    '/uc-primera-b?rival=cogs',
+  )
 })

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import type { YouTubePlayer } from 'react-youtube'
 
 import { ClipThumbnailVisual } from '@/components/clip-thumbnail-visual'
-import { isRealYouTubeVideoId, resolveClipThumbnail } from '@/lib/clip-thumbnail'
+import { resolveClipThumbnail } from '@/lib/clip-thumbnail'
+import { homePreviewPlayback } from '@/lib/home-latest-match'
 import type { LatestUploadedMatchPreview } from '@/lib/latest-uploaded-match'
 import { cn } from '@/lib/utils'
 
@@ -54,9 +55,11 @@ function useAllowsMotionPreview(): boolean {
 }
 
 /**
- * Still image of the best play. When motion is allowed and the clip has a
- * real YouTube id, a muted player covers the still once it is actually playing.
- * Reduced motion, a missing id, and a player error stay on the still.
+ * Still of the best play. When motion is allowed and the clip has a public
+ * R2 file, a muted looping video from media.carpeta.cl covers that still.
+ * YouTube is only used when the clip has no R2 file. Reduced motion, a
+ * missing public URL, and a playback error stay on the still.
+ * The video does not receive clicks. The card link around it is the carpeta page.
  */
 export function LatestMatchPlayPreview({
   preview,
@@ -65,15 +68,18 @@ export function LatestMatchPlayPreview({
 }) {
   const clip = preview ?? EMPTY_PREVIEW
   const allowsMotion = useAllowsMotionPreview()
+  const playback = homePreviewPlayback(clip, allowsMotion)
+  const [hostedFailed, setHostedFailed] = useState(false)
   const [playbackVisible, setPlaybackVisible] = useState(false)
-  const youtubeId = isRealYouTubeVideoId(clip.youtubeId) ? clip.youtubeId.trim() : null
-  const showPlayer = allowsMotion && youtubeId != null
-  const YouTubePlayer = useYouTubePlayerComponent(showPlayer)
-  const still = resolveClipThumbnail({
-    youtubeId: clip.youtubeId,
-    thumbKey: clip.thumbKey,
-    visibility: clip.visibility,
-  })
+  const hosted = playback.kind === 'hosted' && !hostedFailed ? playback : null
+  const youtubeId = playback.kind === 'youtube' ? playback.youtubeId : null
+  const YouTubePlayer = useYouTubePlayerComponent(youtubeId != null)
+  const still = resolveClipThumbnail(clip)
+
+  useEffect(() => {
+    setHostedFailed(false)
+    setPlaybackVisible(false)
+  }, [clip.clipId])
 
   return (
     <>
@@ -102,7 +108,37 @@ export function LatestMatchPlayPreview({
           fetchPriority="high"
         />
       )}
-      {showPlayer && YouTubePlayer != null && youtubeId != null ? (
+      {hosted != null ? (
+        <video
+          key={hosted.src}
+          ref={(node) => {
+            if (node) {
+              node.muted = true
+            }
+          }}
+          src={hosted.src}
+          poster={hosted.poster ?? undefined}
+          muted
+          playsInline
+          loop
+          autoPlay
+          preload="auto"
+          tabIndex={-1}
+          aria-hidden="true"
+          className={cn(
+            'pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-color ease-color',
+            playbackVisible ? 'opacity-100' : 'opacity-0',
+          )}
+          onPlaying={() => {
+            setPlaybackVisible(true)
+          }}
+          onError={() => {
+            setHostedFailed(true)
+            setPlaybackVisible(false)
+          }}
+        />
+      ) : null}
+      {youtubeId != null && YouTubePlayer != null ? (
         <span
           className={cn(
             'pointer-events-none absolute inset-0 transition-opacity duration-color ease-color',
