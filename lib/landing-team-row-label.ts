@@ -1,33 +1,33 @@
 /**
  * Display-only labels for catalog libraries. Stored ids and names stay unchanged.
- * A folder named "Otros - …" shows the tournament name after the dash.
- * The bare `others` library has no tournament name in the catalog, so it
- * keeps a marked placeholder until that name exists.
+ * The two Otros folders are separate FEHOCH tournaments.
  */
-export const FEHOCH_TOURNAMENT_NAME_PLACEHOLDER =
-  'Torneo FEHOCH (nombre pendiente)'
+const FEHOCH_TOURNAMENT_LABELS: ReadonlyArray<{ source: string; label: string }> = [
+  { source: 'otros - torneo sub-16 a', label: 'Torneo Nacional Sub-16' },
+  { source: 'otros - torneo primera a', label: 'Torneo Nacional Primera A' },
+]
 
-const OTHERS_DASH_PREFIX = /^otros\s*-\s+(.+)$/i
-const OTHERS_NAME = /^otros$/i
+function tournamentKey(name: string): string {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+function fehochTournamentLabel(name: string): string | null {
+  const key = tournamentKey(name)
+  for (const entry of FEHOCH_TOURNAMENT_LABELS) {
+    if (entry.source === key) {
+      return entry.label
+    }
+  }
+  return null
+}
 
 export function landingFolderUsesFehochMark(team: {
   id: string
   name: string
 }): boolean {
-  const name = team.name.trim()
-  return (
-    team.id === 'others' || OTHERS_NAME.test(name) || OTHERS_DASH_PREFIX.test(name)
-  )
+  return fehochTournamentLabel(team.name) != null
 }
 
 export function landingTeamRowLabel(team: { id: string; name: string }): string {
-  const name = team.name.trim()
-  const tournamentName = OTHERS_DASH_PREFIX.exec(name)?.[1]?.trim()
-  if (tournamentName) {
-    return tournamentName
-  }
-  if (team.id === 'others' || OTHERS_NAME.test(name)) {
-    return FEHOCH_TOURNAMENT_NAME_PLACEHOLDER
-  }
-  return team.name
+  return fehochTournamentLabel(team.name) ?? team.name
 }

@@ -60,16 +60,16 @@ function homeTeamPreviewMode(value: string | undefined): HomeTeamPreviewMode {
 function worstCasePublicTeams(): TeamLibraryWithClipCount[] {
   return [
     {
-      id: 'others',
-      name: 'Otros',
-      slug: 'others',
+      id: 'others-sub-16',
+      name: 'Otros - Torneo Sub-16 A',
+      slug: 'others-sub-16',
       country: 'Chile',
       clipCount: 0,
     },
     {
-      id: 'others-torneo',
-      name: 'Otros - Torneo Metropolitano Femenino de Hockey Césped Benachrichtigungseinstellungen',
-      slug: 'others-torneo',
+      id: 'others-primera-a',
+      name: 'Otros - Torneo Primera A',
+      slug: 'others-primera-a',
       country: 'Chile',
       clipCount: 1,
     },
