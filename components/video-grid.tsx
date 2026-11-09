@@ -9,11 +9,11 @@ import { useLibraryClipSelection } from '@/hooks/use-library-clip'
 import { useLibraryFilters } from '@/hooks/use-library-filters'
 import { MatchContextBanner } from './match-context-banner'
 import { VideoFilters } from './video-filters'
+import { FilterResultLine } from './filter-result-line'
 import { clipLibraryEmptyState } from '@/lib/break-ui/clip-library-empty-state'
 import { listUniqueMatchSummaries } from '@/lib/match-display'
 import { storageSlugFromClip } from '@/lib/match-keys'
 import { readCssNumber, readCssTimeMilliseconds } from '@/lib/css-time'
-import { cn } from '@/lib/utils'
 
 const VideoModal = dynamic(
   () => import('./video-modal').then((module) => module.VideoModal),
@@ -174,16 +174,26 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
 
   return (
     <div className="space-y-10">
-      {/* Filters */}
-      <VideoFilters
-        selectedConcepts={selectedConcepts}
-        selectedRivals={selectedRivals}
-        onConceptsChange={setSelectedConcepts}
-        onRivalsChange={setSelectedRivals}
-        availableRivals={availableRivals}
-        videos={videos}
-        hasActiveFilters={hasActiveFilters}
-      />
+      <div className="space-y-3">
+        <VideoFilters
+          selectedConcepts={selectedConcepts}
+          selectedRivals={selectedRivals}
+          onConceptsChange={setSelectedConcepts}
+          onRivalsChange={setSelectedRivals}
+          availableRivals={availableRivals}
+          videos={videos}
+          hasActiveFilters={hasActiveFilters}
+        />
+        <FilterResultLine
+          filteredCount={filteredVideos.length}
+          totalCount={videos.length}
+          selectedConcepts={selectedConcepts}
+          selectedRivals={selectedRivals}
+          onConceptsChange={setSelectedConcepts}
+          onRivalsChange={setSelectedRivals}
+          onClearFilters={clearFilters}
+        />
+      </div>
 
       {shouldShowMatchBanner && (
         <MatchContextBanner
@@ -193,16 +203,6 @@ export function VideoGrid({ videos, availableRivals, matchXmlAvailability }: Vid
           onToggleMatchVisibility={toggleMatchVisibility}
         />
       )}
-
-      {/* Results count */}
-      <p
-        className={cn(
-          'text-sm tabular-nums',
-          hasActiveFilters ? 'font-medium text-state' : 'text-muted-foreground',
-        )}
-      >
-        {filteredVideos.length} {filteredVideos.length === 1 ? 'clip' : 'clips'}
-      </p>
 
       {/* Video Grid */}
       {filteredVideos.length > 0 ? (
