@@ -228,29 +228,30 @@ export function VideoFilters({
   }, [selectedRivals, selectableRivals, onRivalsChange])
 
   return (
-    <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
-      <MultiSelectFilter
-        id="concept-filter"
-        label="Concepto"
-        allLabel={ALL_CONCEPTS_FILTER_LABEL}
-        options={selectableConcepts}
-        selected={selectedConcepts}
-        onChange={onConceptsChange}
-        triggerClassName="w-full min-w-0 sm:w-[200px]"
-        multipleCountLabel={(count) => `${count} conceptos`}
-      />
+    <div className="flex w-full min-w-0 flex-col items-end gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex w-full min-w-0 flex-col gap-4 self-stretch sm:w-auto sm:min-w-0 sm:flex-1 sm:flex-row sm:flex-wrap sm:items-center sm:self-auto">
+        <MultiSelectFilter
+          id="concept-filter"
+          label="Concepto"
+          allLabel={ALL_CONCEPTS_FILTER_LABEL}
+          options={selectableConcepts}
+          selected={selectedConcepts}
+          onChange={onConceptsChange}
+          triggerClassName="w-full min-w-0 sm:w-[200px]"
+          multipleCountLabel={(count) => `${count} conceptos`}
+        />
 
-      <MultiSelectFilter
-        id="rival-filter"
-        label="Rival"
-        allLabel={ALL_RIVALS_FILTER_LABEL}
-        options={selectableRivals}
-        selected={selectedRivals}
-        onChange={onRivalsChange}
-        triggerClassName="w-full min-w-0 sm:w-[180px]"
-        multipleCountLabel={(count) => `${count} rivales`}
-      />
-
+        <MultiSelectFilter
+          id="rival-filter"
+          label="Rival"
+          allLabel={ALL_RIVALS_FILTER_LABEL}
+          options={selectableRivals}
+          selected={selectedRivals}
+          onChange={onRivalsChange}
+          triggerClassName="w-full min-w-0 sm:w-[180px]"
+          multipleCountLabel={(count) => `${count} rivales`}
+        />
+      </div>
       <ShareFiltersButton visible={hasActiveFilters} />
     </div>
   )

@@ -3,6 +3,7 @@
 import { Share } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { shareFiltersButtonClassName } from '@/lib/library-filters/filter-result-line'
 
 interface ShareFiltersButtonProps {
   visible: boolean
@@ -23,14 +24,14 @@ export function ShareFiltersButton({ visible }: ShareFiltersButtonProps) {
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="ghost"
       size="sm"
       onClick={handleCopyLink}
-      className="shrink-0"
+      className={shareFiltersButtonClassName}
       aria-label="Copiar enlace con filtros"
       title="Copiar enlace"
     >
-      <Share className="h-3.5 w-3.5" />
+      <Share className="size-3.5" />
       Compartir
     </Button>
   )
