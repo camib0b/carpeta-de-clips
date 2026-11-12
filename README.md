@@ -84,6 +84,27 @@ Smoke-check local D1 after migrate:
 pnpm run db:parity
 ```
 
+## Benchmark a query change
+
+`scripts/bench-d1.ts` compares two read-only statements against D1’s REST endpoint `POST /accounts/{account}/d1/database/{database}/query`. It refuses anything that is not a single `SELECT`, `WITH … SELECT`, or `EXPLAIN` of one of those, and it stops if `meta.rows_written` is greater than 0. The API token is read from the environment and is not printed.
+
+```bash
+export CLOUDFLARE_ACCOUNT_ID=...
+export CLOUDFLARE_D1_DATABASE_ID=...   # database_id in wrangler.jsonc
+export CLOUDFLARE_API_TOKEN=...        # D1 read permission is enough
+
+pnpm exec tsx scripts/bench-d1.ts \
+  --old queries/before.sql \
+  --new queries/after.sql \
+  --params-file queries/params.json \
+  --warmup 3 \
+  --runs 10 \
+  --threshold 1 \
+  --format markdown
+```
+
+`--old` and `--new` are a `.sql` file or `module.ts#EXPORT_NAME`. `--params` / `--params-file` is one parameter list, a list of lists, or `[{ "name", "params" }]` so the same pair can run once per library id. The first `--warmup` runs (default 3) are reported as cold. The next `--runs` (default 10) alternate old, then new. The markdown table has the median, min, and max of `meta.duration` and of the client round trip, plus `rows_read`. Sorted result rows must match. The verdict is `no meaningful difference` when the min–max ranges overlap or the median gap is under `--threshold` milliseconds. `--format json` or `both` adds the same report as JSON.
+
 ## Plays inside a clip
 
 Compiled uploads can contain several plays. Rows in `clip_instances` store `ord`, timeline `offset_s`, and `duration_s` (plus optional quarter / score / XML id). The modal seeks between plays with swipe (mobile) or keyboard; share links may include `?clip=<id>&jugada=<ord>`.
