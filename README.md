@@ -89,9 +89,9 @@ pnpm run db:parity
 `scripts/bench-d1.ts` compares two read-only statements against D1’s REST endpoint `POST /accounts/{account}/d1/database/{database}/query`. It refuses anything that is not a single `SELECT`, `WITH … SELECT`, or `EXPLAIN` of one of those, and it stops if `meta.rows_written` is greater than 0. The API token is read from the environment and is not printed.
 
 ```bash
-export CLOUDFLARE_ACCOUNT_ID=...
-export CLOUDFLARE_D1_DATABASE_ID=...   # database_id in wrangler.jsonc
-export CLOUDFLARE_API_TOKEN=...        # D1 read permission is enough
+export CLOUDFLARE_ACCOUNT_ID=your-account-id
+export CLOUDFLARE_D1_DATABASE_ID=your-database-id   # database_id in wrangler.jsonc
+export CLOUDFLARE_API_TOKEN=your-api-token          # D1 read permission is enough
 
 pnpm exec tsx scripts/bench-d1.ts \
   --old queries/before.sql \
