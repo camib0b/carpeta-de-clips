@@ -28,6 +28,7 @@ export type MediaUrlOptions = {
  */
 const TRAILING_SLASHES = /\/+$/
 const LEADING_SLASHES = /^\/+/
+const INBOX_OBJECT_KEY_PREFIX = 'inbox/'
 
 function configuredMediaBaseUrl(): string | null {
   const raw = process.env.NEXT_PUBLIC_MEDIA_BASE_URL
@@ -58,7 +59,7 @@ function objectKeyPath(objectKey: string | null | undefined): string | null {
   }
 
   const trimmed = objectKey.trim().replace(LEADING_SLASHES, '')
-  if (trimmed.length === 0) {
+  if (trimmed.length === 0 || trimmed.startsWith(INBOX_OBJECT_KEY_PREFIX)) {
     return null
   }
 
@@ -75,9 +76,10 @@ function objectKeyPath(objectKey: string | null | undefined): string | null {
 }
 
 /**
- * Builds a public URL for any object in `carpeta-clips` when
+ * Builds a public URL for a published object in `carpeta-clips` when
  * `NEXT_PUBLIC_MEDIA_BASE_URL` is configured. Does not check clip visibility;
- * callers gate restricted media themselves.
+ * callers gate restricted media themselves. `inbox/` keys belong to the
+ * private team-inbox bucket and return null.
  */
 export function publicMediaObjectUrl(
   objectKey: string | null | undefined,

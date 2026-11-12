@@ -33,7 +33,7 @@ flowchart LR
 
 - Next.js 16 and React 19
 - OpenNext on Cloudflare Workers
-- Cloudflare D1 (catalog) and R2 (`clipped-xml` for XML; public `carpeta-clips` at `media.carpeta.cl` for MP4s)
+- Cloudflare D1 (catalog) and R2 (`clipped-xml` for XML; public `carpeta-clips` at `media.carpeta.cl` for published MP4s; private `carpeta-inbox` for team-inbox uploads)
 - Wrangler for migrations, D1 execute, and deploy
 
 ## Getting started
@@ -115,7 +115,7 @@ Production XML is read from R2 (`CLIPPED_XML` → `clipped-xml`) using `matches.
 
 ## Self-hosted clip video
 
-When `mediaUrl()` in `lib/media-url.ts` returns a URL, the modal plays a native `<video>`; otherwise it uses the YouTube embed. Library cards and the home “último partido” row use `clips.thumb_key` when set (versioned `*.thumb.<hash>.480.webp` on `https://media.carpeta.cl`, with a matching `640.webp` sibling for `srcset`), then a real YouTube `mqdefault` poster, then a neutral placeholder (placeholder `youtube_id` values such as `pending-…` skip YouTube). Grids do not autoload MP4 metadata for posters. Objects live in the public R2 bucket `carpeta-clips`. Set `NEXT_PUBLIC_MEDIA_BASE_URL` as documented in `.env.example`. Team-inbox files use the `inbox/` prefix on that same public host: add a Cloudflare rule that blocks public access to `inbox/` on `media.carpeta.cl` before setting `TEAM_INBOX_ENABLED=true`.
+When `mediaUrl()` in `lib/media-url.ts` returns a URL, the modal plays a native `<video>`; otherwise it uses the YouTube embed. Library cards and the home “último partido” row use `clips.thumb_key` when set (versioned `*.thumb.<hash>.480.webp` on `https://media.carpeta.cl`, with a matching `640.webp` sibling for `srcset`), then a real YouTube `mqdefault` poster, then a neutral placeholder (placeholder `youtube_id` values such as `pending-…` skip YouTube). Grids do not autoload MP4 metadata for posters. Published clip files live in the public R2 bucket `carpeta-clips`. Set `NEXT_PUBLIC_MEDIA_BASE_URL` as documented in `.env.example`. Team-inbox uploads use the private R2 bucket `carpeta-inbox` (binding `TEAM_INBOX`), which has no custom domain and no public r2.dev URL. `mediaUrl()` does not build a public URL for an `inbox/` key.
 
 The home `#equipos` offer prices each match on a 2×2 matrix: **Nivel de detalle** (Básico or Exhaustivo) and **Plazo** (Estándar, 3 days, or Express, 24 hours). CLP amounts are Básico+Estándar $21.000, Básico+Express $32.000, Exhaustivo+Estándar $30.000, and Exhaustivo+Express $39.990. Fintoc links are built as `https://fintoc.me/cami-escu/<amount>` from the selected price. The clock starts when both the payment and the video file have arrived. Mail for that inbox goes to `video@camilaescudero.cl`. In production the section and `/api/team-inbox` stay closed until `TEAM_INBOX_ENABLED` is exactly `true`.
 
@@ -215,6 +215,8 @@ Related scripts:
 Worker config is `wrangler.jsonc`:
 
 - R2 binding `CLIPPED_XML` → bucket `clipped-xml`
+- R2 binding `MEDIA` → bucket `carpeta-clips` (public, published clips)
+- R2 binding `TEAM_INBOX` → bucket `carpeta-inbox` (private, team-inbox uploads)
 - D1 binding `DB` → database `carpeta-de-clips`
 
 Home and team library pages are `force-dynamic` so they read D1 at request time.
