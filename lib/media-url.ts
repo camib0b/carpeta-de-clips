@@ -52,13 +52,21 @@ function configuredMediaBaseUrl(): string | null {
   return trimmed
 }
 
+/** Team-inbox keys stay off the public media host. */
+function isInboxObjectKey(objectKey: string): boolean {
+  const slashIndex = objectKey.indexOf('/')
+  const firstSegment =
+    slashIndex === -1 ? objectKey : objectKey.slice(0, slashIndex)
+  return firstSegment.toLowerCase() === 'inbox'
+}
+
 function objectKeyPath(objectKey: string | null | undefined): string | null {
   if (objectKey == null) {
     return null
   }
 
   const trimmed = objectKey.trim().replace(LEADING_SLASHES, '')
-  if (trimmed.length === 0) {
+  if (trimmed.length === 0 || isInboxObjectKey(trimmed)) {
     return null
   }
 
@@ -75,9 +83,10 @@ function objectKeyPath(objectKey: string | null | undefined): string | null {
 }
 
 /**
- * Builds a public URL for any object in `carpeta-clips` when
- * `NEXT_PUBLIC_MEDIA_BASE_URL` is configured. Does not check clip visibility;
- * callers gate restricted media themselves.
+ * Builds a public URL for an object in `carpeta-clips` when
+ * `NEXT_PUBLIC_MEDIA_BASE_URL` is configured. Keys under `inbox/` return null.
+ * Does not check clip visibility; callers gate restricted media themselves.
+ * This guard cannot unpublish objects already stored in the public bucket.
  */
 export function publicMediaObjectUrl(
   objectKey: string | null | undefined,

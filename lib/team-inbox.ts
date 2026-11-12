@@ -129,10 +129,11 @@ const PATH_SEPARATOR = /[/\\]/
 const NON_SLUG_CHARACTERS = /[^a-z0-9]+/g
 const LEADING_OR_TRAILING_HYPHENS = /^-+|-+$/g
 const TRAILING_HYPHENS = /-+$/g
-const NON_ALNUM_CHARACTERS = /[^a-z0-9]/g
 const WHITESPACE = /\s/
 const WHITESPACE_RUN = /\s+/g
-const INBOX_PREFIX_PATTERN = /^inbox\/\d{4}-\d{2}-\d{2}-[a-z0-9-]{1,48}-[a-z0-9]{4,8}\/$/
+const INBOX_OBJECT_SUFFIX_PATTERN = /^[a-f0-9]{32}$/
+const INBOX_PREFIX_PATTERN =
+  /^inbox\/\d{4}-\d{2}-\d{2}-[a-z0-9-]{1,48}-[a-f0-9]{32}\/$/
 const PART_ETAG_PATTERN = /^"?[A-Fa-f0-9]{16,64}"?$/
 const MULTIPART_ETAG_PATTERN = /^"?[A-Fa-f0-9]{16,64}-\d{1,5}"?$/
 
@@ -233,16 +234,31 @@ export function inboxTeamSlug(teamName: string): string {
   return slug.length > 0 ? slug : 'equipo'
 }
 
+/** 16 bytes from `crypto.getRandomValues` is 128 bits. Hex keeps the key in the prefix charset. */
+export const INBOX_OBJECT_SUFFIX_BYTES = 16
+
+export function createInboxObjectSuffix(): string {
+  const bytes = new Uint8Array(INBOX_OBJECT_SUFFIX_BYTES)
+  crypto.getRandomValues(bytes)
+  let suffix = ''
+  for (const byte of bytes) {
+    suffix += byte.toString(16).padStart(2, '0')
+  }
+  return suffix
+}
+
 export function buildInboxObjectPrefix(
   teamName: string,
   now: Date,
   suffix: string,
 ): string {
-  const safeSuffix = suffix.toLowerCase().replace(NON_ALNUM_CHARACTERS, '').slice(0, 8)
-  if (safeSuffix.length < 4) {
-    throw new Error('Inbox suffix is too short.')
+  const normalizedSuffix = suffix.toLowerCase()
+  if (!INBOX_OBJECT_SUFFIX_PATTERN.test(normalizedSuffix)) {
+    throw new Error(
+      'Inbox suffix must be 32 hex characters from a 128-bit random value.',
+    )
   }
-  return `inbox/${inboxCalendarDate(now)}-${inboxTeamSlug(teamName)}-${safeSuffix}/`
+  return `inbox/${inboxCalendarDate(now)}-${inboxTeamSlug(teamName)}-${normalizedSuffix}/`
 }
 
 export function isSafeInboxObjectKey(objectKey: string, objectPrefix: string): boolean {

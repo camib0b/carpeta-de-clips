@@ -26,16 +26,24 @@
     {
       "binding": "MEDIA",
       "bucket_name": "carpeta-clips"
-    }
+    },
     // Playback URLs still come only from mediaUrl() in lib/media-url.ts.
     // NEXT_PUBLIC_MEDIA_BASE_URL is inlined by `next build` from
     // `.env.production` (https://media.carpeta.cl). A `vars` entry here would
     // only exist on the Worker at runtime, after that inlining, so it does not
     // set the player URL. Restricted clips return null until a gated URL exists.
-    // MEDIA writes the private-team inbox under inbox/<date>-<team>-<suffix>/.
-    // It is not remote, so local dev does not upload into production.
-    // media.carpeta.cl is a public custom domain: inbox objects are readable
-    // at that host until a rule blocks the inbox/ prefix.
+    // MEDIA is the public clip bucket behind media.carpeta.cl. It is not
+    // remote, so local dev does not upload into production. Team-inbox
+    // objects do not belong in this bucket.
+    {
+      "binding": "INBOX",
+      "bucket_name": "carpeta-inbox"
+    }
+    // Private team-inbox videos, including multipart uploads. R2 buckets are
+    // private until a custom domain or r2.dev public URL is enabled. Create
+    // carpeta-inbox before deploying this Worker, and leave both of those off.
+    // Do not attach media.carpeta.cl. remote stays unset so local dev writes
+    // to local storage instead of production.
   ],
   "d1_databases": [
     {

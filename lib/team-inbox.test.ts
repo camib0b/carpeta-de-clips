@@ -22,6 +22,7 @@ import {
   TEAM_NAME_MAX_LENGTH,
   UPLOAD_PART_BYTES,
   buildInboxObjectPrefix,
+  createInboxObjectSuffix,
   clampDisplayedFileName,
   expectedUploadPartSize,
   formatByteSize,
@@ -29,6 +30,7 @@ import {
   formatSelectedFileSummary,
   inboxCalendarDate,
   inboxObjectFileName,
+  isSafeInboxPrefix,
   teamInboxClientAddress,
   teamInboxMessages,
   uploadPartCount,
@@ -54,19 +56,50 @@ function submission(overrides: {
   })
 }
 
-test('inbox prefix uses the Santiago calendar date and a slug', () => {
+test('inbox prefix uses the Santiago calendar date, a slug, and a 128-bit suffix', () => {
   const previousEvening = inboxCalendarDate(new Date('2026-06-15T02:00:00.000Z'))
   const sameDay = inboxCalendarDate(new Date('2026-06-15T18:00:00.000Z'))
   assert.equal(previousEvening, '2026-06-14')
   assert.equal(sameDay, '2026-06-15')
 
-  const prefix = buildInboxObjectPrefix(
-    'Universidad Católica',
-    new Date('2026-06-15T18:00:00.000Z'),
-    'ab12cd34',
+  const suffix = 'ab'.repeat(16)
+  const when = new Date('2026-06-15T18:00:00.000Z')
+  const prefix = buildInboxObjectPrefix('Universidad Católica', when, suffix)
+  assert.equal(prefix, `inbox/2026-06-15-universidad-catolica-${suffix}/`)
+  assert.equal(isSafeInboxPrefix(prefix), true)
+  assert.equal(
+    buildInboxObjectPrefix('王秀英', when, suffix.toUpperCase()),
+    `inbox/2026-06-15-equipo-${suffix}/`,
   )
-  assert.equal(prefix, 'inbox/2026-06-15-universidad-catolica-ab12cd34/')
-  assert.equal(buildInboxObjectPrefix('王秀英', new Date('2026-06-15T18:00:00.000Z'), 'abcd'), 'inbox/2026-06-15-equipo-abcd/')
+  assert.equal(
+    isSafeInboxPrefix(
+      buildInboxObjectPrefix('a'.repeat(80), when, suffix),
+    ),
+    true,
+  )
+  assert.throws(
+    () => buildInboxObjectPrefix('Universidad Católica', when, 'ab12cd34'),
+    /128-bit/,
+  )
+})
+
+test('inbox suffix reads 16 bytes from crypto.getRandomValues', () => {
+  const cryptoApi = globalThis.crypto
+  const original = cryptoApi.getRandomValues.bind(cryptoApi)
+  const seenLengths: number[] = []
+  cryptoApi.getRandomValues = (<T extends ArrayBufferView | null>(array: T): T => {
+    if (array instanceof Uint8Array) {
+      seenLengths.push(array.byteLength)
+      array.fill(0x0f)
+    }
+    return array
+  }) as typeof cryptoApi.getRandomValues
+  try {
+    assert.equal(createInboxObjectSuffix(), '0f'.repeat(16))
+    assert.deepEqual(seenLengths, [16])
+  } finally {
+    cryptoApi.getRandomValues = original as typeof cryptoApi.getRandomValues
+  }
 })
 
 test('validation accepts a link, a video, or both, and rejects the empty form', () => {
