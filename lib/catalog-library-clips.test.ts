@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import { DatabaseSync } from 'node:sqlite'
 import test from 'node:test'
 
-import { loadTeamLibraryClipsFromDatabase } from './catalog'
+import { LIBRARY_CLIP_INSTANCES_SQL, loadTeamLibraryClipsFromDatabase } from './catalog'
+
+const D1_MAX_BOUND_PARAMETERS = 100
 
 type QueryKind = 'team' | 'clips' | 'instances' | 'drawings' | 'other'
 
@@ -123,9 +125,10 @@ function seedLibrary(database: DatabaseSync): void {
 function asCatalogDatabase(
   database: DatabaseSync,
   failingKinds: ReadonlySet<QueryKind> = new Set(),
-): { database: D1Database; overlaps: Set<string> } {
+): { database: D1Database; overlaps: Set<string>; boundParameterCounts: number[] } {
   const inFlight = new Set<QueryKind>()
   const overlaps = new Set<string>()
+  const boundParameterCounts: number[] = []
 
   function enter(kind: QueryKind): void {
     inFlight.add(kind)
@@ -145,11 +148,17 @@ function asCatalogDatabase(
       const kind = queryKind(sql)
       return {
         bind(...parameters: unknown[]) {
+          boundParameterCounts.push(parameters.length)
           return {
             async all() {
               enter(kind)
               try {
                 await delay(25)
+                if (parameters.length > D1_MAX_BOUND_PARAMETERS) {
+                  throw new Error(
+                    `D1 allows at most ${D1_MAX_BOUND_PARAMETERS} bound parameters per query`,
+                  )
+                }
                 if (failingKinds.has(kind)) {
                   throw new Error(`forced ${kind} failure`)
                 }
@@ -163,6 +172,11 @@ function asCatalogDatabase(
               enter(kind)
               try {
                 await delay(25)
+                if (parameters.length > D1_MAX_BOUND_PARAMETERS) {
+                  throw new Error(
+                    `D1 allows at most ${D1_MAX_BOUND_PARAMETERS} bound parameters per query`,
+                  )
+                }
                 if (failingKinds.has(kind)) {
                   throw new Error(`forced ${kind} failure`)
                 }
@@ -177,7 +191,7 @@ function asCatalogDatabase(
     },
   }
 
-  return { database: catalog as unknown as D1Database, overlaps }
+  return { database: catalog as unknown as D1Database, overlaps, boundParameterCounts }
 }
 
 test('library clips load the team row with the clip rows, then plays with drawings', async () => {
@@ -250,3 +264,147 @@ test('a clip query failure for a real library still rejects', async () => {
     /forced clips failure/,
   )
 })
+
+test('play segments load for a library with more than 100 clips', async () => {
+  const sqlite = createSqliteCatalog()
+  const clipIds = seedLargeLibrary(sqlite)
+  const previousPlaceholders = clipIds.map(() => '?').join(', ')
+  const previousRows = sqlite
+    .prepare(
+      `SELECT
+         clip_id,
+         ord,
+         offset_s,
+         duration_s,
+         quarter,
+         score_label,
+         xml_instance_id
+       FROM clip_instances
+       WHERE clip_id IN (${previousPlaceholders})
+       ORDER BY clip_id ASC, ord ASC`,
+    )
+    .all(...clipIds)
+  const libraryRows = sqlite.prepare(LIBRARY_CLIP_INSTANCES_SQL).all('bulk')
+
+  assert.equal(clipIds.length, 250)
+  assert.deepEqual(libraryRows, previousRows)
+  assert.equal(
+    libraryRows.some((row) => (row as { clip_id: number }).clip_id === 1000),
+    false,
+  )
+
+  const { database, boundParameterCounts } = asCatalogDatabase(sqlite)
+  const clips = await loadTeamLibraryClipsFromDatabase(database, 'bulk')
+
+  assert.equal(clips.length, 250)
+  assert.ok(boundParameterCounts.length > 0)
+  assert.ok(
+    boundParameterCounts.every((count) => count <= D1_MAX_BOUND_PARAMETERS),
+  )
+
+  for (const clip of clips) {
+    const clipId = Number(clip.id)
+    if (clipId === 7) {
+      assert.equal(clip.instances, undefined)
+      assert.equal(clip.hasDrawings, undefined)
+      continue
+    }
+
+    assert.equal(clip.instances?.[0]?.ord, 1)
+    assert.equal(clip.instances?.[0]?.offsetS, clipId)
+    assert.equal(clip.instances?.[0]?.quarter, '1T')
+    if (clipId === 250) {
+      assert.deepEqual(
+        clip.instances?.map((instance) => instance.ord),
+        [1, 2],
+      )
+      assert.equal(clip.instances?.[1]?.offsetS, 20)
+      assert.equal(clip.instances?.[1]?.scoreLabel, '2-2')
+    } else {
+      assert.equal(clip.instances?.length, 1)
+    }
+  }
+
+  assert.equal(clips.find((clip) => clip.id === '4')?.hasDrawings, true)
+  assert.equal(clips.find((clip) => clip.id === '5')?.hasDrawings, undefined)
+  assert.equal(
+    clips.some((clip) => clip.id === '1000'),
+    false,
+  )
+})
+
+function seedLargeLibrary(database: DatabaseSync): number[] {
+  database
+    .prepare(
+      `INSERT INTO libraries (id, name, sort_order)
+       VALUES ('bulk', 'Bulk', 1), ('other', 'Other', 2)`,
+    )
+    .run()
+  database
+    .prepare(
+      `INSERT INTO matches (
+         id, played_on, home_team, away_team, home_goals, away_goals,
+         library_id, rival_label
+       ) VALUES
+         ('bulk-a', '2026-06-01', 'Bulk', 'Other', 1, 0, 'bulk', 'Other'),
+         ('bulk-b', '2026-06-08', 'Other', 'Bulk', 0, 1, 'bulk', 'Other'),
+         ('other-match', '2026-06-01', 'Other', 'Bulk', 3, 1, 'other', 'Bulk')`,
+    )
+    .run()
+
+  const insertClip = database.prepare(
+    `INSERT INTO clips (id, youtube_id, match_id, title, game_concept, uploaded_at, visibility)
+     VALUES (?, ?, ?, ?, 'Goles', ?, 'public')`,
+  )
+  const insertInstance = database.prepare(
+    `INSERT INTO clip_instances (
+       clip_id, ord, offset_s, duration_s, quarter, score_label, xml_instance_id
+     ) VALUES (?, ?, ?, 5, ?, ?, ?)`,
+  )
+  const clipIds: number[] = []
+  for (let clipId = 1; clipId <= 250; clipId += 1) {
+    clipIds.push(clipId)
+    const matchId = clipId <= 200 ? 'bulk-a' : 'bulk-b'
+    insertClip.run(
+      clipId,
+      `bulk-${clipId}`,
+      matchId,
+      `Play ${clipId}`,
+      `2026-06-01T00:00:${String(clipId).padStart(3, '0')}Z`,
+    )
+    if (clipId === 7) continue
+    if (clipId === 250) {
+      insertInstance.run(clipId, 2, 20, '2T', '2-2', 2502)
+      insertInstance.run(clipId, 1, clipId, '1T', '1-1', 2501)
+      continue
+    }
+    insertInstance.run(clipId, 1, clipId, '1T', '0-0', clipId * 10)
+  }
+
+  insertClip.run(1000, 'other-1000', 'other-match', 'Other play', '2026-01-01T00:00:00Z')
+  insertInstance.run(1000, 1, 999, '1T', '3-1', 10000)
+  database
+    .prepare(
+      `INSERT INTO clip_drawings (id, play_id, owner_id, strokes_json, created_at, updated_at)
+       VALUES
+         (
+           'bulk-mark',
+           'clip:4:play:1',
+           NULL,
+           '{"version":1,"strokes":[{"points":[{"x":0.1,"y":0.2}]}]}',
+           '2026-06-01T00:00:00Z',
+           '2026-06-01T00:00:00Z'
+         ),
+         (
+           'other-mark',
+           'clip:1000:play:1',
+           NULL,
+           '{"version":1,"strokes":[{"points":[{"x":0.3,"y":0.4}]}]}',
+           '2026-06-01T00:00:00Z',
+           '2026-06-01T00:00:00Z'
+         )`,
+    )
+    .run()
+
+  return clipIds
+}
