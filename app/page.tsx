@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 import nextDynamic from 'next/dynamic'
 import Link from 'next/link'
-import Image from 'next/image'
 import { CurtainReveal } from '@/components/curtain-reveal-client'
 import {
   LatestUploadedMatchSection,
@@ -16,10 +15,7 @@ import {
 import { getLatestUploadedMatch, listTeamLibrariesWithClipCounts } from '@/lib/clip-catalog'
 import type { TeamLibraryWithClipCount } from '@/lib/catalog'
 import { landingEntranceStyle } from '@/lib/landing-entrance'
-import {
-  landingFolderUsesFehochMark,
-  landingTeamRowLabel,
-} from '@/lib/landing-team-row-label'
+import { landingTeamRowLabel } from '@/lib/landing-team-row-label'
 import type { LatestUploadedMatch } from '@/lib/latest-uploaded-match'
 import { isPrivateTeamOfferReady } from '@/lib/private-team-offer'
 import { siteName } from '@/lib/site-metadata'
@@ -396,19 +392,7 @@ export default async function HomePage({
                       className="press tap-reset duration-color group flex min-w-0 w-full cursor-pointer items-center justify-between gap-3 py-6 outline-none hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-state focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                       <div className="flex min-w-0 items-center gap-4">
-                        {landingFolderUsesFehochMark(team) ? (
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white">
-                            <Image
-                              src="/teams/fehoch.webp"
-                              alt="FEHOCH"
-                              width={64}
-                              height={64}
-                              className="h-7 w-7"
-                            />
-                          </span>
-                        ) : (
-                          <TeamIcon slug={team.slug} name={team.name} size="sm" />
-                        )}
+                        <TeamIcon team={team} size="sm" />
                         <span
                           dir="auto"
                           className="min-w-0 wrap-anywhere text-base font-medium text-foreground"

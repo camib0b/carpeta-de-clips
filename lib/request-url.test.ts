@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { hrefWithSearchParam, searchParamsFromAbsoluteUrl } from './request-url'
+import {
+  hrefWithSearchParam,
+  pathnameFromAbsoluteUrl,
+  searchParamsFromAbsoluteUrl,
+} from './request-url'
 
 const ABSOLUTE_URLS = [
   'https://carpeta.cl/',
@@ -82,4 +86,32 @@ test('hrefWithSearchParam matches a URL search mutation of location parts', () =
     )
     assert.equal(actual, expected, href)
   }
+})
+
+test('pathnameFromAbsoluteUrl matches URL.pathname for serialized request URLs', () => {
+  for (const url of ABSOLUTE_URLS) {
+    assert.equal(pathnameFromAbsoluteUrl(url), new URL(url).pathname, url)
+  }
+
+  assert.equal(pathnameFromAbsoluteUrl('https://carpeta.cl'), '/')
+  assert.equal(pathnameFromAbsoluteUrl('https://carpeta.cl/'), '/')
+
+  const unnormalized = [
+    'https://carpeta.cl/foo/../bar',
+    'https://carpeta.cl/foo/./bar',
+    'https://carpeta.cl/foo\\bar',
+    'https://carpeta.cl/ü?clip=1',
+    'https://user:pass@[::1]:8443/a/b?x=1#h',
+  ]
+  for (const url of unnormalized) {
+    const serialized = new URL(url).href
+    assert.equal(
+      pathnameFromAbsoluteUrl(serialized),
+      new URL(serialized).pathname,
+      serialized,
+    )
+  }
+
+  assert.equal(pathnameFromAbsoluteUrl('https://carpeta.cl/foo/../bar'), '/foo/../bar')
+  assert.equal(new URL('https://carpeta.cl/foo/../bar').pathname, '/bar')
 })

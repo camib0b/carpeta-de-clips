@@ -18,8 +18,10 @@ type LandingFolder = {
   slug?: string
 }
 
+const WHITESPACE_RUN = /\s+/g
+
 function tournamentKey(name: string): string {
-  return name.trim().replace(/\s+/g, ' ').toLowerCase()
+  return name.trim().replace(WHITESPACE_RUN, ' ').toLowerCase()
 }
 
 function fehochTournamentLabel(name: string): string | null {

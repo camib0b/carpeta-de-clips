@@ -35,3 +35,35 @@ export function hrefWithSearchParam(
   const search = query.length === 0 ? '' : `?${query}`
   return `${location.pathname}${search}${location.hash}`
 }
+
+/**
+ * Path of an absolute URL string, without `new URL()`.
+ * `Request.url` is already serialized, so this matches `URL.pathname` for
+ * that form. A missing path (`https://host`) yields `/`.
+ * It does not normalize dot segments, backslashes, or raw non-ASCII.
+ * Those strings still need `URL` when the caller wants a parsed path.
+ */
+export function pathnameFromAbsoluteUrl(url: string): string {
+  const schemeSeparator = url.indexOf('://')
+  if (schemeSeparator === -1) {
+    return '/'
+  }
+
+  const pathStart = url.indexOf('/', schemeSeparator + 3)
+  if (pathStart === -1) {
+    return '/'
+  }
+
+  const queryStart = url.indexOf('?', pathStart)
+  const hashStart = url.indexOf('#', pathStart)
+  let pathEnd = url.length
+  if (queryStart !== -1) {
+    pathEnd = queryStart
+  }
+  if (hashStart !== -1 && hashStart < pathEnd) {
+    pathEnd = hashStart
+  }
+
+  const pathname = url.slice(pathStart, pathEnd)
+  return pathname.length === 0 ? '/' : pathname
+}

@@ -5,6 +5,7 @@ import { PLAYED_MATCHES_GROUPED_QUERY } from './played-matches'
 import {
   buildPlayedMatchCalendar,
   calendarToday,
+  parseCalendarDate,
   clipCountToIntensityLevel,
   columnFadeDelayMilliseconds,
   formatPlayedMatchTooltip,
@@ -16,6 +17,7 @@ import {
 } from './played-match-calendar'
 
 const NOW = new Date('2026-10-18T15:00:00.000Z')
+const GROUP_BY_CLAUSE = /GROUP BY/gi
 
 const TEAMS: PlayedMatchCalendarTeam[] = [
   { slug: 'uc-sub-16-a', name: 'UC Sub-16 A' },
@@ -60,6 +62,18 @@ test('Nuevo follows the upload clock, not how recently the match was played', ()
   assert.equal(isUploadWithinLastSevenDays(uploadedJustOverSevenDaysAgo, now), false)
   assert.equal(isUploadWithinLastSevenDays('2026-10-17T15:00:00.000Z', now), true)
   assert.equal(isUploadWithinLastSevenDays(null, now), false)
+})
+
+test('parseCalendarDate keeps a calendar prefix and rejects impossible days', () => {
+  assert.equal(parseCalendarDate('2026-10-12')?.toISOString(), '2026-10-12T00:00:00.000Z')
+  assert.equal(
+    parseCalendarDate('2026-10-12T15:00:00.000Z')?.toISOString(),
+    '2026-10-12T00:00:00.000Z',
+  )
+  assert.equal(parseCalendarDate('2026-02-31'), null)
+  assert.equal(parseCalendarDate('2026-13-01'), null)
+  assert.equal(parseCalendarDate('not-a-date'), null)
+  assert.equal(parseCalendarDate(''), null)
 })
 
 test('calendarToday uses the Santiago calendar date', () => {
@@ -214,7 +228,7 @@ test('the grouped match query is a single aggregation', () => {
   assert.match(PLAYED_MATCHES_GROUPED_QUERY, /COUNT\(c\.id\) AS clip_count/)
   assert.match(PLAYED_MATCHES_GROUPED_QUERY, /MIN\(c\.uploaded_at\) AS first_uploaded/)
   assert.match(PLAYED_MATCHES_GROUPED_QUERY, /GROUP BY m\.id/)
-  assert.equal(PLAYED_MATCHES_GROUPED_QUERY.match(/GROUP BY/gi)?.length, 1)
+  assert.equal(PLAYED_MATCHES_GROUPED_QUERY.match(GROUP_BY_CLAUSE)?.length, 1)
   assert.doesNotMatch(PLAYED_MATCHES_GROUPED_QUERY, /ALTER|CREATE TABLE/i)
 })
 
