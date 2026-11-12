@@ -299,8 +299,10 @@ export const TEAM_LIBRARY_CLIPS_SQL = `${CLIP_JOIN_SELECT}
 /**
  * Team row, clip rows, play segments, and drawing hints for one library.
  * The team lookup and the clip query do not use each other's results.
- * Play segments and drawing hints are filtered by this library in SQL, then
- * run together. Each read still degrades on its own if its table is missing.
+ * Play segments are read for this library in one statement, so the read does
+ * not bind one parameter per clip. Drawing hints still match these clip ids
+ * after a public-drawing read. Those reads run together. Each read still
+ * degrades on its own if its table is missing.
  * An unknown library returns [] and does not surface a clip-query failure.
  */
 export async function loadTeamLibraryClipsFromDatabase(
@@ -335,7 +337,6 @@ export async function loadTeamLibraryClipsFromDatabase(
     fetchClipInstancesForLibrary(database, teamSlug),
     listClipIdsWithPublicDrawings(
       database,
-      teamSlug,
       clips.map((clip) => clip.id),
     ),
   ])

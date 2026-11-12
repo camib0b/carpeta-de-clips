@@ -81,38 +81,14 @@ export async function resolveAuthor(_request: Request): Promise<string | null> {
 /**
  * Public version-1 drawings that contain at least one stroke.
  * `?` binds `DRAWING_DOCUMENT_VERSION`. Owner rows are not included.
- * `owner_id` and `strokes_json` are unqualified so this predicate can be
- * composed onto `clip_drawings` without renaming those columns.
  */
 const PUBLIC_NONEMPTY_DRAWING_PREDICATE = `owner_id IS NULL
   AND json_extract(strokes_json, '$.version') = ?
   AND json_array_length(json_extract(strokes_json, '$.strokes')) > 0`
 
-/**
- * Every public non-empty drawing in the database.
- * Library pages use `LIBRARY_PUBLIC_NONEMPTY_DRAWING_PLAY_IDS_SQL` instead.
- */
 export const PUBLIC_NONEMPTY_DRAWING_PLAY_IDS_SQL = `SELECT play_id
   FROM clip_drawings
   WHERE ${PUBLIC_NONEMPTY_DRAWING_PREDICATE}`
-
-/**
- * Public non-empty drawings for clips in one library.
- * Bind library id, then `DRAWING_DOCUMENT_VERSION`.
- *
- * Play ids look like `clip:130:play:1`. The lower bound is `clip:130:play:`
- * and the upper bound is `clip:130:play;`. `;` is the code point after `:`,
- * so a longer clip id that shares a leading number (40 beside 4, 1300 beside
- * 130) sorts outside the range.
- */
-export const LIBRARY_PUBLIC_NONEMPTY_DRAWING_PLAY_IDS_SQL = `SELECT clip_drawings.play_id
-  FROM matches
-  INNER JOIN clips ON clips.match_id = matches.id
-  INNER JOIN clip_drawings
-    ON clip_drawings.play_id >= ('clip:' || clips.id || ':play:')
-   AND clip_drawings.play_id < ('clip:' || clips.id || ':play;')
-  WHERE matches.library_id = ?
-    AND ${PUBLIC_NONEMPTY_DRAWING_PREDICATE}`
 
 /**
  * Clip ids from `clipIds` that own one of `playIds`.
@@ -199,15 +175,12 @@ export async function listPlayOrdsWithDrawings(
 }
 
 /**
- * Clip ids in `clipIds` that have a non-empty public drawing on a clip in
- * `libraryId`. The database reads that library's drawings, then the same play-id
- * parse as before decides which of `clipIds` match.
+ * Clip ids in `clipIds` that have a non-empty public drawing.
  * Does not return stroke payloads. A failed read returns an empty set so the
  * library grid still renders, without the drawing hint.
  */
 export async function listClipIdsWithPublicDrawings(
   database: D1Database,
-  libraryId: string,
   clipIds: readonly string[],
 ): Promise<Set<string>> {
   if (!clipIds.some((clipId) => parseClipId(clipId))) {
@@ -216,8 +189,8 @@ export async function listClipIdsWithPublicDrawings(
 
   try {
     const result = await database
-      .prepare(LIBRARY_PUBLIC_NONEMPTY_DRAWING_PLAY_IDS_SQL)
-      .bind(libraryId, DRAWING_DOCUMENT_VERSION)
+      .prepare(PUBLIC_NONEMPTY_DRAWING_PLAY_IDS_SQL)
+      .bind(DRAWING_DOCUMENT_VERSION)
       .all<{ play_id: string }>()
     const playIds = (result.results ?? []).map((row) => row.play_id)
     return clipIdsFromDrawingPlayIds(playIds, clipIds)
