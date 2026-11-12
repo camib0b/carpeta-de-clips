@@ -448,6 +448,27 @@
 }
 
 /*
+  Focus rings are box-shadows. Leave box-shadow out of this transition so the
+  ring is fully painted on the first focused frame. Interpolating it from the
+  resting shadow starts at a transparent 0 spread, which is what Tab was seeing
+  on team rows, filter chips, and clip cards. The hover lift still transitions
+  box-shadow from the rule above.
+*/
+.press.duration-color:focus-visible {
+  transition:
+    color var(--duration-color) var(--color-ease),
+    background-color var(--duration-color) var(--color-ease),
+    border-color var(--duration-color) var(--color-ease),
+    outline-color var(--duration-color) var(--color-ease),
+    text-decoration-color var(--duration-color) var(--color-ease),
+    fill var(--duration-color) var(--color-ease),
+    stroke var(--duration-color) var(--color-ease),
+    opacity var(--duration-color) var(--color-ease),
+    translate var(--duration-press) var(--ease-out-strong),
+    transform var(--duration-press) var(--ease-out-strong);
+}
+
+/*
   `.link-underline` is display:inline-block and unlayered, which would drop
   the team-home row's inline-flex. Keep the icon and label on one line.
 */
@@ -553,5 +574,14 @@ a[data-team-library-home].link-underline {
   .skeleton-mark::after {
     animation: none !important;
     content: none;
+  }
+
+  /*
+    The universal reduced-motion rule puts box-shadow back onto every
+    transition. Focused press controls drop it again so the ring stays instant.
+  */
+  .press.duration-color:focus-visible {
+    transition-property: opacity, color, background-color, border-color, outline-color,
+      text-decoration-color, fill, stroke, visibility !important;
   }
 }

@@ -104,6 +104,8 @@ test('cards, banners, and the latest-upload row wrap instead of overflowing', ()
   const latest = source('components/latest-uploaded-match-section.tsx')
 
   assert.match(card, /line-clamp-2 wrap-anywhere/)
+  assert.match(card, /<h2/)
+  assert.equal(card.includes('<h3'), false)
   assert.match(card, /title=\{video\.title\}/)
   assert.match(card, /ClipThumbnailVisual/)
   assert.match(card, /thumbKey=\{video\.thumbKey\}/)
