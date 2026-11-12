@@ -51,14 +51,28 @@ export type TeamInboxUploadPlan = {
   }[]
 }
 
-async function getMediaBucket(): Promise<R2Bucket> {
-  const { env } = await getCloudflareContext({ async: true })
-  if (!env.MEDIA) {
+type TeamInboxBucketEnv = {
+  TEAM_INBOX?: R2Bucket
+}
+
+/**
+ * Private bucket for team-inbox objects. Published clips stay on MEDIA.
+ * There is no admin reader. A future review page must use an authenticated
+ * Worker route or a short-lived signed URL, never media.carpeta.cl.
+ */
+export function teamInboxBucketFromEnv(env: TeamInboxBucketEnv): R2Bucket {
+  const bucket = env.TEAM_INBOX
+  if (!bucket) {
     throw new Error(
-      'R2 binding MEDIA is missing. Add it to wrangler.jsonc for the carpeta-clips bucket.',
+      'R2 binding TEAM_INBOX is missing. Add a private bucket named carpeta-inbox with no custom domain and no public r2.dev URL in wrangler.jsonc.',
     )
   }
-  return env.MEDIA
+  return bucket
+}
+
+async function getTeamInboxBucket(): Promise<R2Bucket> {
+  const { env } = await getCloudflareContext({ async: true })
+  return teamInboxBucketFromEnv(env)
 }
 
 async function assertWithinRateLimit(
@@ -314,7 +328,7 @@ export async function createTeamInboxSubmission(
     now,
     submissionId.replace(SUBMISSION_ID_HYPHENS, '').slice(0, 8),
   )
-  const bucket = await getMediaBucket()
+  const bucket = await getTeamInboxBucket()
   let storedFiles: StoredInboxFile[] = []
   try {
     storedFiles = await openInboxMultipartUploads(bucket, objectPrefix, submission.files)
@@ -372,7 +386,7 @@ export async function uploadTeamInboxPart(
     throw new TeamInboxRequestError(teamInboxMessages.partInvalid, 400)
   }
 
-  const bucket = await getMediaBucket()
+  const bucket = await getTeamInboxBucket()
   const upload = bucket.resumeMultipartUpload(storedFile.objectKey, storedFile.uploadId)
   const uploadedPart = await upload.uploadPart(partNumber, request.body)
   return {
@@ -426,7 +440,7 @@ export async function completeTeamInboxSubmission(
     throw new TeamInboxRequestError(teamInboxMessages.partInvalid, 400)
   }
 
-  const bucket = await getMediaBucket()
+  const bucket = await getTeamInboxBucket()
   for (const storedFile of storedFiles) {
     if (storedFile.completed) {
       continue
@@ -473,7 +487,7 @@ export async function abortTeamInboxSubmission(
     return
   }
   const storedFiles = readStoredFiles(row)
-  const bucket = await getMediaBucket()
+  const bucket = await getTeamInboxBucket()
   await abortMultipartUploads(bucket, storedFiles, row.object_prefix)
   await saveManifest(database, row.id, storedFiles, 'abandoned')
 }

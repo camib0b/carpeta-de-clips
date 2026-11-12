@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
-import { mediaUrl } from './media-url'
+import { mediaUrl, publicMediaObjectUrl } from './media-url'
 
 const ORIGINAL_MEDIA_BASE_URL = process.env.NEXT_PUBLIC_MEDIA_BASE_URL
 
@@ -103,6 +103,36 @@ describe('mediaUrl', () => {
 
     process.env.NEXT_PUBLIC_MEDIA_BASE_URL = 'not a url'
     assert.equal(mediaUrl({ r2Key: 'full.mp4', visibility: 'public' }), null)
+  })
+
+  it('does not publish team-inbox keys on the public media host', () => {
+    assert.equal(
+      publicMediaObjectUrl('inbox/2026-06-15-equipo-abcd/partido.mp4'),
+      null,
+    )
+    assert.equal(
+      mediaUrl({ r2Key: 'inbox/secret.mp4', visibility: 'public' }),
+      null,
+    )
+    assert.equal(
+      mediaUrl({ r2Key: '/inbox/secret.mp4', visibility: 'public' }),
+      null,
+    )
+    assert.equal(
+      mediaUrl(
+        {
+          r2Key: 'matches/full.mp4',
+          r2KeyLow: 'inbox/low.mp4',
+          visibility: 'public',
+        },
+        { preferLow: true },
+      ),
+      'https://media.carpeta.cl/matches/full.mp4',
+    )
+    assert.equal(
+      mediaUrl({ r2Key: 'inbox.mp4', visibility: 'public' }),
+      'https://media.carpeta.cl/inbox.mp4',
+    )
   })
 
   it('strips a trailing slash on the base URL and rejects parent segments', () => {

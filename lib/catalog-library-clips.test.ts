@@ -2,9 +2,20 @@ import assert from 'node:assert/strict'
 import { DatabaseSync } from 'node:sqlite'
 import test from 'node:test'
 
-import { loadTeamLibraryClipsFromDatabase } from './catalog'
+import { CLIP_INSTANCES_FOR_LIBRARY_SQL, loadTeamLibraryClipsFromDatabase } from './catalog'
 
 type QueryKind = 'team' | 'clips' | 'instances' | 'drawings' | 'other'
+
+type PreparedQuery = {
+  kind: QueryKind
+  sql: string
+  parameterCount: number
+}
+
+/** D1 rejects a query with more bound parameters than this. */
+const D1_MAX_BOUND_PARAMETERS = 100
+
+const LIBRARY_OVER_PARAMETER_LIMIT = 101
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => {
@@ -123,9 +134,10 @@ function seedLibrary(database: DatabaseSync): void {
 function asCatalogDatabase(
   database: DatabaseSync,
   failingKinds: ReadonlySet<QueryKind> = new Set(),
-): { database: D1Database; overlaps: Set<string> } {
+): { database: D1Database; overlaps: Set<string>; preparedQueries: PreparedQuery[] } {
   const inFlight = new Set<QueryKind>()
   const overlaps = new Set<string>()
+  const preparedQueries: PreparedQuery[] = []
 
   function enter(kind: QueryKind): void {
     inFlight.add(kind)
@@ -145,11 +157,21 @@ function asCatalogDatabase(
       const kind = queryKind(sql)
       return {
         bind(...parameters: unknown[]) {
+          preparedQueries.push({
+            kind,
+            sql,
+            parameterCount: parameters.length,
+          })
           return {
             async all() {
               enter(kind)
               try {
                 await delay(25)
+                if (parameters.length > D1_MAX_BOUND_PARAMETERS) {
+                  throw new Error(
+                    `D1_ERROR: too many SQL variables (${parameters.length}). The maximum is ${D1_MAX_BOUND_PARAMETERS}.`,
+                  )
+                }
                 if (failingKinds.has(kind)) {
                   throw new Error(`forced ${kind} failure`)
                 }
@@ -163,6 +185,11 @@ function asCatalogDatabase(
               enter(kind)
               try {
                 await delay(25)
+                if (parameters.length > D1_MAX_BOUND_PARAMETERS) {
+                  throw new Error(
+                    `D1_ERROR: too many SQL variables (${parameters.length}). The maximum is ${D1_MAX_BOUND_PARAMETERS}.`,
+                  )
+                }
                 if (failingKinds.has(kind)) {
                   throw new Error(`forced ${kind} failure`)
                 }
@@ -177,7 +204,7 @@ function asCatalogDatabase(
     },
   }
 
-  return { database: catalog as unknown as D1Database, overlaps }
+  return { database: catalog as unknown as D1Database, overlaps, preparedQueries }
 }
 
 test('library clips load the team row with the clip rows, then plays with drawings', async () => {
@@ -238,6 +265,98 @@ test('an unknown library returns no clips even when the clip query fails', async
 
   assert.deepEqual(clips, [])
   assert.equal(overlaps.has('team+clips'), true)
+})
+
+function seedLibraryPastParameterLimit(database: DatabaseSync, clipCount: number): void {
+  database
+    .prepare(
+      `INSERT INTO libraries (id, name, sort_order) VALUES
+         ('big-library', 'Big Library', 1),
+         ('other-library', 'Other Library', 2)`,
+    )
+    .run()
+  database
+    .prepare(
+      `INSERT INTO matches (
+         id, played_on, home_team, away_team, home_goals, away_goals,
+         library_id, rival_label
+       ) VALUES
+         ('match-big', '2026-05-01', 'Big Library', 'Rival FC', 1, 0, 'big-library', 'Rival FC'),
+         ('match-other', '2026-05-01', 'Other Library', 'Rival FC', 0, 1, 'other-library', 'Rival FC')`,
+    )
+    .run()
+
+  const insertClip = database.prepare(
+    `INSERT INTO clips (id, youtube_id, match_id, title, game_concept, uploaded_at, visibility)
+     VALUES (?, ?, ?, ?, 'Goles', ?, 'public')`,
+  )
+  const insertInstance = database.prepare(
+    `INSERT INTO clip_instances (clip_id, ord, offset_s, duration_s, quarter, score_label, xml_instance_id)
+     VALUES (?, 1, ?, 6, '1T', '1-0', ?)`,
+  )
+  for (let clipId = 1; clipId <= clipCount; clipId += 1) {
+    const uploadedAt = new Date(Date.UTC(2026, 4, 2, 0, 0, clipId)).toISOString()
+    insertClip.run(clipId, `clip-${clipId}`, 'match-big', `Jugada ${clipId}`, uploadedAt)
+    insertInstance.run(clipId, clipId, clipId)
+  }
+
+  const otherClipId = clipCount + 1
+  insertClip.run(
+    otherClipId,
+    'clip-other',
+    'match-other',
+    'Jugada ajena',
+    '2026-05-04T00:00:00.000Z',
+  )
+  insertInstance.run(otherClipId, otherClipId, otherClipId)
+}
+
+test('a library with more than 100 clips still returns every play', async () => {
+  const sqlite = createSqliteCatalog()
+  seedLibraryPastParameterLimit(sqlite, LIBRARY_OVER_PARAMETER_LIMIT)
+  const { database, preparedQueries } = asCatalogDatabase(sqlite)
+
+  const clips = await loadTeamLibraryClipsFromDatabase(database, 'big-library')
+
+  assert.equal(clips.length, LIBRARY_OVER_PARAMETER_LIMIT)
+  for (const clip of clips) {
+    assert.equal(clip.instances?.length, 1)
+    assert.equal(clip.instances?.[0]?.ord, 1)
+    assert.equal(clip.instances?.[0]?.offsetS, Number(clip.id))
+    assert.equal(clip.instances?.[0]?.durationS, 6)
+  }
+  assert.equal(
+    clips.some((clip) => clip.id === String(LIBRARY_OVER_PARAMETER_LIMIT + 1)),
+    false,
+  )
+
+  const instanceQueries = preparedQueries.filter((query) => query.kind === 'instances')
+  assert.equal(instanceQueries.length, 1)
+  assert.equal(instanceQueries[0]?.parameterCount, 1)
+  assert.equal(instanceQueries[0]?.sql, CLIP_INSTANCES_FOR_LIBRARY_SQL)
+  assert.equal((CLIP_INSTANCES_FOR_LIBRARY_SQL.match(/\?/g) ?? []).length, 1)
+  assert.match(CLIP_INSTANCES_FOR_LIBRARY_SQL, /matches\.library_id = \?/)
+
+  const libraryRows = sqlite
+    .prepare(CLIP_INSTANCES_FOR_LIBRARY_SQL)
+    .all('big-library') as Array<Record<string, unknown>>
+  assert.equal(libraryRows.length, LIBRARY_OVER_PARAMETER_LIMIT)
+  assert.deepEqual(Object.keys(libraryRows[0] ?? {}).sort(), [
+    'clip_id',
+    'duration_s',
+    'offset_s',
+    'ord',
+    'quarter',
+    'score_label',
+    'xml_instance_id',
+  ])
+  const otherRows = sqlite
+    .prepare(CLIP_INSTANCES_FOR_LIBRARY_SQL)
+    .all('other-library') as Array<{ clip_id: number }>
+  assert.deepEqual(
+    otherRows.map((row) => row.clip_id),
+    [LIBRARY_OVER_PARAMETER_LIMIT + 1],
+  )
 })
 
 test('a clip query failure for a real library still rejects', async () => {

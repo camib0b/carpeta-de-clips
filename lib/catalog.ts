@@ -99,33 +99,40 @@ function clipInstanceRowToClipInstance(row: ClipInstanceRow): ClipInstance {
   }
 }
 
-async function fetchClipInstancesByClipIds(
+/**
+ * Plays for every clip in one library.
+ * One bound parameter: D1 allows at most 100 per query, and a library can
+ * hold more clips than that. Binding each clip id in `IN (?)` drops every
+ * play once the query throws.
+ */
+export const CLIP_INSTANCES_FOR_LIBRARY_SQL = `SELECT
+  clip_id,
+  ord,
+  offset_s,
+  duration_s,
+  quarter,
+  score_label,
+  xml_instance_id
+FROM clip_instances
+WHERE clip_id IN (
+  SELECT clips.id
+  FROM clips
+  INNER JOIN matches ON matches.id = clips.match_id
+  WHERE matches.library_id = ?
+)
+ORDER BY clip_id ASC, ord ASC`
+
+async function fetchClipInstancesForLibrary(
   database: D1Database,
-  clipIds: number[],
+  libraryId: string,
 ): Promise<Map<number, ClipInstance[]>> {
   const instancesByClipId = new Map<number, ClipInstance[]>()
-  if (clipIds.length === 0) {
-    return instancesByClipId
-  }
 
-  const placeholders = clipIds.map(() => '?').join(', ')
   let rows: ClipInstanceRow[] = []
   try {
     const result = await database
-      .prepare(
-        `SELECT
-           clip_id,
-           ord,
-           offset_s,
-           duration_s,
-           quarter,
-           score_label,
-           xml_instance_id
-         FROM clip_instances
-         WHERE clip_id IN (${placeholders})
-         ORDER BY clip_id ASC, ord ASC`,
-      )
-      .bind(...clipIds)
+      .prepare(CLIP_INSTANCES_FOR_LIBRARY_SQL)
+      .bind(libraryId)
       .all<ClipInstanceRow>()
     rows = result.results ?? []
   } catch (error) {
@@ -293,8 +300,10 @@ export const TEAM_LIBRARY_CLIPS_SQL = `${CLIP_JOIN_SELECT}
 /**
  * Team row, clip rows, play segments, and drawing hints for one library.
  * The team lookup and the clip query do not use each other's results.
- * Play segments and drawing hints only need the clip ids, so those reads
- * run together. Each read still degrades on its own if its table is missing.
+ * Play segments are one query filtered by library id, so the bind list does
+ * not grow with the clip count. Drawing hints only need the clip ids. Those
+ * two reads run together. Each read still degrades on its own if its table
+ * is missing.
  * An unknown library returns [] and does not surface a clip-query failure.
  */
 export async function loadTeamLibraryClipsFromDatabase(
@@ -321,9 +330,10 @@ export async function loadTeamLibraryClipsFromDatabase(
 
   const result = await clipsQuery
   const clips = (result.results ?? []).map(clipJoinRowToVideoClip)
-  const clipIds = clips.map((clip) => Number(clip.id))
   const [instancesByClipId, clipIdsWithDrawings] = await Promise.all([
-    fetchClipInstancesByClipIds(database, clipIds),
+    clips.length === 0
+      ? Promise.resolve(new Map<number, ClipInstance[]>())
+      : fetchClipInstancesForLibrary(database, teamSlug),
     listClipIdsWithPublicDrawings(
       database,
       clips.map((clip) => clip.id),

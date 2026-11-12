@@ -5,6 +5,7 @@ import {
   TeamInboxRequestError,
   abortMultipartUploads,
   openInboxMultipartUploads,
+  teamInboxBucketFromEnv,
 } from './team-inbox.server'
 import { teamInboxMessages, type StoredInboxFile, type ValidTeamInboxFile } from './team-inbox'
 
@@ -127,6 +128,30 @@ function createFakeBucket(failCreateFor: (objectKey: string) => Promise<void> | 
     abortAttempts,
   }
 }
+
+test('inbox storage uses the private TEAM_INBOX binding and ignores MEDIA', () => {
+  const privateBucket = { binding: 'TEAM_INBOX' }
+  const publicBucket = { binding: 'MEDIA' }
+  const env = {
+    TEAM_INBOX: privateBucket as unknown as R2Bucket,
+    MEDIA: publicBucket as unknown as R2Bucket,
+  }
+
+  assert.equal(teamInboxBucketFromEnv(env), privateBucket)
+})
+
+test('inbox storage fails closed when the private binding is missing', () => {
+  const envWithPublicBucketOnly = {
+    MEDIA: {} as R2Bucket,
+    TEAM_INBOX: undefined,
+  }
+
+  assert.throws(
+    () => teamInboxBucketFromEnv(envWithPublicBucketOnly),
+    /R2 binding TEAM_INBOX is missing/,
+  )
+  assert.throws(() => teamInboxBucketFromEnv({}), /carpeta-inbox/)
+})
 
 test('multipart uploads open together and keep file order', async () => {
   const fakeBucket = createFakeBucket(() => undefined)
