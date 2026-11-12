@@ -30,7 +30,7 @@ export function TeamHeader({ team }: TeamHeaderProps) {
         </a>
 
         <div className="landing-enter flex min-w-0 items-center gap-4">
-          <TeamIcon slug={team.slug} name={team.name} size="lg" />
+          <TeamIcon team={team} size="lg" />
           <h1 className="min-w-0 wrap-anywhere text-2xl font-medium tracking-tight text-foreground">
             {landingTeamRowLabel(team)}
           </h1>

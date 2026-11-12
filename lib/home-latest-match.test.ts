@@ -68,8 +68,12 @@ test('the home page leads with the latest match, the audience, and no section ca
   assert.equal(privateFolder.includes('mb-28'), false)
   assert.match(latest, /formatPlayedOnCaption/)
   assert.match(latest, /cursor-pointer/)
-  assert.match(page, /\/teams\/fehoch\.webp/)
-  assert.match(page, /rounded-full bg-white/)
+  const teamIcon = readFileSync(path.join(repoRoot, 'components/team-icon.tsx'), 'utf8')
+  const teamIcons = readFileSync(path.join(repoRoot, 'lib/team-icons.ts'), 'utf8')
+  assert.match(page, /<TeamIcon/)
+  assert.match(teamIcons, /\/teams\/fehoch\.webp/)
+  assert.match(teamIcon, /rounded-full bg-white/)
+  assert.equal(page.includes('/teams/fehoch.webp'), false)
   assert.equal(page.includes('FehochPlaceholderMark'), false)
 
   const preview = readFileSync(
