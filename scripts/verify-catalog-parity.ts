@@ -14,6 +14,8 @@ type D1ExecuteResult = {
   results?: Array<Record<string, unknown>>
 }
 
+const JSON_VALUE_START = /[\[{]/
+
 function queryLocalD1(sql: string): Array<Record<string, unknown>> {
   const output = execFileSync(
     'pnpm',
@@ -31,7 +33,7 @@ function queryLocalD1(sql: string): Array<Record<string, unknown>> {
     { cwd: REPOSITORY_ROOT, encoding: 'utf8' },
   )
 
-  const jsonStart = output.search(/[\[{]/)
+  const jsonStart = output.search(JSON_VALUE_START)
   if (jsonStart < 0) {
     throw new Error(`wrangler d1 execute did not return JSON:\n${output}`)
   }

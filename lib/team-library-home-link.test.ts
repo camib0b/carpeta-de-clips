@@ -11,6 +11,7 @@ import {
 } from './team-library-home-link'
 
 const linkRectangle = { left: 24, top: 32, right: 180, bottom: 52 }
+const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g
 
 function pointer(overrides: Partial<TeamLibraryHomePointer> = {}): TeamLibraryHomePointer {
   return {
@@ -115,7 +116,7 @@ test('the team header is a document link to / and does not cancel that navigatio
     path.join(import.meta.dirname, '../components/team-header.tsx'),
     'utf8',
   )
-  const code = header.replace(/\/\*[\s\S]*?\*\//g, '')
+  const code = header.replace(BLOCK_COMMENT, '')
   assert.match(code, /<a\s/)
   assert.match(code, /href=\{TEAM_LIBRARY_HOME_HREF\}/)
   assert.match(code, /data-team-library-home/)

@@ -33,6 +33,9 @@ const MOBILE_CONTENT_PX = 360 - 48
 const CHIP_CHROME_PX = 16 + 14 + 8
 const LITERAL_DURATION =
   /duration-\[|duration-\d|ease-\[|cubic-bezier|\d+(?:\.\d+)?ms\b|\d+(?:\.\d+)?s\b/
+const WHITESPACE_SEPARATOR = /\s+/
+const CUSTOM_PROPERTY_DECLARATION = /--([a-z0-9-]+)\s*:\s*([^;]+);/g
+const HSL_COMPONENT_TEXT = /([\d.]+)\s+([\d.]+)%\s+([\d.]+)%/
 
 function source(relativePath: string): string {
   return readFileSync(path.join(repoRoot, relativePath), 'utf8')
@@ -43,7 +46,7 @@ function mergedGhostButton(className: string): string {
 }
 
 function classTokens(className: string): Set<string> {
-  return new Set(className.split(/\s+/).filter((token) => token.length > 0))
+  return new Set(className.split(WHITESPACE_SEPARATOR).filter((token) => token.length > 0))
 }
 
 test('idle counts use clip or clips, and a filtered sentence names the library total', () => {
@@ -223,7 +226,7 @@ type Hsl = [number, number, number]
 
 function customProperties(block: string): Map<string, string> {
   const properties = new Map<string, string>()
-  for (const match of block.matchAll(/--([a-z0-9-]+)\s*:\s*([^;]+);/g)) {
+  for (const match of block.matchAll(CUSTOM_PROPERTY_DECLARATION)) {
     properties.set(match[1], match[2].trim())
   }
   return properties
@@ -245,7 +248,7 @@ function bracedBlock(fileSource: string, startIndex: number): string {
 }
 
 function parseHsl(value: string): Hsl {
-  const match = value.match(/([\d.]+)\s+([\d.]+)%\s+([\d.]+)%/)
+  const match = value.match(HSL_COMPONENT_TEXT)
   assert.ok(match, value)
   return [Number(match[1]), Number(match[2]), Number(match[3])]
 }

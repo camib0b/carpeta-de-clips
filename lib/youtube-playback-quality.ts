@@ -3,6 +3,8 @@
  * Levels arrive unordered, and "auto" / "default" are not concrete sizes.
  */
 
+const HD_PIXEL_QUALITY = /^hd(\d+)$/
+
 const KNOWN_PLAYBACK_QUALITY_RANK = new Map<string, number>([
   ['highres', 0],
   ['hd2160', 1],
@@ -21,7 +23,7 @@ function playbackQualityRank(level: string): number | null {
     return knownRank
   }
 
-  const pixelMatch = /^hd(\d+)$/.exec(level)
+  const pixelMatch = HD_PIXEL_QUALITY.exec(level)
   if (!pixelMatch) {
     return null
   }

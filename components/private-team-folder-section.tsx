@@ -279,11 +279,13 @@ function measureTabIndicator(list: HTMLElement, tab: HTMLElement): TabIndicator 
   }
 }
 
+const UPLOAD_PROGRESS_PARTS = /parte (\d+) de (\d+)/
+
 function uploadProgressPercent(progressLabel: string | null): number | null {
   if (progressLabel == null) {
     return null
   }
-  const match = /parte (\d+) de (\d+)/.exec(progressLabel)
+  const match = UPLOAD_PROGRESS_PARTS.exec(progressLabel)
   if (match == null) {
     return null
   }

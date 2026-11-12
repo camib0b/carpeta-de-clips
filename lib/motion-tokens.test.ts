@@ -7,13 +7,18 @@ const repoRoot = path.resolve(import.meta.dirname, '..')
 
 const LITERAL_DURATION =
   /duration-\[|duration-\d|ease-\[|cubic-bezier|\d+(?:\.\d+)?ms\b|\d+(?:\.\d+)?s\b/g
+const MOTION_TOKEN_BLOCK = /\/\* motion-tokens:start[\s\S]*?motion-tokens:end \*\//g
+const CUSTOM_PROPERTY_ASSIGNMENT = /(--[A-Za-z0-9_-]+)\s*:\s*([^;]+);/g
+const CSS_VARIABLE_REFERENCE = /^var\((--[\w-]+)\)$/
+const KEYBOARD_SEEK_BADGE_KEYFRAMES = /@keyframes keyboard-seek-badge \{([\s\S]*?)\n\}/
+const PERCENT_STOP = /([\d.]+)%/g
 
 function source(relativePath: string): string {
   return readFileSync(path.join(repoRoot, relativePath), 'utf8')
 }
 
 function stripMotionTokenBlock(fileSource: string): string {
-  return fileSource.replace(/\/\* motion-tokens:start[\s\S]*?motion-tokens:end \*\//g, '')
+  return fileSource.replace(MOTION_TOKEN_BLOCK, '')
 }
 
 function filesUnder(directoryName: string): string[] {
@@ -36,13 +41,16 @@ function filesUnder(directoryName: string): string[] {
 }
 
 function customProperty(fileSource: string, name: string): string {
-  const match = fileSource.match(new RegExp(`${name}\\s*:\\s*([^;]+);`))
-  assert.ok(match, `missing ${name}`)
-  return match[1].trim()
+  for (const match of fileSource.matchAll(CUSTOM_PROPERTY_ASSIGNMENT)) {
+    if (match[1] === name) {
+      return match[2].trim()
+    }
+  }
+  assert.fail(`missing ${name}`)
 }
 
 function millisecondsFromToken(value: string, packageTokens: string): number {
-  const variable = value.match(/^var\((--[\w-]+)\)$/)
+  const variable = value.match(CSS_VARIABLE_REFERENCE)
   const resolved = variable ? customProperty(packageTokens, variable[1]) : value
   if (resolved.endsWith('ms')) {
     return Number.parseFloat(resolved)
@@ -78,9 +86,9 @@ test('seek badge stops match the seek duration tokens', () => {
   )
   const seekOut = millisecondsFromToken(customProperty(globals, '--duration-seek-out'), packageTokens)
   const total = seekIn + seekHold + seekOut
-  const keyframes = globals.match(/@keyframes keyboard-seek-badge \{([\s\S]*?)\n\}/)
+  const keyframes = globals.match(KEYBOARD_SEEK_BADGE_KEYFRAMES)
   assert.ok(keyframes)
-  const stops = [...keyframes[1].matchAll(/([\d.]+)%/g)].map((match) => Number(match[1]))
+  const stops = [...keyframes[1].matchAll(PERCENT_STOP)].map((match) => Number(match[1]))
   assert.equal(stops.length, 4)
   assert.ok(Math.abs(stops[1] - (seekIn / total) * 100) < 0.0001)
   assert.ok(Math.abs(stops[2] - ((seekIn + seekHold) / total) * 100) < 0.0001)
