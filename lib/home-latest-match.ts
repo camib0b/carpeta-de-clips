@@ -7,9 +7,10 @@ import type { LatestUploadedMatchPreview } from '@/lib/latest-uploaded-match'
 
 const PLAYED_ON_CAPTION = /^(\d{1,2}-[a-z]+)-\d{4}$/
 const FULL_MATCH_TITLE = /partido completo/i
+const WHITESPACE_RUN = /\s+/g
 
 function collapseWhitespace(value: string): string {
-  return value.replace(/\s+/g, ' ').trim()
+  return value.replace(WHITESPACE_RUN, ' ').trim()
 }
 
 const HIGHLIGHT_TITLE_RANK: ReadonlyArray<{ pattern: RegExp; rank: number }> = [

@@ -12,6 +12,8 @@ import {
   type CatalogClipInsert,
 } from './catalog-upsert'
 
+const SQL_PLACEHOLDER = /\?/g
+
 const MIGRATION_PATH = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../migrations/0005_clip_self_hosted_media.sql',
@@ -114,7 +116,7 @@ describe('clips self-hosted media migration', () => {
 
 describe('clip upsert media fields', () => {
   it('binds one parameter per placeholder', () => {
-    const placeholders = INSERT_CLIP_SQL.match(/\?/g) ?? []
+    const placeholders = INSERT_CLIP_SQL.match(SQL_PLACEHOLDER) ?? []
     assert.equal(placeholders.length, bindInsertClip(baseClip).length)
     assert.equal(INSERT_CLIP_SQL.includes('__RAW_VISIBILITY__'), false)
     assert.match(INSERT_CLIP_SQL, /COALESCE\(excluded\.r2_key, clips\.r2_key\)/)

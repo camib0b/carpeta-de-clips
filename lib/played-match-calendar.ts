@@ -81,8 +81,10 @@ export interface PlayedMatchCalendarModel {
   fadeDelayMillisecondsByColumn: number[]
 }
 
+const CALENDAR_DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})/
+
 export function parseCalendarDate(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
+  const match = CALENDAR_DATE_PREFIX.exec(value)
   if (!match) return null
 
   const year = Number(match[1])

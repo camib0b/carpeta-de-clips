@@ -38,7 +38,6 @@ type ClipRow = {
   id: number
   match_id: string
   r2_key: string
-  thumb_key: string | null
 }
 
 type CliOptions = {
@@ -104,18 +103,21 @@ function runWranglerD1Json(
   return JSON.parse(output)
 }
 
-function fetchClipsToProcess(options: CliOptions): ClipRow[] {
-  const matchFilter = options.matchId
-    ? `AND clips.match_id = ${sqlString(options.matchId)}`
-    : ''
+export function clipsMissingThumbnailSql(matchId: string | null): string {
+  const matchFilter =
+    matchId == null ? '' : `AND clips.match_id = ${sqlString(matchId)}`
 
-  const sql = `SELECT clips.id, clips.match_id, clips.r2_key, clips.thumb_key
+  return `SELECT clips.id, clips.match_id, clips.r2_key
 FROM clips
 WHERE clips.r2_key IS NOT NULL
   AND TRIM(clips.r2_key) != ''
   AND (clips.thumb_key IS NULL OR TRIM(clips.thumb_key) = '')
   ${matchFilter}
 ORDER BY clips.match_id ASC, clips.id ASC`
+}
+
+function fetchClipsToProcess(options: CliOptions): ClipRow[] {
+  const sql = clipsMissingThumbnailSql(options.matchId)
 
   const parsed = runWranglerD1Json(options.wranglerTarget, sql) as Array<{
     results: ClipRow[]
@@ -311,4 +313,10 @@ function main() {
   }
 }
 
-main()
+const executedFile = process.argv[1]
+if (
+  executedFile != null &&
+  path.resolve(executedFile) === fileURLToPath(import.meta.url)
+) {
+  main()
+}
