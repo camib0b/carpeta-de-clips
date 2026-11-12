@@ -527,6 +527,13 @@ function JugadasList({
   )
 }
 
+/**
+ * Stable empty list. `video?.instances ?? []` allocated a new array on every
+ * render, the drawing effect depended on it, and clearing the set allocated a
+ * new Set, so the closed modal re-rendered until React stopped it.
+ */
+const NO_CLIP_INSTANCES: ClipInstance[] = []
+
 /** Dev-only. Production builds inline NODE_ENV and drop the toggle. */
 const MODAL_BREAK_UI_ENABLED = process.env.NODE_ENV === 'development'
 
@@ -800,7 +807,7 @@ export function VideoModal({
   )
   playbackRateRef.current = playbackRate
 
-  const instances = video?.instances ?? []
+  const instances = video?.instances ?? NO_CLIP_INSTANCES
   const hasInstances = instances.length > 0
   const hasSelfHostedFile = video != null && mediaUrl(video) != null
   const useNativePlayer = hasSelfHostedFile && !hostedPlaybackFailed
@@ -1174,7 +1181,7 @@ export function VideoModal({
 
   useEffect(() => {
     if (!open || video?.id == null) {
-      setPlayOrdsWithDrawings(new Set())
+      setPlayOrdsWithDrawings((current) => (current.size === 0 ? current : new Set()))
       return
     }
 

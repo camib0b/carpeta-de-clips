@@ -90,6 +90,20 @@ test('seek badge stops match the seek duration tokens', () => {
   )
 })
 
+test('focused press controls do not fade the focus ring in', () => {
+  const globals = source('app/globals.css')
+  const focused = [
+    ...globals.matchAll(/\.press\.duration-color:focus-visible\s*\{([^}]+)\}/g),
+  ]
+  assert.equal(focused.length, 2)
+  for (const block of focused) {
+    assert.equal(block[1].includes('box-shadow'), false)
+  }
+  const resting = globals.match(/\.press\.duration-color\s*\{([^}]+)\}/)
+  assert.ok(resting)
+  assert.match(resting[1], /box-shadow var\(--duration-button\)/)
+})
+
 test('library curtain and landing delay read the shared motion tokens', () => {
   const globals = source('app/globals.css')
   assert.match(globals, /--curtain-duration:\s*var\(--duration-enter\)/)

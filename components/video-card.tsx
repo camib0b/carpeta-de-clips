@@ -81,12 +81,12 @@ export function VideoCard({
 
       {/* Caption sits inside the same card as the thumbnail above it. */}
       <div className="space-y-1 border-t border-border bg-card px-3 py-2.5">
-        <h3
+        <h2
           className="line-clamp-2 wrap-anywhere text-sm font-medium leading-snug tracking-tight text-foreground"
           title={video.title}
         >
           {video.title}
-        </h3>
+        </h2>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-foreground/80">
           <span className="min-w-0 wrap-anywhere">{matchupDisplay}</span>
           {scoreDisplay && (
